@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:equate/view/auth/login_view.dart';
 
 class OnboardingView extends StatefulWidget {
   const OnboardingView({super.key});
@@ -45,7 +46,10 @@ class _OnboardingViewState extends State<OnboardingView> {
       );
     } else {
       // 🎯 AKSI SAAT SLIDE TERAKHIR SELESAI (Pindah Halaman)
-      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginView()));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginView()),
+      );
     }
   }
 
@@ -65,6 +69,10 @@ class _OnboardingViewState extends State<OnboardingView> {
               child: TextButton(
                 onPressed: () {
                   // Aksi skip langsung ke halaman utama/login
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginView()),
+                  );
                 },
                 child: Text(
                   'Skip',
@@ -106,7 +114,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                                   TextSpan(
                                     text: '${item['titleHighlight']}\n',
                                     style: TextStyle(
-                                      color: Colors.amber[800], // Warna Oranye/Emas
+                                      color: Colors
+                                          .amber[800], // Warna Oranye/Emas
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -146,7 +155,9 @@ class _OnboardingViewState extends State<OnboardingView> {
                                 width: double.infinity,
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Color(0xFFFFF8ED), // Accent Lingkaran Latar belakang
+                                  color: Color(
+                                    0xFFFFF8ED,
+                                  ), // Accent Lingkaran Latar belakang
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.all(20.0),
@@ -252,12 +263,7 @@ class CurvedCornerPainter extends CustomPainter {
 
     final path = Path();
     path.moveTo(size.width, 0);
-    path.quadraticBezierTo(
-      size.width * 0.2,
-      size.height * 0.2,
-      0,
-      size.height,
-    );
+    path.quadraticBezierTo(size.width * 0.2, size.height * 0.2, 0, size.height);
     path.lineTo(size.width, size.height);
     path.close();
 
