@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'signup_view.dart';
+import '../main_navigation_view.dart'; // Dibetulkan: Jalur keluar folder auth ke main_navigation_view
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -204,7 +205,15 @@ class _LoginViewState extends State<LoginView> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: () {},
+                        onPressed: () {
+                          // Dibetulkan: Mengarahkan ke MainNavigationView agar Bottom Navigation Bar muncul
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MainNavigationView(),
+                            ),
+                          );
+                        },
                         child: const Text(
                           'Masuk',
                           style: TextStyle(
