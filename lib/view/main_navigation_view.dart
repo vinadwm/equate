@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'tabs/home_tab_view.dart';
 import 'tabs/calculator_tab_view.dart';
 import 'tabs/profile_tab_view.dart';
@@ -22,80 +23,94 @@ class _MainNavigationViewState extends State<MainNavigationView> {
 
   @override
   Widget build(BuildContext context) {
-    const defaultGreyColor = Color(0xFF9E9E9E); // Abu-abu konstan
-
     return Scaffold(
       body: Stack(
         children: [
           // Content Halaman
           _tabs[_currentIndex],
 
-          // Floating Navbar Utama
-          Positioned(
-            left: 70,  // Nilai lebih besar membuat navbar lebih ramping horizontal
-            right: 70, // Nilai lebih besar membuat navbar lebih ramping horizontal
-            bottom: 20,
-            child: Container(
-              height: 64,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(35),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // 1. HOME TAB
-                  _buildNavItem(
-                    index: 0,
-                    label: 'Beranda',
-                    activeIcon: Icons.home_rounded,
-                    inactiveIcon: Icons.home_outlined,
-                    color: defaultGreyColor,
-                  ),
+          // Floating Navbar Utama (Mendengar Perubahan Tema)
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: ThemeViewModel.themeMode,
+            builder: (context, currentThemeMode, child) {
+              final isDarkMode = ThemeViewModel.isDarkMode;
 
-                  // 2. CALCULATOR TAB (Icon Presisi & Tebal)
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _currentIndex = 1;
-                      });
-                    },
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      width: 46,
-                      height: 46,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF9800), // Background Oranye
-                        shape: BoxShape.circle,
+              // Penyesuaian Warna Dinamis
+              final navBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+              final navBorderColor = isDarkMode ? Colors.grey[800]! : Colors.transparent;
+              final defaultGreyColor = isDarkMode ? const Color(0xFFA0A0A0) : const Color(0xFF9E9E9E);
+              final activeColor = isDarkMode ? const Color(0xFFFF9800) : defaultGreyColor;
+
+              return Positioned(
+                left: 70,
+                right: 70,
+                bottom: 20,
+                child: Container(
+                  height: 64,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: navBgColor,
+                    borderRadius: BorderRadius.circular(35),
+                    border: Border.all(color: navBorderColor),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
                       ),
-                      child: Center(
-                        child: CustomPaint(
-                          size: const Size(18, 18),
-                          painter: MathSymbolsPainter(),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // 1. HOME TAB
+                      _buildNavItem(
+                        index: 0,
+                        label: 'Beranda',
+                        activeIcon: Icons.home_rounded,
+                        inactiveIcon: Icons.home_outlined,
+                        activeColor: activeColor,
+                        inactiveColor: defaultGreyColor,
+                      ),
+
+                      // 2. CALCULATOR TAB
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _currentIndex = 1;
+                          });
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          width: 46,
+                          height: 46,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFF9800), // Background Oranye
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: CustomPaint(
+                              size: const Size(18, 18),
+                              painter: MathSymbolsPainter(),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
 
-                  // 3. PROFILE TAB
-                  _buildNavItem(
-                    index: 2,
-                    label: 'Profil',
-                    activeIcon: Icons.person_rounded,
-                    inactiveIcon: Icons.person_outline_rounded,
-                    color: defaultGreyColor,
+                      // 3. PROFILE TAB
+                      _buildNavItem(
+                        index: 2,
+                        label: 'Profil',
+                        activeIcon: Icons.person_rounded,
+                        inactiveIcon: Icons.person_outline_rounded,
+                        activeColor: activeColor,
+                        inactiveColor: defaultGreyColor,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -107,9 +122,11 @@ class _MainNavigationViewState extends State<MainNavigationView> {
     required String label,
     required IconData activeIcon,
     required IconData inactiveIcon,
-    required Color color,
+    required Color activeColor,
+    required Color inactiveColor,
   }) {
     final isSelected = _currentIndex == index;
+    final itemColor = isSelected ? activeColor : inactiveColor;
 
     return GestureDetector(
       onTap: () {
@@ -119,7 +136,7 @@ class _MainNavigationViewState extends State<MainNavigationView> {
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 55, // Kunci lebar item agar tetap presisi di tengah
+        width: 55,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -127,7 +144,7 @@ class _MainNavigationViewState extends State<MainNavigationView> {
             Icon(
               isSelected ? activeIcon : inactiveIcon,
               size: 22,
-              color: color,
+              color: itemColor,
             ),
             const SizedBox(height: 3),
             Text(
@@ -135,8 +152,8 @@ class _MainNavigationViewState extends State<MainNavigationView> {
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: color,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: itemColor,
               ),
             ),
           ],
@@ -159,18 +176,18 @@ class MathSymbolsPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // --- 1. SIMBOL PLUS (+) [Pojok Kiri Atas] ---
+    // --- 1. SIMBOL PLUS (+) ---
     canvas.drawLine(Offset(0, h * 0.22), Offset(w * 0.38, h * 0.22), paint);
     canvas.drawLine(Offset(w * 0.19, 0), Offset(w * 0.19, h * 0.44), paint);
 
-    // --- 2. SIMBOL MINUS (-) [Pojok Kanan Atas] ---
+    // --- 2. SIMBOL MINUS (-) ---
     canvas.drawLine(Offset(w * 0.62, h * 0.22), Offset(w, h * 0.22), paint);
 
-    // --- 3. SIMBOL KALI (X) [Pojok Kiri Bawah] ---
+    // --- 3. SIMBOL KALI (X) ---
     canvas.drawLine(Offset(0, h * 0.6), Offset(w * 0.38, h * 0.98), paint);
     canvas.drawLine(Offset(0, h * 0.98), Offset(w * 0.38, h * 0.6), paint);
 
-    // --- 4. SIMBOL SAMA DENGAN (=) [Pojok Kanan Bawah] ---
+    // --- 4. SIMBOL SAMA DENGAN (=) ---
     canvas.drawLine(Offset(w * 0.62, h * 0.68), Offset(w, h * 0.68), paint);
     canvas.drawLine(Offset(w * 0.62, h * 0.90), Offset(w, h * 0.90), paint);
   }
