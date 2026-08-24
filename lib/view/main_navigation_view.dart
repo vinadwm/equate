@@ -15,31 +15,37 @@ class MainNavigationView extends StatefulWidget {
 class _MainNavigationViewState extends State<MainNavigationView> {
   int _currentIndex = 0;
 
-  final List<Widget> _tabs = const [
-    HomeTabView(),
-    CalculatorTabView(),
-    ProfileTabView(),
-  ];
+  final List<Widget> _tabs = const [HomeTabView(), ProfileTabView()];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // Content Halaman
-          _tabs[_currentIndex],
+          // Content Halaman (Menggunakan Safe Indexing)
+          IndexedStack(
+            index: _currentIndex > 1 ? 0 : _currentIndex,
+            children: _tabs,
+          ),
 
-          // Floating Navbar Utama (Mendengar Perubahan Tema)
+          // Floating Navbar Utama
           ValueListenableBuilder<ThemeMode>(
             valueListenable: ThemeViewModel.themeMode,
             builder: (context, currentThemeMode, child) {
               final isDarkMode = ThemeViewModel.isDarkMode;
 
-              // Penyesuaian Warna Dinamis
-              final navBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-              final navBorderColor = isDarkMode ? Colors.grey[800]! : Colors.transparent;
-              final defaultGreyColor = isDarkMode ? const Color(0xFFA0A0A0) : const Color(0xFF9E9E9E);
-              final activeColor = isDarkMode ? const Color(0xFFFF9800) : defaultGreyColor;
+              final navBgColor = isDarkMode
+                  ? const Color(0xFF1E1E1E)
+                  : Colors.white;
+              final navBorderColor = isDarkMode
+                  ? Colors.grey[800]!
+                  : Colors.transparent;
+              final defaultGreyColor = isDarkMode
+                  ? const Color(0xFFA0A0A0)
+                  : const Color(0xFF9E9E9E);
+              final activeColor = isDarkMode
+                  ? const Color(0xFFFF9800)
+                  : defaultGreyColor;
 
               return Positioned(
                 left: 70,
@@ -54,7 +60,9 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                     border: Border.all(color: navBorderColor),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.08),
+                        color: Colors.black.withOpacity(
+                          isDarkMode ? 0.3 : 0.08,
+                        ),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       ),
@@ -73,19 +81,22 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                         inactiveColor: defaultGreyColor,
                       ),
 
-                      // 2. CALCULATOR TAB
+                      // 2. CALCULATOR BUTTON (BUKA HALAMAN BARU TANPA NAVBAR)
                       GestureDetector(
                         onTap: () {
-                          setState(() {
-                            _currentIndex = 1;
-                          });
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CalculatorTabView(),
+                            ),
+                          );
                         },
                         behavior: HitTestBehavior.opaque,
                         child: Container(
                           width: 46,
                           height: 46,
                           decoration: const BoxDecoration(
-                            color: Color(0xFFFF9800), // Background Oranye
+                            color: Color(0xFFFF9800),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -99,7 +110,7 @@ class _MainNavigationViewState extends State<MainNavigationView> {
 
                       // 3. PROFILE TAB
                       _buildNavItem(
-                        index: 2,
+                        index: 1, // Index disesuaikan menjadi 1
                         label: 'Profil',
                         activeIcon: Icons.person_rounded,
                         inactiveIcon: Icons.person_outline_rounded,
@@ -163,7 +174,6 @@ class _MainNavigationViewState extends State<MainNavigationView> {
   }
 }
 
-// Custom Painter untuk Menggambar Simbol + - x = Tebal & Presisi
 class MathSymbolsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

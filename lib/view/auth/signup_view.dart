@@ -12,6 +12,7 @@ class _SignUpViewState extends State<SignUpView> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isObscure = true;
 
   @override
@@ -209,6 +210,50 @@ class _SignUpViewState extends State<SignUpView> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    // Input Kata Sandi
+                    const Text(
+                      'Konfirmasi Kata Sandi',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _confirmPasswordController,
+                      obscureText: _isObscure,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFFF7F7F9),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFEEEEEE),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFEEEEEE),
+                          ),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isObscure
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () =>
+                              setState(() => _isObscure = !_isObscure),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 24),
                     // Button Daftar
                     SizedBox(
@@ -222,7 +267,14 @@ class _SignUpViewState extends State<SignUpView> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginView(),
+                            ),
+                          );
+                        },
                         child: const Text(
                           'Daftar',
                           style: TextStyle(

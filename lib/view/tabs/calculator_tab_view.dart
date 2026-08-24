@@ -24,12 +24,20 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
         final isDarkMode = ThemeViewModel.isDarkMode;
 
         // Penyesuaian Warna Dinamis
-        final bgColor = isDarkMode ? const Color(0xFF121212) : const Color(0xFFFBFBFB);
-        final tabBgColor = isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF2F2F2);
-        final activeTabBgColor = isDarkMode ? const Color(0xFF2A2A2A) : Colors.white;
+        final bgColor = isDarkMode
+            ? const Color(0xFF121212)
+            : const Color(0xFFFBFBFB);
+        final tabBgColor = isDarkMode
+            ? const Color(0xFF1E1E1E)
+            : const Color(0xFFF2F2F2);
+        final activeTabBgColor = isDarkMode
+            ? const Color(0xFF2A2A2A)
+            : Colors.white;
         final iconColor = isDarkMode ? Colors.white : Colors.black;
         final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
-        final unselectedTextColor = isDarkMode ? const Color(0xFFA0A0A0) : Colors.grey[600]!;
+        final unselectedTextColor = isDarkMode
+            ? const Color(0xFFA0A0A0)
+            : Colors.grey[600]!;
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -41,9 +49,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const HomeTabView(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const HomeTabView()),
                 );
               },
             ),
@@ -84,7 +90,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                             boxShadow: _selectedTab == 0
                                 ? [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                                      color: Colors.black.withOpacity(
+                                        isDarkMode ? 0.3 : 0.05,
+                                      ),
                                       blurRadius: 4,
                                     ),
                                   ]
@@ -117,7 +125,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                             boxShadow: _selectedTab == 1
                                 ? [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
+                                      color: Colors.black.withOpacity(
+                                        isDarkMode ? 0.3 : 0.05,
+                                      ),
                                       blurRadius: 4,
                                     ),
                                   ]
@@ -257,9 +267,15 @@ class _GoldCalculatorContentState extends State<GoldCalculatorContent> {
 
     final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
     final primaryTextColor = isDarkMode ? Colors.white : Colors.black87;
-    final labelTextColor = isDarkMode ? const Color(0xFFD0D0D0) : Colors.grey[700]!;
-    final inputFillColor = isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF8F8FA);
-    final borderColor = isDarkMode ? Colors.grey[800]! : const Color(0xFFEEEEEE);
+    final labelTextColor = isDarkMode
+        ? const Color(0xFFD0D0D0)
+        : Colors.grey[700]!;
+    final inputFillColor = isDarkMode
+        ? const Color(0xFF2A2A2A)
+        : const Color(0xFFF8F8FA);
+    final borderColor = isDarkMode
+        ? Colors.grey[800]!
+        : const Color(0xFFEEEEEE);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -358,7 +374,9 @@ class _GoldCalculatorContentState extends State<GoldCalculatorContent> {
                       color: Colors.grey,
                     ),
                     filled: true,
-                    fillColor: isDarkMode ? const Color(0xFF222222) : const Color(0xFFF8F8FA),
+                    fillColor: isDarkMode
+                        ? const Color(0xFF222222)
+                        : const Color(0xFFF8F8FA),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 14,
@@ -378,9 +396,7 @@ class _GoldCalculatorContentState extends State<GoldCalculatorContent> {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(
-                              color: _hasInput
-                                  ? primaryOrange
-                                  : borderColor,
+                              color: _hasInput ? primaryOrange : borderColor,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -409,7 +425,9 @@ class _GoldCalculatorContentState extends State<GoldCalculatorContent> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _hasInput
                                 ? primaryOrange
-                                : (isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF8F8FA)),
+                                : (isDarkMode
+                                      ? const Color(0xFF2A2A2A)
+                                      : const Color(0xFFF8F8FA)),
                             elevation: _hasInput ? 2 : 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -673,39 +691,53 @@ class _PivotPointCalculatorContentState
 
   String _formatVal(double? val) {
     if (val == null) return '';
-    return val.toStringAsFixed(0);
+    return val.toStringAsFixed(2).replaceAll('.', ',');
   }
 
   double _mid(double a, double b) => (a + b) / 2;
 
   @override
   Widget build(BuildContext context) {
-    const primaryOrange = Color(0xFFFFA800);
+    const primaryOrange = Color(0xFFFF9E0F);
+    const resistanceColor = Color(0xFFFFB800);
+    const supportColor = Color(0xFF4295FF);
+    const pivotColor = Color(0xFF18B85A);
+    const midpointColor = Color(0xFFB5B5B5);
+
     final isDarkMode = ThemeViewModel.isDarkMode;
 
     final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-    final tableBgColor = isDarkMode ? const Color(0xFF262626) : const Color(0xFFF9F9FB);
-    final primaryTextColor = isDarkMode ? Colors.white : Colors.black87;
-    final labelTextColor = isDarkMode ? const Color(0xFFD0D0D0) : Colors.grey[700]!;
-    final inputFillColor = isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF8F8FA);
-    final borderColor = isDarkMode ? Colors.grey[800]! : const Color(0xFFEEEEEE);
+    final inputFillColor = isDarkMode
+        ? const Color(0xFF2A2A2A)
+        : const Color(0xFFF8F8FA);
+    final primaryTextColor = isDarkMode
+        ? Colors.white
+        : const Color(0xFF161616);
+    final labelTextColor = isDarkMode
+        ? const Color(0xFFD0D0D0)
+        : const Color(0xFF626262);
+    final borderColor = isDarkMode
+        ? Colors.grey[800]!
+        : const Color(0xFFE7E7E7);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       child: Column(
         children: [
-          // CONTAINER FORM INPUT
+          // ==========================
+          // INPUT CARD
+          // ==========================
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
             decoration: BoxDecoration(
               color: cardBgColor,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.02),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.035),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
@@ -715,31 +747,34 @@ class _PivotPointCalculatorContentState
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
                         color: primaryOrange,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(5),
                       ),
                       child: const Icon(
-                        Icons.bar_chart,
+                        Icons.bar_chart_rounded,
                         color: Colors.white,
-                        size: 16,
+                        size: 14,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Masukkan Data',
                       style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: primaryTextColor,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+
+                const SizedBox(height: 22),
+
                 _buildLabel('Harga Tertinggi', labelTextColor),
-                const SizedBox(height: 6),
+                const SizedBox(height: 7),
                 _buildTextField(
                   controller: _highController,
                   hintText: '0,00',
@@ -747,9 +782,11 @@ class _PivotPointCalculatorContentState
                   inputFillColor: inputFillColor,
                   borderColor: borderColor,
                 ),
-                const SizedBox(height: 16),
+
+                const SizedBox(height: 18),
+
                 _buildLabel('Harga Terendah', labelTextColor),
-                const SizedBox(height: 6),
+                const SizedBox(height: 7),
                 _buildTextField(
                   controller: _lowController,
                   hintText: '0,00',
@@ -757,9 +794,11 @@ class _PivotPointCalculatorContentState
                   inputFillColor: inputFillColor,
                   borderColor: borderColor,
                 ),
-                const SizedBox(height: 16),
+
+                const SizedBox(height: 18),
+
                 _buildLabel('Harga Penutupan', labelTextColor),
-                const SizedBox(height: 6),
+                const SizedBox(height: 7),
                 _buildTextField(
                   controller: _closeController,
                   hintText: '0,00',
@@ -767,33 +806,35 @@ class _PivotPointCalculatorContentState
                   inputFillColor: inputFillColor,
                   borderColor: borderColor,
                 ),
-                const SizedBox(height: 24),
+
+                const SizedBox(height: 22),
+
                 Row(
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 48,
+                        height: 52,
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(
-                              color: _hasInput
-                                  ? primaryOrange
-                                  : borderColor,
+                              color: _hasInput ? primaryOrange : borderColor,
                             ),
+                            backgroundColor: cardBgColor,
+                            elevation: _hasInput ? 2 : 0,
+                            shadowColor: primaryOrange.withOpacity(0.18),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            backgroundColor: cardBgColor,
                           ),
                           onPressed: _hasInput ? _resetForm : null,
                           child: Text(
                             'HAPUS',
                             style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                               fontSize: 14,
                               color: _hasInput
                                   ? primaryOrange
-                                  : Colors.grey[500],
+                                  : Colors.grey[400],
                             ),
                           ),
                         ),
@@ -802,13 +843,17 @@ class _PivotPointCalculatorContentState
                     const SizedBox(width: 12),
                     Expanded(
                       child: SizedBox(
-                        height: 48,
+                        height: 52,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _hasInput
                                 ? primaryOrange
-                                : (isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF8F8FA)),
+                                : (isDarkMode
+                                      ? const Color(0xFF2A2A2A)
+                                      : const Color(0xFFF4F4F4)),
+                            foregroundColor: Colors.white,
                             elevation: _hasInput ? 2 : 0,
+                            shadowColor: primaryOrange.withOpacity(0.25),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -817,11 +862,11 @@ class _PivotPointCalculatorContentState
                           child: Text(
                             'HITUNG',
                             style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                               fontSize: 14,
                               color: _hasInput
                                   ? Colors.white
-                                  : Colors.grey[500],
+                                  : Colors.grey[400],
                             ),
                           ),
                         ),
@@ -835,19 +880,21 @@ class _PivotPointCalculatorContentState
 
           const SizedBox(height: 20),
 
-          // HASIL TABEL PIVOT
+          // ==========================
+          // RESULT CARD
+          // ==========================
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
             decoration: BoxDecoration(
               color: cardBgColor,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.02),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.035),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
@@ -856,36 +903,185 @@ class _PivotPointCalculatorContentState
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Color(0xFF00C853),
-                      size: 20,
-                    ),
+                    const Icon(Icons.check_circle, color: pivotColor, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       'Hasil',
                       style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         fontSize: 15,
                         color: primaryTextColor,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
 
-                // TABEL PIVOT DINAMIS
-                Center(
-                  child: Container(
-                    width: 240,
-                    decoration: BoxDecoration(
-                      color: tableBgColor,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Column(children: _buildPivotTableRows(primaryTextColor, isDarkMode)),
+                const SizedBox(height: 18),
+
+                // RESISTANCE
+                if (_isR4Expanded)
+                  _buildExpandedLevelCard(
+                    children: [
+                      _buildResultRow(
+                        label: 'R4',
+                        value: _formatVal(_r4),
+                        labelColor: resistanceColor,
+                        valueColor: primaryTextColor,
+                        trailingIcon: Icons.arrow_circle_up,
+                        trailingIconColor: resistanceColor,
+                        onTrailingIconTap: () =>
+                            setState(() => _isR4Expanded = false),
+                      ),
+                      if (_r4 != null && _r3 != null)
+                        _buildResultRow(
+                          label: 'Midpoint',
+                          value: _formatVal(_mid(_r4!, _r3!)),
+                          labelColor: midpointColor,
+                          valueColor: primaryTextColor,
+                          isMidpoint: true,
+                        ),
+                      _buildResultRow(
+                        label: 'R3',
+                        value: _formatVal(_r3),
+                        labelColor: resistanceColor,
+                        valueColor: primaryTextColor,
+                      ),
+                      if (_r3 != null && _r2 != null)
+                        _buildResultRow(
+                          label: 'Midpoint',
+                          value: _formatVal(_mid(_r3!, _r2!)),
+                          labelColor: midpointColor,
+                          valueColor: primaryTextColor,
+                          isMidpoint: true,
+                        ),
+                      _buildResultRow(
+                        label: 'R2',
+                        value: _formatVal(_r2),
+                        labelColor: resistanceColor,
+                        valueColor: primaryTextColor,
+                      ),
+                      if (_r2 != null && _r1 != null)
+                        _buildResultRow(
+                          label: 'Midpoint',
+                          value: _formatVal(_mid(_r2!, _r1!)),
+                          labelColor: midpointColor,
+                          valueColor: primaryTextColor,
+                          isMidpoint: true,
+                        ),
+                      _buildResultRow(
+                        label: 'R1',
+                        value: _formatVal(_r1),
+                        labelColor: resistanceColor,
+                        valueColor: primaryTextColor,
+                      ),
+                      if (_r1 != null && _pp != null)
+                        _buildResultRow(
+                          label: 'Midpoint',
+                          value: _formatVal(_mid(_r1!, _pp!)),
+                          labelColor: midpointColor,
+                          valueColor: primaryTextColor,
+                          isMidpoint: true,
+                        ),
+                    ],
+                  )
+                else
+                  _buildCollapsedLevelCard(
+                    label: 'R4',
+                    value: _formatVal(_r4),
+                    labelColor: resistanceColor,
+                    iconColor: resistanceColor,
+                    icon: Icons.arrow_drop_down_circle,
+                    onIconTap: () => setState(() => _isR4Expanded = true),
+                    valueColor: primaryTextColor,
                   ),
+
+                const SizedBox(height: 14),
+
+                // PIVOT POINT
+                _buildPivotPointCard(
+                  value: _formatVal(_pp),
+                  primaryTextColor: primaryTextColor,
+                  pivotColor: pivotColor,
                 ),
+
+                const SizedBox(height: 14),
+
+                // SUPPORT
+                if (_isS4Expanded)
+                  _buildExpandedLevelCard(
+                    children: [
+                      if (_pp != null && _s1 != null)
+                        _buildResultRow(
+                          label: 'Midpoint',
+                          value: _formatVal(_mid(_pp!, _s1!)),
+                          labelColor: midpointColor,
+                          valueColor: primaryTextColor,
+                          isMidpoint: true,
+                        ),
+                      _buildResultRow(
+                        label: 'S1',
+                        value: _formatVal(_s1),
+                        labelColor: supportColor,
+                        valueColor: primaryTextColor,
+                      ),
+                      if (_s1 != null && _s2 != null)
+                        _buildResultRow(
+                          label: 'Midpoint',
+                          value: _formatVal(_mid(_s1!, _s2!)),
+                          labelColor: midpointColor,
+                          valueColor: primaryTextColor,
+                          isMidpoint: true,
+                        ),
+                      _buildResultRow(
+                        label: 'S2',
+                        value: _formatVal(_s2),
+                        labelColor: supportColor,
+                        valueColor: primaryTextColor,
+                      ),
+                      if (_s2 != null && _s3 != null)
+                        _buildResultRow(
+                          label: 'Midpoint',
+                          value: _formatVal(_mid(_s2!, _s3!)),
+                          labelColor: midpointColor,
+                          valueColor: primaryTextColor,
+                          isMidpoint: true,
+                        ),
+                      _buildResultRow(
+                        label: 'S3',
+                        value: _formatVal(_s3),
+                        labelColor: supportColor,
+                        valueColor: primaryTextColor,
+                      ),
+                      if (_s3 != null && _s4 != null)
+                        _buildResultRow(
+                          label: 'Midpoint',
+                          value: _formatVal(_mid(_s3!, _s4!)),
+                          labelColor: midpointColor,
+                          valueColor: primaryTextColor,
+                          isMidpoint: true,
+                        ),
+                      _buildResultRow(
+                        label: 'S4',
+                        value: _formatVal(_s4),
+                        labelColor: supportColor,
+                        valueColor: primaryTextColor,
+                        trailingIcon: Icons.arrow_circle_up,
+                        trailingIconColor: supportColor,
+                        onTrailingIconTap: () =>
+                            setState(() => _isS4Expanded = false),
+                      ),
+                    ],
+                  )
+                else
+                  _buildCollapsedLevelCard(
+                    label: 'S4',
+                    value: _formatVal(_s4),
+                    labelColor: supportColor,
+                    iconColor: supportColor,
+                    icon: Icons.arrow_drop_down_circle,
+                    onIconTap: () => setState(() => _isS4Expanded = true),
+                    valueColor: primaryTextColor,
+                  ),
               ],
             ),
           ),
@@ -894,143 +1090,228 @@ class _PivotPointCalculatorContentState
     );
   }
 
-  List<Widget> _buildPivotTableRows(Color valueTextColor, bool isDarkMode) {
-    List<Widget> rows = [];
-
-    rows.add(
-      _buildTableRow(
-        'R4',
-        _formatVal(_r4),
-        valueTextColor: valueTextColor,
-        isDarkMode: isDarkMode,
-        isOrangeText: true,
-        iconData: _isR4Expanded
-            ? Icons.arrow_drop_down_circle
-            : Icons.arrow_drop_down_circle_outlined,
-        onIconTap: () => setState(() => _isR4Expanded = !_isR4Expanded),
-        iconRotated: _isR4Expanded,
-      ),
-    );
-
-    if (_isR4Expanded) {
-      if (_r4 != null && _r3 != null) {
-        rows.add(_buildTableRow('Midpoint', _formatVal(_mid(_r4!, _r3!)), valueTextColor: valueTextColor, isDarkMode: isDarkMode));
-      }
-      rows.add(_buildTableRow('R3', _formatVal(_r3), valueTextColor: valueTextColor, isDarkMode: isDarkMode, isOrangeText: true));
-      if (_r3 != null && _r2 != null) {
-        rows.add(_buildTableRow('Midpoint', _formatVal(_mid(_r3!, _r2!)), valueTextColor: valueTextColor, isDarkMode: isDarkMode));
-      }
-      rows.add(_buildTableRow('R2', _formatVal(_r2), valueTextColor: valueTextColor, isDarkMode: isDarkMode, isOrangeText: true));
-      if (_r2 != null && _r1 != null) {
-        rows.add(_buildTableRow('Midpoint', _formatVal(_mid(_r2!, _r1!)), valueTextColor: valueTextColor, isDarkMode: isDarkMode));
-      }
-      rows.add(_buildTableRow('R1', _formatVal(_r1), valueTextColor: valueTextColor, isDarkMode: isDarkMode, isOrangeText: true));
-      if (_r1 != null && _pp != null) {
-        rows.add(_buildTableRow('Midpoint', _formatVal(_mid(_r1!, _pp!)), valueTextColor: valueTextColor, isDarkMode: isDarkMode));
-      }
-    }
-
-    rows.add(_buildTableRow('PP', _formatVal(_pp), valueTextColor: valueTextColor, isDarkMode: isDarkMode, isOrangeText: true));
-
-    if (_isS4Expanded) {
-      if (_pp != null && _s1 != null) {
-        rows.add(_buildTableRow('Midpoint', _formatVal(_mid(_pp!, _s1!)), valueTextColor: valueTextColor, isDarkMode: isDarkMode));
-      }
-      rows.add(_buildTableRow('S1', _formatVal(_s1), valueTextColor: valueTextColor, isDarkMode: isDarkMode, isOrangeText: true));
-      if (_s1 != null && _s2 != null) {
-        rows.add(_buildTableRow('Midpoint', _formatVal(_mid(_s1!, _s2!)), valueTextColor: valueTextColor, isDarkMode: isDarkMode));
-      }
-      rows.add(_buildTableRow('S2', _formatVal(_s2), valueTextColor: valueTextColor, isDarkMode: isDarkMode, isOrangeText: true));
-      if (_s2 != null && _s3 != null) {
-        rows.add(_buildTableRow('Midpoint', _formatVal(_mid(_s2!, _s3!)), valueTextColor: valueTextColor, isDarkMode: isDarkMode));
-      }
-      rows.add(_buildTableRow('S3', _formatVal(_s3), valueTextColor: valueTextColor, isDarkMode: isDarkMode, isOrangeText: true));
-      if (_s3 != null && _s4 != null) {
-        rows.add(_buildTableRow('Midpoint', _formatVal(_mid(_s3!, _s4!)), valueTextColor: valueTextColor, isDarkMode: isDarkMode));
-      }
-    }
-
-    rows.add(
-      _buildTableRow(
-        'S4',
-        _formatVal(_s4),
-        valueTextColor: valueTextColor,
-        isDarkMode: isDarkMode,
-        isOrangeText: true,
-        iconData: _isS4Expanded
-            ? Icons.arrow_drop_down_circle
-            : Icons.arrow_drop_down_circle_outlined,
-        onIconTap: () => setState(() => _isS4Expanded = !_isS4Expanded),
-        iconRotated: !_isS4Expanded,
-      ),
-    );
-
-    return rows;
-  }
-
-  Widget _buildTableRow(
-    String label,
-    String value, {
-    required Color valueTextColor,
-    required bool isDarkMode,
-    bool isOrangeText = false,
-    IconData? iconData,
-    VoidCallback? onIconTap,
-    bool iconRotated = false,
+  Widget _buildCollapsedLevelCard({
+    required String label,
+    required String value,
+    required Color labelColor,
+    required Color iconColor,
+    required IconData icon,
+    required VoidCallback onIconTap,
+    required Color valueColor,
   }) {
-    const primaryOrange = Color(0xFFFFA800);
-    final rowBorderColor = isDarkMode ? Colors.grey[800]! : const Color(0xFFF0F0F0);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: rowBorderColor, width: 0.5),
+    return Center(
+      child: Container(
+        width: 258,
+        height: 40,
+        decoration: BoxDecoration(
+          color: ThemeViewModel.isDarkMode
+              ? const Color(0xFF242424)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(
+                ThemeViewModel.isDarkMode ? 0.28 : 0.10,
+              ),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 94,
+              child: Center(
+                child: Text(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: labelColor,
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              width: 1,
+              height: 40,
+              color: ThemeViewModel.isDarkMode
+                  ? Colors.white.withOpacity(0.06)
+                  : const Color(0xFFF0F0F0),
+            ),
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        value,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: valueColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: GestureDetector(
+                      onTap: onIconTap,
+                      child: Icon(icon, size: 18, color: iconColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildExpandedLevelCard({required List<Widget> children}) {
+    return Center(
+      child: Container(
+        width: 258,
+        decoration: BoxDecoration(
+          color: ThemeViewModel.isDarkMode
+              ? const Color(0xFF242424)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(
+                ThemeViewModel.isDarkMode ? 0.28 : 0.10,
+              ),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(children: children),
+      ),
+    );
+  }
+
+  Widget _buildResultRow({
+    required String label,
+    required String value,
+    required Color labelColor,
+    required Color valueColor,
+    bool isMidpoint = false,
+    IconData? trailingIcon,
+    Color? trailingIconColor,
+    VoidCallback? onTrailingIconTap,
+  }) {
+    return SizedBox(
+      height: 37,
       child: Row(
         children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: isOrangeText
-                    ? primaryOrange
-                    : primaryOrange.withOpacity(0.8),
+          SizedBox(
+            width: 94,
+            child: Center(
+              child: Text(
+                label,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: isMidpoint ? 11 : 13,
+                  fontWeight: isMidpoint ? FontWeight.w500 : FontWeight.w700,
+                  color: labelColor,
+                ),
               ),
             ),
           ),
+          Container(
+            width: 1,
+            height: 37,
+            color: ThemeViewModel.isDarkMode
+                ? Colors.white.withOpacity(0.06)
+                : const Color(0xFFF1F1F1),
+          ),
           Expanded(
-            flex: 3,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
-                  value,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: valueTextColor,
-                  ),
-                ),
-                if (iconData != null) ...[
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: onIconTap,
-                    child: Transform.rotate(
-                      angle: iconRotated ? 3.14159 : 0,
-                      child: Icon(iconData, size: 18, color: primaryOrange),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      value,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: valueColor,
+                      ),
                     ),
                   ),
-                ] else
-                  const SizedBox(width: 26),
+                ),
+                if (trailingIcon != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: GestureDetector(
+                      onTap: onTrailingIconTap,
+                      child: Icon(
+                        trailingIcon,
+                        size: 18,
+                        color: trailingIconColor ?? labelColor,
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(width: 28),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPivotPointCard({
+    required String value,
+    required Color primaryTextColor,
+    required Color pivotColor,
+  }) {
+    return Center(
+      child: Container(
+        width: 192,
+        height: 76,
+        decoration: BoxDecoration(
+          color: ThemeViewModel.isDarkMode
+              ? const Color(0xFF242424)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(
+                ThemeViewModel.isDarkMode ? 0.28 : 0.09,
+              ),
+              blurRadius: 9,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'PIVOT POINT',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: pivotColor,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              value,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: primaryTextColor,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1064,14 +1345,15 @@ class _PivotPointCalculatorContentState
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: GoogleFonts.plusJakartaSans(
-          color: Colors.grey[500],
+          color: Colors.grey[400],
           fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
         filled: true,
         fillColor: inputFillColor,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 14,
+          vertical: 15,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1079,7 +1361,7 @@ class _PivotPointCalculatorContentState
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFFFA800), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFFF9E0F), width: 1.5),
         ),
       ),
     );

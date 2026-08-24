@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:equate/view/tabs/change_password_view.dart'; 
-import 'package:equate/view/tabs/edit_profile_view.dart'; 
+import 'package:equate/view/tabs/change_password_view.dart';
+import 'package:equate/view/tabs/edit_profile_view.dart';
+import 'package:equate/view/auth/login_view.dart';
 
 // 1. Import ThemeViewModel
 import 'package:equate/viewmodel/theme_viewmodel.dart'; // Sesuaikan path jika berbeda
@@ -19,13 +20,13 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       'title': 'Kalkulasi Diskont & Pajak',
       'expression': '250.000 - 15% + 11%',
       'result': '235.875',
-      'date': 'Hari ini, 14:20'
+      'date': 'Hari ini, 14:20',
     },
     {
       'title': 'Perhitungan Matematika',
       'expression': '(145 * 12) + (500 / 2)',
       'result': '1.990',
-      'date': 'Kemarin, 09:15'
+      'date': 'Kemarin, 09:15',
     },
     {
       'title': 'Total Belanja Bulanan',
@@ -41,7 +42,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             'Keluar dari Akun?',
             style: GoogleFonts.poppins(
@@ -71,16 +74,24 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 elevation: 0,
               ),
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginView()),
+                );
                 // TODO: Logika logout
               },
               child: Text(
                 'Keluar',
-                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -99,9 +110,13 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
     final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
     final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.grey[50];
-    final cardBorderColor = isDarkMode ? Colors.grey[800]! : Colors.grey.shade200;
+    final cardBorderColor = isDarkMode
+        ? Colors.grey[800]!
+        : Colors.grey.shade200;
     final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
-    final secondaryTextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[500]!;
+    final secondaryTextColor = isDarkMode
+        ? Colors.grey[400]!
+        : Colors.grey[500]!;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -127,11 +142,16 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: primaryOrange.withOpacity(0.3), width: 3),
+                              border: Border.all(
+                                color: primaryOrange.withOpacity(0.3),
+                                width: 3,
+                              ),
                             ),
                             child: const CircleAvatar(
                               radius: 58,
-                              backgroundImage: NetworkImage('https://i.pravatar.cc/300?img=5'),
+                              backgroundImage: NetworkImage(
+                                'https://i.pravatar.cc/300?img=5',
+                              ),
                             ),
                           ),
                           Positioned(
@@ -143,10 +163,18 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 color: lightOrangeBg,
                                 shape: BoxShape.circle,
                                 boxShadow: [
-                                  BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
                                 ],
                               ),
-                              child: const Icon(Icons.add_rounded, color: orangeAccent, size: 20),
+                              child: const Icon(
+                                Icons.add_rounded,
+                                color: orangeAccent,
+                                size: 20,
+                              ),
                             ),
                           ),
                           Positioned(
@@ -158,10 +186,18 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 color: Color(0xFFFFE0B2),
                                 shape: BoxShape.circle,
                                 boxShadow: [
-                                  BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
                                 ],
                               ),
-                              child: const Icon(Icons.percent_rounded, color: Color(0xFFE65100), size: 18),
+                              child: const Icon(
+                                Icons.percent_rounded,
+                                color: Color(0xFFE65100),
+                                size: 18,
+                              ),
                             ),
                           ),
                           Positioned(
@@ -173,10 +209,18 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 color: lightOrangeBg,
                                 shape: BoxShape.circle,
                                 boxShadow: [
-                                  BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
                                 ],
                               ),
-                              child: const Icon(Icons.close_rounded, color: primaryOrange, size: 18),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                color: primaryOrange,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ],
@@ -219,10 +263,16 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => EditProfileView()), // FIX: Menggunakan EditProfileView tanpa 'const'
+                                MaterialPageRoute(
+                                  builder: (context) => EditProfileView(),
+                                ), // FIX: Menggunakan EditProfileView tanpa 'const'
                               );
                             },
-                            icon: const Icon(Icons.edit_outlined, size: 13, color: Colors.white),
+                            icon: const Icon(
+                              Icons.edit_outlined,
+                              size: 13,
+                              color: Colors.white,
+                            ),
                             label: Text(
                               'Edit Profil',
                               maxLines: 1,
@@ -236,8 +286,12 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryOrange,
                               elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 2),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           ),
                         ),
@@ -254,11 +308,16 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const ChangePasswordView(),
+                                  builder: (context) =>
+                                      const ChangePasswordView(),
                                 ),
                               );
                             },
-                            icon: Icon(Icons.lock_outline_rounded, size: 13, color: primaryTextColor),
+                            icon: Icon(
+                              Icons.lock_outline_rounded,
+                              size: 13,
+                              color: primaryTextColor,
+                            ),
                             label: Text(
                               'Ubah Sandi',
                               maxLines: 1,
@@ -270,9 +329,17 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                               ),
                             ),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 2),
-                              side: BorderSide(color: isDarkMode ? Colors.grey[700]! : Colors.grey.shade300),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
+                              side: BorderSide(
+                                color: isDarkMode
+                                    ? Colors.grey[700]!
+                                    : Colors.grey.shade300,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           ),
                         ),
@@ -291,15 +358,21 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: isDarkMode ? const Color(0xFFFFB74D).withOpacity(0.2) : lightOrangeBg,
+                            color: isDarkMode
+                                ? const Color(0xFFFFB74D).withOpacity(0.2)
+                                : lightOrangeBg,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isDarkMode ? primaryOrange : Colors.transparent,
+                              color: isDarkMode
+                                  ? primaryOrange
+                                  : Colors.transparent,
                               width: 1.5,
                             ),
                           ),
                           child: Icon(
-                            isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                            isDarkMode
+                                ? Icons.dark_mode_rounded
+                                : Icons.light_mode_rounded,
                             color: isDarkMode ? primaryOrange : orangeAccent,
                             size: 18,
                           ),
@@ -337,7 +410,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           ),
                           Text(
                             'Aktivitas kalkulasi terbaru kamu',
-                            style: GoogleFonts.poppins(fontSize: 11, color: secondaryTextColor),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: secondaryTextColor,
+                            ),
                           ),
                         ],
                       ),
@@ -346,7 +422,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => HistoryDetailPage(historyList: _calculationHistory),
+                              builder: (context) => HistoryDetailPage(
+                                historyList: _calculationHistory,
+                              ),
                             ),
                           );
                         },
@@ -380,7 +458,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+                                color: isDarkMode
+                                    ? const Color(0xFF2A2A2A)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
@@ -453,7 +533,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                     height: 52,
                     child: TextButton.icon(
                       onPressed: () => _showLogoutDialog(isDarkMode),
-                      icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
                       label: Text(
                         'Keluar dari Akun',
                         style: GoogleFonts.poppins(
@@ -463,7 +547,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                         ),
                       ),
                       style: TextButton.styleFrom(
-                        backgroundColor: isDarkMode ? Colors.red.shade900.withOpacity(0.2) : Colors.red.shade50,
+                        backgroundColor: isDarkMode
+                            ? Colors.red.shade900.withOpacity(0.2)
+                            : Colors.red.shade50,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -493,14 +579,24 @@ class HistoryDetailPage extends StatelessWidget {
     final isDarkMode = ThemeViewModel.isDarkMode;
     final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
     final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.grey[50];
-    final cardBorderColor = isDarkMode ? Colors.grey[800]! : Colors.grey.shade200;
+    final cardBorderColor = isDarkMode
+        ? Colors.grey[800]!
+        : Colors.grey.shade200;
     final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
-    final secondaryTextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[500]!;
+    final secondaryTextColor = isDarkMode
+        ? Colors.grey[400]!
+        : Colors.grey[500]!;
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: Text('Semua Riwayat Perhitungan', style: GoogleFonts.poppins(color: primaryTextColor, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Semua Riwayat Perhitungan',
+          style: GoogleFonts.poppins(
+            color: primaryTextColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: bgColor,
         elevation: 0,
         iconTheme: IconThemeData(color: primaryTextColor),
@@ -524,7 +620,9 @@ class HistoryDetailPage extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+                      color: isDarkMode
+                          ? const Color(0xFF2A2A2A)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
