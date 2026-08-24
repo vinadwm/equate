@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:equate/view/splash/splash_view.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const EquateApp());
 }
 
@@ -48,12 +54,12 @@ class EquateApp extends StatelessWidget {
             ),
           ),
 
-          // Gunakan builder child atau pastikan navigasi dikelola oleh Navigator
-          home: child, 
+          home: child,
         );
       },
-      // SplashView ditaruh di child agar TIDAK di-rebuild ulang saat tema berubah
-      child: const SplashView(), 
+
+      // SplashView tidak di-rebuild ulang ketika tema berubah
+      child: const SplashView(),
     );
   }
 }

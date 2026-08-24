@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "798913006079",
+    "project_id": "equate-ewf-app",
+    "storage_bucket": "equate-ewf-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798913006079:android:ccd8412f53d92db94cbfca",
+        "android_client_info": {
+          "package_name": "com.example.equate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTQEWiBW0JrB_rNPcU7uQabdhz-kaUs_I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
