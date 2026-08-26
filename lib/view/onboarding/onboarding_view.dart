@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // BENAR
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart'; // Sesuaikan path jika berbeda
+import 'package:equate/view/auth/login_view.dart';     // Sesuaikan path ke LoginView milikmu
 
 // Model Data Onboarding
 class OnboardingItem {
@@ -90,12 +91,11 @@ class _OnboardingViewState extends State<OnboardingView> with SingleTickerProvid
     }
   }
 
+  // Navigasi Mengarah Langsung ke Halaman Login
   void _finishOnboarding() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Selamat datang di Equate Gold Calculator!', style: GoogleFonts.poppins()),
-        backgroundColor: const Color(0xFFFF9800),
-      ),
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginView()), // Ganti LoginView sesuai nama class login kamu
     );
   }
 
@@ -157,7 +157,7 @@ class _OnboardingViewState extends State<OnboardingView> with SingleTickerProvid
                       ),
                     ),
 
-                    // Tombol Lewati
+                    // Tombol Lewati -> Berpindah ke Login
                     TextButton(
                       onPressed: _finishOnboarding,
                       child: Text(
@@ -179,7 +179,7 @@ class _OnboardingViewState extends State<OnboardingView> with SingleTickerProvid
     );
   }
 
-  // UBAH TATA LETAK DI SINI: Judul ditaruh di atas animasi Lottie
+  // Layout Tata Letak: Judul di Atas Animasi
   Widget _buildPageContent(OnboardingItem item) {
     final isDarkMode = ThemeViewModel.isDarkMode;
     final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF1F1F1F);
@@ -193,7 +193,7 @@ class _OnboardingViewState extends State<OnboardingView> with SingleTickerProvid
         children: [
           const Spacer(flex: 3),
 
-          // 1. Teks Judul di Paling Atas
+          // 1. Teks Judul di Atas
           Text(
             item.title,
             textAlign: TextAlign.center,
@@ -207,7 +207,7 @@ class _OnboardingViewState extends State<OnboardingView> with SingleTickerProvid
 
           const Spacer(flex: 1),
 
-          // 2. Area Animasi Lottie di Tengah
+          // 2. Area Animasi Lottie Besar di Tengah
           SizedBox(
             height: 340,
             child: Center(child: item.illustration),
