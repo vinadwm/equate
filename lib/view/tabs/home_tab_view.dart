@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/model/user_model.dart';
+import 'package:equate/viewmodel/auth_viewmodel.dart';
 
-class HomeTabView extends StatelessWidget {
+class HomeTabView extends StatefulWidget {
   const HomeTabView({super.key});
 
   @override
@@ -16,15 +18,22 @@ class HomeTabView extends StatelessWidget {
         // Definisi Warna Dinamis
         final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
         final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-        final borderColor = isDarkMode ? Colors.grey[800]! : const Color(0xFFF0F0F0);
+        final borderColor = isDarkMode
+            ? Colors.grey[800]!
+            : const Color(0xFFF0F0F0);
         final primaryTextColor = isDarkMode ? Colors.white : Colors.black87;
-        final secondaryTextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
+        final secondaryTextColor = isDarkMode
+            ? Colors.grey[400]!
+            : Colors.grey[600]!;
 
         return Scaffold(
           backgroundColor: bgColor,
           body: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 12.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -39,7 +48,9 @@ class HomeTabView extends StatelessWidget {
                         ),
                         child: const CircleAvatar(
                           radius: 18,
-                          backgroundImage: NetworkImage('https://i.pravatar.cc/100'),
+                          backgroundImage: NetworkImage(
+                            'https://i.pravatar.cc/100',
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -72,7 +83,9 @@ class HomeTabView extends StatelessWidget {
                     primaryOrange: primaryOrange,
                     isDarkMode: isDarkMode,
                     cardBgColor: cardBgColor,
-                    borderColor: isDarkMode ? Colors.grey[800]! : const Color(0xFFE0E0E0),
+                    borderColor: isDarkMode
+                        ? Colors.grey[800]!
+                        : const Color(0xFFE0E0E0),
                     textColor: primaryTextColor,
                   ),
 
@@ -86,7 +99,9 @@ class HomeTabView extends StatelessWidget {
                           title: 'Open',
                           value: '4410.76',
                           icon: Icons.wb_sunny_outlined,
-                          iconBgColor: isDarkMode ? const Color(0xFF332A00) : const Color(0xFFFFFDE7),
+                          iconBgColor: isDarkMode
+                              ? const Color(0xFF332A00)
+                              : const Color(0xFFFFFDE7),
                           iconColor: Colors.amber[700]!,
                           valueColor: primaryTextColor,
                           cardBgColor: cardBgColor,
@@ -100,7 +115,9 @@ class HomeTabView extends StatelessWidget {
                           title: 'Close',
                           value: '4415.10',
                           icon: Icons.nightlight_round_outlined,
-                          iconBgColor: isDarkMode ? const Color(0xFF2C3E50) : const Color(0xFF1E293B),
+                          iconBgColor: isDarkMode
+                              ? const Color(0xFF2C3E50)
+                              : const Color(0xFF1E293B),
                           iconColor: Colors.amber,
                           valueColor: primaryTextColor,
                           cardBgColor: cardBgColor,
@@ -118,7 +135,9 @@ class HomeTabView extends StatelessWidget {
                           title: 'High',
                           value: '4436.07',
                           icon: Icons.trending_up,
-                          iconBgColor: isDarkMode ? const Color(0xFF1B3E20) : const Color(0xFFE8F5E9),
+                          iconBgColor: isDarkMode
+                              ? const Color(0xFF1B3E20)
+                              : const Color(0xFFE8F5E9),
                           iconColor: const Color(0xFF4CAF50),
                           valueColor: const Color(0xFF4CAF50),
                           cardBgColor: cardBgColor,
@@ -132,7 +151,9 @@ class HomeTabView extends StatelessWidget {
                           title: 'Low',
                           value: '4386.03',
                           icon: Icons.trending_down,
-                          iconBgColor: isDarkMode ? const Color(0xFF3E1A1A) : const Color(0xFFFFEBEE),
+                          iconBgColor: isDarkMode
+                              ? const Color(0xFF3E1A1A)
+                              : const Color(0xFFFFEBEE),
                           iconColor: const Color(0xFFEF5350),
                           valueColor: const Color(0xFFEF5350),
                           cardBgColor: cardBgColor,
@@ -188,18 +209,14 @@ class HomeTabView extends StatelessWidget {
                   cardBgColor,
                   const Color(0xFF332200), // Gradient Oranye Gelap di Dark Mode
                 ]
-              : [
-                  Colors.white,
-                  Colors.white,
-                  const Color(0xFFFFF8E1),
-                ],
+              : [Colors.white, Colors.white, const Color(0xFFFFF8E1)],
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -230,9 +247,14 @@ class HomeTabView extends StatelessWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF1B3E20) : const Color(0xFFE8F5E9),
+                  color: isDarkMode
+                      ? const Color(0xFF1B3E20)
+                      : const Color(0xFFE8F5E9),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -247,26 +269,63 @@ class HomeTabView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Divider(height: 1, color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE)),
+          Divider(
+            height: 1,
+            color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE),
+          ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Column(
                 children: [
-                  Text('Bid', style: GoogleFonts.poppins(color: secondaryTextColor, fontSize: 12)),
+                  Text(
+                    'Bid',
+                    style: GoogleFonts.poppins(
+                      color: secondaryTextColor,
+                      fontSize: 12,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text('4396.43', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: primaryTextColor)),
+                  Text(
+                    '4396.43',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: primaryTextColor,
+                    ),
+                  ),
                 ],
               ),
-              const Icon(Icons.trending_down, color: Color(0xFFEF5350), size: 18),
-              Container(width: 1, height: 24, color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE)),
+              const Icon(
+                Icons.trending_down,
+                color: Color(0xFFEF5350),
+                size: 18,
+              ),
+              Container(
+                width: 1,
+                height: 24,
+                color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE),
+              ),
               const Icon(Icons.trending_up, color: Color(0xFF4CAF50), size: 18),
               Column(
                 children: [
-                  Text('Ask', style: GoogleFonts.poppins(color: secondaryTextColor, fontSize: 12)),
+                  Text(
+                    'Ask',
+                    style: GoogleFonts.poppins(
+                      color: secondaryTextColor,
+                      fontSize: 12,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text('4396.81', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: primaryTextColor)),
+                  Text(
+                    '4396.81',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: primaryTextColor,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -314,7 +373,11 @@ class HomeTabView extends StatelessWidget {
               color: primaryOrange,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
+            child: const Icon(
+              Icons.keyboard_arrow_down,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ],
       ),
@@ -415,7 +478,9 @@ class HomeTabView extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF2C2C2C) : const Color(0xFFF5F5F7),
+                  color: isDarkMode
+                      ? const Color(0xFF2C2C2C)
+                      : const Color(0xFFF5F5F7),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -434,21 +499,26 @@ class HomeTabView extends StatelessWidget {
             height: 140,
             width: double.infinity,
             child: CustomPaint(
-              painter: AreaChartPainter(primaryOrange: primaryOrange, isDarkMode: isDarkMode),
+              painter: AreaChartPainter(
+                primaryOrange: primaryOrange,
+                isDarkMode: isDarkMode,
+              ),
             ),
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
-                .map((day) => Text(
-                      day,
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        color: secondaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ))
+                .map(
+                  (day) => Text(
+                    day,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: secondaryTextColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                )
                 .toList(),
           ),
         ],
@@ -456,7 +526,12 @@ class HomeTabView extends StatelessWidget {
     );
   }
 
-  Widget _buildTimeFilter(String label, bool isSelected, Color primaryOrange, bool isDarkMode) {
+  Widget _buildTimeFilter(
+    String label,
+    bool isSelected,
+    Color primaryOrange,
+    bool isDarkMode,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -470,7 +545,9 @@ class HomeTabView extends StatelessWidget {
         style: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          color: isSelected ? primaryOrange : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+          color: isSelected
+              ? primaryOrange
+              : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
         ),
       ),
     );
@@ -491,22 +568,40 @@ class AreaChartPainter extends CustomPainter {
       ..color = isDarkMode ? Colors.grey[800]! : const Color(0xFFEEEEEE)
       ..strokeWidth = 1.0;
 
-    canvas.drawLine(Offset(0, size.height * 0.25), Offset(size.width, size.height * 0.25), gridPaint);
-    canvas.drawLine(Offset(0, size.height * 0.55), Offset(size.width, size.height * 0.55), gridPaint);
-    canvas.drawLine(Offset(0, size.height * 0.85), Offset(size.width, size.height * 0.85), gridPaint);
+    canvas.drawLine(
+      Offset(0, size.height * 0.25),
+      Offset(size.width, size.height * 0.25),
+      gridPaint,
+    );
+    canvas.drawLine(
+      Offset(0, size.height * 0.55),
+      Offset(size.width, size.height * 0.55),
+      gridPaint,
+    );
+    canvas.drawLine(
+      Offset(0, size.height * 0.85),
+      Offset(size.width, size.height * 0.85),
+      gridPaint,
+    );
 
     // 2. Path Kurva Grafik
     final path = Path();
     path.moveTo(0, size.height * 0.8);
     path.cubicTo(
-      size.width * 0.25, size.height * 0.8,
-      size.width * 0.35, size.height * 0.5,
-      size.width * 0.55, size.height * 0.45,
+      size.width * 0.25,
+      size.height * 0.8,
+      size.width * 0.35,
+      size.height * 0.5,
+      size.width * 0.55,
+      size.height * 0.45,
     );
     path.cubicTo(
-      size.width * 0.75, size.height * 0.4,
-      size.width * 0.8, size.height * 0.1,
-      size.width, size.height * 0.12,
+      size.width * 0.75,
+      size.height * 0.4,
+      size.width * 0.8,
+      size.height * 0.1,
+      size.width,
+      size.height * 0.12,
     );
 
     // 3. Area Fill Gradient

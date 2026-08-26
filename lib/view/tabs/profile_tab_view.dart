@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'package:equate/model/user_model.dart';
+import 'package:equate/viewmodel/auth_viewmodel.dart';
+import 'package:equate/viewmodel/theme_viewmodel.dart';
+
 import 'package:equate/view/tabs/change_password_view.dart';
 import 'package:equate/view/tabs/edit_profile_view.dart';
 import 'package:equate/view/auth/login_view.dart';
-
-// 1. Import ThemeViewModel
-import 'package:equate/viewmodel/theme_viewmodel.dart'; // Sesuaikan path jika berbeda
 
 class ProfileTabView extends StatefulWidget {
   const ProfileTabView({super.key});
@@ -15,6 +17,19 @@ class ProfileTabView extends StatefulWidget {
 }
 
 class _ProfileTabViewState extends State<ProfileTabView> {
+  // ============================================================
+  // AUTH & USER
+  // ============================================================
+
+  final AuthViewModel _authViewModel = AuthViewModel();
+
+  UserModel? _user;
+  bool _isLoadingUser = true;
+
+  // ============================================================
+  // RIWAYAT SEMENTARA
+  // ============================================================
+
   final List<Map<String, String>> _calculationHistory = [
     {
       'title': 'Kalkulasi Diskont & Pajak',
@@ -35,6 +50,103 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       'date': '17 Aug 2026',
     },
   ];
+
+  // ============================================================
+  // INIT
+  // ============================================================
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  // ============================================================
+  // LOAD USER DARI FIRESTORE
+  // ============================================================
+
+  Future<void> _loadUser() async {
+    try {
+      final user = await _authViewModel.getUserProfile();
+
+      if (!mounted) return;
+
+      setState(() {
+        _user = user;
+        _isLoadingUser = false;
+      });
+    } catch (e) {
+      debugPrint('Gagal mengambil data profil: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingUser = false;
+      });
+    }
+  }
+
+  // ============================================================
+  // FORMAT TANGGAL LAHIR
+  // ============================================================
+
+  String _formatBirthDate() {
+    final birthDate = _user?.birthDate;
+
+    if (birthDate == null) {
+      return '-';
+    }
+
+    return '${birthDate.day} '
+        '${_monthName(birthDate.month)} '
+        '${birthDate.year}';
+  }
+
+  String _monthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+
+    return months[month - 1];
+  }
+
+  // ============================================================
+  // NAMA LENGKAP
+  // ============================================================
+
+  String _getFullName() {
+    final firstName = _user?.firstName.trim() ?? '';
+    final lastName = _user?.lastName.trim() ?? '';
+
+    if (firstName.isEmpty && lastName.isEmpty) {
+      return 'Pengguna';
+    }
+
+    if (lastName.isEmpty) {
+      return firstName;
+    }
+
+    if (firstName.isEmpty) {
+      return lastName;
+    }
+
+    return '$firstName $lastName';
+  }
+
+  // ============================================================
+  // LOGOUT DIALOG
+  // ============================================================
 
   void _showLogoutDialog(bool isDarkMode) {
     showDialog(
@@ -62,7 +174,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context);
+              },
               child: Text(
                 'Batal',
                 style: GoogleFonts.poppins(
@@ -71,6 +185,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                 ),
               ),
             ),
+
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
@@ -79,12 +194,25 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                 ),
                 elevation: 0,
               ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginView()),
-                );
-                // TODO: Logika logout
+              onPressed: () async {
+                // Tutup dialog
+                Navigator.pop(context);
+
+                try {
+                  await _authViewModel.logout();
+
+                  if (!mounted) return;
+
+                  // Hapus semua halaman sebelumnya
+                  // supaya setelah logout tidak bisa kembali ke Home.
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginView()),
+                    (route) => false,
+                  );
+                } catch (e) {
+                  debugPrint('Logout gagal: $e');
+                }
               },
               child: Text(
                 'Keluar',
@@ -100,6 +228,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     );
   }
 
+  // ============================================================
+  // BUILD
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = ThemeViewModel.isDarkMode;
@@ -109,28 +241,35 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     const lightOrangeBg = Color(0xFFFFF3E0);
 
     final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
+
     final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.grey[50];
+
     final cardBorderColor = isDarkMode
         ? Colors.grey[800]!
         : Colors.grey.shade200;
+
     final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
+
     final secondaryTextColor = isDarkMode
         ? Colors.grey[400]!
         : Colors.grey[500]!;
 
     return Scaffold(
       backgroundColor: bgColor,
+
       body: SafeArea(
         child: Column(
           children: [
-            // ==========================================
-            // 1. BAGIAN HEADER & PROFILE
-            // ==========================================
+            // ==================================================
+            // 1. HEADER & PROFILE
+            // ==================================================
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Column(
                 children: [
-                  // Foto Profil
+                  // ==================================================
+                  // FOTO PROFIL
+                  // ==================================================
                   Center(
                     child: SizedBox(
                       width: 140,
@@ -147,13 +286,37 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 width: 3,
                               ),
                             ),
-                            child: const CircleAvatar(
+
+                            child: CircleAvatar(
                               radius: 58,
-                              backgroundImage: NetworkImage(
-                                'https://i.pravatar.cc/300?img=5',
-                              ),
+
+                              backgroundColor: isDarkMode
+                                  ? Colors.grey[800]
+                                  : Colors.grey[200],
+
+                              backgroundImage:
+                                  _user?.photo != null &&
+                                      _user!.photo!.trim().isNotEmpty
+                                  ? NetworkImage(_user!.photo!)
+                                  : null,
+
+                              child:
+                                  _user?.photo == null ||
+                                      _user!.photo!.trim().isEmpty
+                                  ? Icon(
+                                      Icons.person_rounded,
+                                      size: 55,
+                                      color: isDarkMode
+                                          ? Colors.grey[500]
+                                          : Colors.grey[400],
+                                    )
+                                  : null,
                             ),
                           ),
+
+                          // ==================================================
+                          // DEKORASI + ORANGE
+                          // ==================================================
                           Positioned(
                             left: -4,
                             bottom: 20,
@@ -177,6 +340,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                               ),
                             ),
                           ),
+
                           Positioned(
                             right: 10,
                             bottom: 0,
@@ -200,6 +364,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                               ),
                             ),
                           ),
+
                           Positioned(
                             right: -4,
                             top: 15,
@@ -230,18 +395,42 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
                   const SizedBox(height: 12),
 
-                  // Nama User & Informasi
-                  Text(
-                    'Vina Dwi Maulita',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: primaryTextColor,
-                    ),
-                  ),
+                  // ==================================================
+                  // NAMA USER
+                  // ==================================================
+                  _isLoadingUser
+                      ? SizedBox(
+                          height: 30,
+                          child: Center(
+                            child: Text(
+                              'Memuat profil...',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: secondaryTextColor,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          _getFullName(),
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: primaryTextColor,
+                          ),
+                        ),
+
                   const SizedBox(height: 2),
+
+                  // ==================================================
+                  // EMAIL + TANGGAL LAHIR
+                  // ==================================================
                   Text(
-                    'vina@equate.com   •   7 Apr 2002',
+                    _isLoadingUser
+                        ? 'Memuat data...'
+                        : '${_user?.email ?? '-'}   •   ${_formatBirthDate()}',
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: secondaryTextColor,
@@ -251,22 +440,30 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
                   const SizedBox(height: 20),
 
-                  // --- TOMBOL ACTION ---
+                  // ==================================================
+                  // BUTTON ACTION
+                  // ==================================================
                   Row(
                     children: [
-                      // Edit Profile
+                      // ==================================================
+                      // EDIT PROFIL
+                      // ==================================================
                       Expanded(
                         flex: 4,
                         child: SizedBox(
                           height: 40,
                           child: ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
+                            onPressed: () async {
+                              await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => EditProfileView(),
-                                ), // FIX: Menggunakan EditProfileView tanpa 'const'
+                                ),
                               );
+
+                              // Ambil ulang data setelah
+                              // Edit Profile ditutup.
+                              _loadUser();
                             },
                             icon: const Icon(
                               Icons.edit_outlined,
@@ -296,9 +493,12 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           ),
                         ),
                       ),
+
                       const SizedBox(width: 8),
 
-                      // Ubah Sandi
+                      // ==================================================
+                      // UBAH PASSWORD
+                      // ==================================================
                       Expanded(
                         flex: 4,
                         child: SizedBox(
@@ -344,14 +544,15 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           ),
                         ),
                       ),
+
                       const SizedBox(width: 8),
 
-                      // Tombol Night Mode Toggle
+                      // ==================================================
+                      // DARK MODE
+                      // ==================================================
                       GestureDetector(
                         onTap: () {
-                          setState(() {
-                            ThemeViewModel.toggleTheme();
-                          });
+                          ThemeViewModel.toggleTheme();
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
@@ -386,13 +587,16 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
             const SizedBox(height: 10),
 
-            // ==========================================
-            // 2. BAGIAN RIWAYAT & LOGOUT (BISA DI-SCROLL)
-            // ==========================================
+            // ==================================================
+            // 2. RIWAYAT & LOGOUT
+            // ==================================================
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
                 children: [
+                  // ==================================================
+                  // JUDUL RIWAYAT
+                  // ==================================================
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -417,6 +621,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           ),
                         ],
                       ),
+
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -442,7 +647,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
                   const SizedBox(height: 14),
 
-                  // Daftar Kartu Riwayat
+                  // ==================================================
+                  // RIWAYAT
+                  // ==================================================
                   ..._calculationHistory.map((item) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -469,7 +676,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 size: 22,
                               ),
                             ),
+
                             const SizedBox(width: 12),
+
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,7 +706,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 ],
                               ),
                             ),
+
                             const SizedBox(width: 8),
+
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
@@ -523,11 +734,13 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                         ),
                       ),
                     );
-                  }).toList(),
+                  }),
 
                   const SizedBox(height: 24),
 
-                  // Tombol Logout
+                  // ==================================================
+                  // LOGOUT
+                  // ==================================================
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -566,9 +779,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   }
 }
 
-// ==========================================
-// PAGE 3: RIWAYAT LENGKAP
-// ==========================================
+// ============================================================
+// HISTORY DETAIL PAGE
+// ============================================================
+
 class HistoryDetailPage extends StatelessWidget {
   final List<Map<String, String>> historyList;
 
@@ -577,12 +791,17 @@ class HistoryDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = ThemeViewModel.isDarkMode;
+
     final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
+
     final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.grey[50];
+
     final cardBorderColor = isDarkMode
         ? Colors.grey[800]!
         : Colors.grey.shade200;
+
     final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
+
     final secondaryTextColor = isDarkMode
         ? Colors.grey[400]!
         : Colors.grey[500]!;
@@ -606,6 +825,7 @@ class HistoryDetailPage extends StatelessWidget {
         itemCount: historyList.length,
         itemBuilder: (context, index) {
           final item = historyList[index];
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Container(
@@ -631,7 +851,9 @@ class HistoryDetailPage extends StatelessWidget {
                       size: 22,
                     ),
                   ),
+
                   const SizedBox(width: 12),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,7 +881,9 @@ class HistoryDetailPage extends StatelessWidget {
                       ],
                     ),
                   ),
+
                   const SizedBox(width: 8),
+
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [

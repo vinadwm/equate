@@ -15,10 +15,13 @@ class AuthViewModel {
   // ============================================================
 
   Future<UserModel> signUp({
-    required String name,
+    required String firstName,
+    required String lastName,
     required String email,
     required String password,
+    DateTime? birthDate,
   }) async {
+    // 1. Membuat akun di Firebase Authentication
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -30,15 +33,22 @@ class AuthViewModel {
       throw Exception('Gagal membuat akun');
     }
 
-    await user.updateDisplayName(name.trim());
+    // 2. Menyimpan nama lengkap ke Firebase Auth
+    final fullName = '$firstName $lastName'.trim();
 
+    await user.updateDisplayName(fullName);
+
+    // 3. Membuat UserModel
     final userModel = UserModel(
       uid: user.uid,
-      name: name.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       email: email.trim(),
+      birthDate: birthDate,
       photo: user.photoURL,
     );
 
+    // 4. Menyimpan data profil ke Firestore
     await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
 
     return userModel;
@@ -63,14 +73,18 @@ class AuthViewModel {
   // ============================================================
 
   Future<UserCredential> loginWithGoogle() async {
+    // Membuka Google Sign-In
     final googleUser = await GoogleSignIn.instance.authenticate();
 
+    // Mengambil authentication dari akun Google
     final googleAuth = googleUser.authentication;
 
+    // Membuat Firebase credential
     final credential = GoogleAuthProvider.credential(
       idToken: googleAuth.idToken,
     );
 
+    // Login ke Firebase Authentication
     final result = await _auth.signInWithCredential(credential);
 
     final user = result.user;
@@ -79,13 +93,28 @@ class AuthViewModel {
       throw Exception('Login Google gagal');
     }
 
+    // Cek apakah data profil user sudah ada di Firestore
     final doc = await _firestore.collection('users').doc(user.uid).get();
 
+    // Kalau belum ada, buat data user baru
     if (!doc.exists) {
+      final fullName = user.displayName ?? 'Pengguna';
+
+      // Memisahkan nama Google menjadi nama depan & belakang
+      final nameParts = fullName.trim().split(' ');
+
+      final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+
+      final lastName = nameParts.length > 1
+          ? nameParts.sublist(1).join(' ')
+          : '';
+
       final userModel = UserModel(
         uid: user.uid,
-        name: user.displayName ?? 'Pengguna',
+        firstName: firstName,
+        lastName: lastName,
         email: user.email ?? '',
+        birthDate: null,
         photo: user.photoURL,
       );
 
@@ -96,11 +125,36 @@ class AuthViewModel {
   }
 
   // ============================================================
+  // GET USER PROFILE
+  // ============================================================
+
+  Future<UserModel?> getUserProfile() async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      return null;
+    }
+
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+
+    if (!doc.exists || doc.data() == null) {
+      return null;
+    }
+
+    return UserModel.fromMap(doc.data()!, user.uid);
+  }
+
+  // ============================================================
   // LOGOUT
   // ============================================================
 
   Future<void> logout() async {
-    await GoogleSignIn.instance.signOut();
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {
+      // Abaikan jika user bukan login menggunakan Google
+    }
+
     await _auth.signOut();
   }
 
@@ -122,6 +176,7 @@ class AuthViewModel {
       throw Exception('Akun ini tidak menggunakan email/password');
     }
 
+    // Re-authentication menggunakan password lama
     final credential = EmailAuthProvider.credential(
       email: user.email!,
       password: oldPassword,
@@ -129,6 +184,7 @@ class AuthViewModel {
 
     await user.reauthenticateWithCredential(credential);
 
+    // Mengubah password di Firebase Authentication
     await user.updatePassword(newPassword);
   }
 
