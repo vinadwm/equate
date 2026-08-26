@@ -1,9 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/viewmodel/gold_viewmodel.dart'; // Add GoldViewModel Import
 
-class HomeTabView extends StatelessWidget {
+class HomeTabView extends StatefulWidget {
   const HomeTabView({super.key});
+
+  @override
+  State<HomeTabView> createState() => _HomeTabViewState();
+}
+
+class _HomeTabViewState extends State<HomeTabView> {
+  @override
+  void initState() {
+    super.initState();
+    // Panggil API harga emas saat tampilan utama dibuka
+    Future.microtask(() =>
+      Provider.of<GoldViewModel>(context, listen: false).loadGoldPrice()
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +60,7 @@ class HomeTabView extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Halo, Aleesha',
+                        'Halo, Vina', // Sesuaikan dengan nama user
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -56,13 +72,14 @@ class HomeTabView extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
-                  // ================= LAST PRICE CARD =================
+                  // ================= LAST PRICE CARD (LIVE DATA) =================
                   _buildLastPriceCard(
                     isDarkMode: isDarkMode,
                     cardBgColor: cardBgColor,
                     borderColor: borderColor,
                     primaryTextColor: primaryTextColor,
                     secondaryTextColor: secondaryTextColor,
+                    primaryOrange: primaryOrange,
                   ),
 
                   const SizedBox(height: 16),
@@ -165,13 +182,14 @@ class HomeTabView extends StatelessWidget {
     );
   }
 
-  // Card Last Price
+  // Card Last Price (Terhubung ke GoldViewModel)
   Widget _buildLastPriceCard({
     required bool isDarkMode,
     required Color cardBgColor,
     required Color borderColor,
     required Color primaryTextColor,
     required Color secondaryTextColor,
+    required Color primaryOrange,
   }) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -183,16 +201,8 @@ class HomeTabView extends StatelessWidget {
           begin: Alignment.bottomLeft,
           end: Alignment.topRight,
           colors: isDarkMode
-              ? [
-                  cardBgColor,
-                  cardBgColor,
-                  const Color(0xFF332200), // Gradient Oranye Gelap di Dark Mode
-                ]
-              : [
-                  Colors.white,
-                  Colors.white,
-                  const Color(0xFFFFF8E1),
-                ],
+              ? [cardBgColor, cardBgColor, const Color(0xFF332200)]
+              : [Colors.white, Colors.white, const Color(0xFFFFF8E1)],
         ),
         boxShadow: [
           BoxShadow(
@@ -202,76 +212,100 @@ class HomeTabView extends StatelessWidget {
           )
         ],
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Consumer<GoldViewModel>(
+        builder: (context, goldVM, child) {
+          return Column(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'LAST PRICE',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: secondaryTextColor,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'HARGA EMAS REALTIME',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+
+                      // Kondisi Status Data
+                      if (goldVM.isLoading)
+                        const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF9800)),
+                        )
+                      else if (goldVM.errorMessage != null || goldVM.goldData == null)
+                        Text(
+                          'Gagal Memuat Data',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        )
+                      else
+                        Text(
+                          'Rp ${goldVM.goldData!.pricePerGram.toStringAsFixed(0)} / gr',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: primaryTextColor,
+                          ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '4396.43',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: primaryTextColor,
-                    ),
+                  
+                  // Tombol Refresh / Status Persentase
+                  IconButton(
+                    onPressed: () => goldVM.loadGoldPrice(),
+                    icon: Icon(Icons.refresh, color: primaryOrange, size: 20),
+                    tooltip: 'Refresh Harga',
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF1B3E20) : const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '↑ 1.24%',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF4CAF50),
+              const SizedBox(height: 12),
+              Divider(height: 1, color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE)),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
+                    children: [
+                      Text('Bid', style: GoogleFonts.poppins(color: secondaryTextColor, fontSize: 12)),
+                      const SizedBox(height: 2),
+                      Text(
+                        goldVM.goldData != null 
+                            ? 'Rp ${(goldVM.goldData!.pricePerGram * 0.98).toStringAsFixed(0)}' 
+                            : '-', 
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: primaryTextColor),
+                      ),
+                    ],
                   ),
-                ),
+                  const Icon(Icons.trending_down, color: Color(0xFFEF5350), size: 18),
+                  Container(width: 1, height: 24, color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE)),
+                  const Icon(Icons.trending_up, color: Color(0xFF4CAF50), size: 18),
+                  Column(
+                    children: [
+                      Text('Ask', style: GoogleFonts.poppins(color: secondaryTextColor, fontSize: 12)),
+                      const SizedBox(height: 2),
+                      Text(
+                        goldVM.goldData != null 
+                            ? 'Rp ${(goldVM.goldData!.pricePerGram * 1.02).toStringAsFixed(0)}' 
+                            : '-', 
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: primaryTextColor),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Divider(height: 1, color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE)),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Column(
-                children: [
-                  Text('Bid', style: GoogleFonts.poppins(color: secondaryTextColor, fontSize: 12)),
-                  const SizedBox(height: 2),
-                  Text('4396.43', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: primaryTextColor)),
-                ],
-              ),
-              const Icon(Icons.trending_down, color: Color(0xFFEF5350), size: 18),
-              Container(width: 1, height: 24, color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE)),
-              const Icon(Icons.trending_up, color: Color(0xFF4CAF50), size: 18),
-              Column(
-                children: [
-                  Text('Ask', style: GoogleFonts.poppins(color: secondaryTextColor, fontSize: 12)),
-                  const SizedBox(height: 2),
-                  Text('4396.81', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: primaryTextColor)),
-                ],
-              ),
-            ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -299,7 +333,7 @@ class HomeTabView extends StatelessWidget {
               Icon(Icons.calendar_today_outlined, color: textColor, size: 18),
               const SizedBox(width: 12),
               Text(
-                '18 Agustus 2026',
+                '26 Agustus 2026',
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,

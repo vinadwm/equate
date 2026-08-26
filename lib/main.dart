@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:equate/view/splash/splash_view.dart';
+import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+
+// View & ViewModel
+import 'package:equate/view/splash/splash_view.dart';
+import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/viewmodel/gold_viewmodel.dart'; // Import GoldViewModel kamu
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(const EquateApp());
+  runApp(
+    // Membungkus aplikasi dengan MultiProvider
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => GoldViewModel()),
+      ],
+      child: const EquateApp(),
+    ),
+  );
 }
 
 class EquateApp extends StatelessWidget {
