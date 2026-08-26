@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
-import 'home_tab_view.dart';
 
 class CalculatorTabView extends StatefulWidget {
   const CalculatorTabView({super.key});
@@ -47,10 +46,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             leading: IconButton(
               icon: Icon(Icons.arrow_back, color: iconColor),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const HomeTabView()),
-                );
+                Navigator.pop(context);
               },
             ),
             title: Text(
