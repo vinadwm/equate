@@ -9,7 +9,8 @@ class SignUpView extends StatefulWidget {
 }
 
 class _SignUpViewState extends State<SignUpView> {
-  final _nameController = TextEditingController();
+  final _frontNameController = TextEditingController();
+  final _backNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -103,7 +104,7 @@ class _SignUpViewState extends State<SignUpView> {
                   children: [
                     // Input Nama
                     const Text(
-                      'Nama',
+                      'Nama Depan',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
@@ -111,7 +112,39 @@ class _SignUpViewState extends State<SignUpView> {
                     ),
                     const SizedBox(height: 6),
                     TextField(
-                      controller: _nameController,
+                      controller: _frontNameController,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFFF7F7F9),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFEEEEEE),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFEEEEEE),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Nama Belakang',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _backNameController,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFF7F7F9),

@@ -11,17 +11,25 @@ class EditProfileView extends StatefulWidget {
 
 class _EditProfileViewState extends State<EditProfileView> {
   // Controller untuk Form Input
-  final TextEditingController _nicknameController = TextEditingController(text: 'Vina');
-  final TextEditingController _fullNameController = TextEditingController(text: 'Vina Dwi Maulita');
-  final TextEditingController _emailController = TextEditingController(text: 'vina@equate.com');
-  final TextEditingController _dobController = TextEditingController(text: '07/04/2002');
+  final TextEditingController _firstNameController = TextEditingController(
+    text: 'Vina',
+  );
+  final TextEditingController _lastNameController = TextEditingController(
+    text: 'Vina Dwi Maulita',
+  );
+  final TextEditingController _emailController = TextEditingController(
+    text: 'vina@equate.com',
+  );
+  final TextEditingController _dobController = TextEditingController(
+    text: '07/04/2002',
+  );
 
   DateTime? _selectedDate = DateTime(2002, 4, 7);
 
   @override
   void dispose() {
-    _nicknameController.dispose();
-    _fullNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _dobController.dispose();
     super.dispose();
@@ -40,7 +48,9 @@ class _EditProfileViewState extends State<EditProfileView> {
             colorScheme: ColorScheme.light(
               primary: const Color(0xFFFF9800),
               onPrimary: Colors.white,
-              onSurface: ThemeViewModel.isDarkMode ? Colors.white : Colors.black,
+              onSurface: ThemeViewModel.isDarkMode
+                  ? Colors.white
+                  : Colors.black,
             ),
           ),
           child: child!,
@@ -51,7 +61,8 @@ class _EditProfileViewState extends State<EditProfileView> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
-        _dobController.text = "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+        _dobController.text =
+            "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
       });
     }
   }
@@ -64,8 +75,12 @@ class _EditProfileViewState extends State<EditProfileView> {
     final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
     final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.grey[50];
     final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
-    final secondaryTextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
-    final inputBorderColor = isDarkMode ? Colors.grey[800]! : Colors.grey.shade300;
+    final secondaryTextColor = isDarkMode
+        ? Colors.grey[400]!
+        : Colors.grey[600]!;
+    final inputBorderColor = isDarkMode
+        ? Colors.grey[800]!
+        : Colors.grey.shade300;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -73,7 +88,11 @@ class _EditProfileViewState extends State<EditProfileView> {
         backgroundColor: bgColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: primaryTextColor, size: 20),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: primaryTextColor,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -100,7 +119,9 @@ class _EditProfileViewState extends State<EditProfileView> {
                       children: [
                         CircleAvatar(
                           radius: 50,
-                          backgroundImage: const NetworkImage('https://i.pravatar.cc/300?img=5'),
+                          backgroundImage: const NetworkImage(
+                            'https://i.pravatar.cc/300?img=5',
+                          ),
                           backgroundColor: Colors.grey[300],
                         ),
                         Positioned(
@@ -143,8 +164,8 @@ class _EditProfileViewState extends State<EditProfileView> {
 
               // Form Input: Nama Panggilan
               _buildInputField(
-                label: 'Nama Panggilan',
-                controller: _nicknameController,
+                label: 'Nama Depan',
+                controller: _firstNameController,
                 icon: Icons.badge_outlined,
                 isDarkMode: isDarkMode,
                 primaryTextColor: primaryTextColor,
@@ -157,8 +178,8 @@ class _EditProfileViewState extends State<EditProfileView> {
 
               // Form Input: Nama Lengkap
               _buildInputField(
-                label: 'Nama Lengkap',
-                controller: _fullNameController,
+                label: 'Nama Belakang',
+                controller: _lastNameController,
                 icon: Icons.person_outline_rounded,
                 isDarkMode: isDarkMode,
                 primaryTextColor: primaryTextColor,
@@ -202,14 +223,27 @@ class _EditProfileViewState extends State<EditProfileView> {
                     child: AbsorbPointer(
                       child: TextField(
                         controller: _dobController,
-                        style: GoogleFonts.poppins(color: primaryTextColor, fontSize: 14),
+                        style: GoogleFonts.poppins(
+                          color: primaryTextColor,
+                          fontSize: 14,
+                        ),
                         decoration: InputDecoration(
                           hintText: 'DD/MM/YYYY',
-                          hintStyle: GoogleFonts.poppins(color: secondaryTextColor, fontSize: 13),
-                          prefixIcon: Icon(Icons.calendar_today_outlined, color: secondaryTextColor, size: 20),
+                          hintStyle: GoogleFonts.poppins(
+                            color: secondaryTextColor,
+                            fontSize: 13,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.calendar_today_outlined,
+                            color: secondaryTextColor,
+                            size: 20,
+                          ),
                           filled: true,
                           fillColor: cardBgColor,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: inputBorderColor),
@@ -220,7 +254,10 @@ class _EditProfileViewState extends State<EditProfileView> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: primaryOrange, width: 1.5),
+                            borderSide: const BorderSide(
+                              color: primaryOrange,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
@@ -240,7 +277,10 @@ class _EditProfileViewState extends State<EditProfileView> {
                     // TODO: Logika simpan profil
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Profil berhasil diperbarui!', style: GoogleFonts.poppins()),
+                        content: Text(
+                          'Profil berhasil diperbarui!',
+                          style: GoogleFonts.poppins(),
+                        ),
                         backgroundColor: primaryOrange,
                       ),
                     );
@@ -302,7 +342,10 @@ class _EditProfileViewState extends State<EditProfileView> {
             prefixIcon: Icon(icon, color: secondaryTextColor, size: 20),
             filled: true,
             fillColor: cardBgColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: inputBorderColor),
@@ -313,7 +356,10 @@ class _EditProfileViewState extends State<EditProfileView> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFFF9800), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFFFF9800),
+                width: 1.5,
+              ),
             ),
           ),
         ),
