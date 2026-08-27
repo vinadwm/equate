@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+
+import 'package:equate/model/user_model.dart';
+import 'package:equate/model/gold_price_model.dart';
+import 'package:equate/viewmodel/auth_viewmodel.dart';
+import 'package:equate/viewmodel/gold_viewmodel.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
-import 'package:equate/viewmodel/gold_viewmodel.dart'; // Add GoldViewModel Import
 
 class HomeTabView extends StatefulWidget {
   const HomeTabView({super.key});
@@ -12,168 +16,252 @@ class HomeTabView extends StatefulWidget {
 }
 
 class _HomeTabViewState extends State<HomeTabView> {
+  UserModel? _user;
+  bool _isLoadingUser = true;
+
+  final AuthViewModel _authViewModel = AuthViewModel();
+  final GoldViewModel _goldViewModel = GoldViewModel();
+
+  DateTime _selectedDate = DateTime.now();
+
   @override
   void initState() {
     super.initState();
-    // Panggil API harga emas saat tampilan utama dibuka
-    Future.microtask(() =>
-      Provider.of<GoldViewModel>(context, listen: false).loadGoldPrice()
-    );
+
+    _loadUser();
+
+    // Ambil harga emas
+    _goldViewModel.startLivePriceUpdates();
+
+    _goldViewModel.addListener(_onGoldPriceChanged);
   }
+
+  void _onGoldPriceChanged() {
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _goldViewModel.removeListener(_onGoldPriceChanged);
+    super.dispose();
+  }
+
+  // ============================================================
+  // LOAD USER
+  // ============================================================
+
+  Future<void> _loadUser() async {
+    try {
+      final user = await _authViewModel.getUserData();
+
+      if (!mounted) return;
+
+      setState(() {
+        _user = user;
+        _isLoadingUser = false;
+      });
+    } catch (e) {
+      debugPrint('LOAD USER ERROR: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingUser = false;
+      });
+    }
+  }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeViewModel.themeMode,
       builder: (context, currentThemeMode, child) {
-        final isDarkMode = ThemeViewModel.isDarkMode;
-        const primaryOrange = Color(0xFFFF9800);
+        final bool isDarkMode = ThemeViewModel.isDarkMode;
 
-        // Definisi Warna Dinamis
+        const primaryOrange = Color(0xFFFF9E0F);
+
         final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
-        final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-        final borderColor = isDarkMode ? Colors.grey[800]! : const Color(0xFFF0F0F0);
-        final primaryTextColor = isDarkMode ? Colors.white : Colors.black87;
-        final secondaryTextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
+
+        final cardBgColor = isDarkMode
+            ? const Color(0xFF1E1E1E)
+            : Colors.grey[50]!;
+
+        final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
+
+        final secondaryTextColor = isDarkMode
+            ? Colors.grey[400]!
+            : Colors.grey[600]!;
+
+        final borderColor = isDarkMode
+            ? Colors.grey[800]!
+            : const Color(0xFFE0E0E0);
+
+        final gold = _goldViewModel.goldPrice;
 
         return Scaffold(
           backgroundColor: bgColor,
+
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ================= HEADER =================
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(2.0),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: primaryOrange, width: 1.5),
+            child: RefreshIndicator(
+              color: primaryOrange,
+
+              onRefresh: () async {
+                await _goldViewModel.startLivePriceUpdates();
+              },
+
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ==================================================
+                    // HEADER USER
+                    // ==================================================
+                    _buildUserHeader(primaryOrange: primaryOrange),
+
+                    const SizedBox(height: 24),
+
+                    // ==================================================
+                    // LAST PRICE
+                    // ==================================================
+                    _buildLastPriceCard(
+                      gold: gold,
+                      isLoading: _goldViewModel.isLoading,
+                      isDarkMode: isDarkMode,
+                      cardBgColor: cardBgColor,
+                      borderColor: borderColor,
+                      primaryTextColor: primaryTextColor,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ==================================================
+                    // DATE
+                    // ==================================================
+                    _buildDatePicker(
+                      primaryOrange: primaryOrange,
+                      cardBgColor: cardBgColor,
+                      borderColor: borderColor,
+                      textColor: primaryTextColor,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ==================================================
+                    // OPEN / CLOSE
+                    // ==================================================
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetricCard(
+                            title: 'Open',
+                            value: gold != null
+                                ? gold.open.toStringAsFixed(2)
+                                : '---',
+                            icon: Icons.wb_sunny_outlined,
+                            iconBgColor: isDarkMode
+                                ? const Color(0xFF332A00)
+                                : const Color(0xFFFFFDE7),
+                            iconColor: Colors.amber[700]!,
+                            valueColor: primaryTextColor,
+                            cardBgColor: cardBgColor,
+                            borderColor: borderColor,
+                            secondaryTextColor: secondaryTextColor,
+                          ),
                         ),
-                        child: const CircleAvatar(
-                          radius: 18,
-                          backgroundImage: NetworkImage('https://i.pravatar.cc/100'),
+
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: _buildMetricCard(
+                            title: 'Close',
+                            value: gold != null
+                                ? gold.close.toStringAsFixed(2)
+                                : '---',
+                            icon: Icons.nightlight_round_outlined,
+                            iconBgColor: isDarkMode
+                                ? const Color(0xFF2C3E50)
+                                : const Color(0xFF1E293B),
+                            iconColor: Colors.amber,
+                            valueColor: primaryTextColor,
+                            cardBgColor: cardBgColor,
+                            borderColor: borderColor,
+                            secondaryTextColor: secondaryTextColor,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Halo, Vina', // Sesuaikan dengan nama user
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: primaryOrange,
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ==================================================
+                    // HIGH / LOW
+                    // ==================================================
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetricCard(
+                            title: 'High',
+                            value: gold != null
+                                ? gold.high.toStringAsFixed(2)
+                                : '---',
+                            icon: Icons.trending_up,
+                            iconBgColor: isDarkMode
+                                ? const Color(0xFF1B3E20)
+                                : const Color(0xFFE8F5E9),
+                            iconColor: const Color(0xFF4CAF50),
+                            valueColor: const Color(0xFF4CAF50),
+                            cardBgColor: cardBgColor,
+                            borderColor: borderColor,
+                            secondaryTextColor: secondaryTextColor,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
 
-                  const SizedBox(height: 20),
+                        const SizedBox(width: 12),
 
-                  // ================= LAST PRICE CARD (LIVE DATA) =================
-                  _buildLastPriceCard(
-                    isDarkMode: isDarkMode,
-                    cardBgColor: cardBgColor,
-                    borderColor: borderColor,
-                    primaryTextColor: primaryTextColor,
-                    secondaryTextColor: secondaryTextColor,
-                    primaryOrange: primaryOrange,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ================= DATE PICKER =================
-                  _buildDatePicker(
-                    primaryOrange: primaryOrange,
-                    isDarkMode: isDarkMode,
-                    cardBgColor: cardBgColor,
-                    borderColor: isDarkMode ? Colors.grey[800]! : const Color(0xFFE0E0E0),
-                    textColor: primaryTextColor,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ================= METRICS GRID =================
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'Open',
-                          value: '4410.76',
-                          icon: Icons.wb_sunny_outlined,
-                          iconBgColor: isDarkMode ? const Color(0xFF332A00) : const Color(0xFFFFFDE7),
-                          iconColor: Colors.amber[700]!,
-                          valueColor: primaryTextColor,
-                          cardBgColor: cardBgColor,
-                          borderColor: borderColor,
-                          secondaryTextColor: secondaryTextColor,
+                        Expanded(
+                          child: _buildMetricCard(
+                            title: 'Low',
+                            value: gold != null
+                                ? gold.low.toStringAsFixed(2)
+                                : '---',
+                            icon: Icons.trending_down,
+                            iconBgColor: isDarkMode
+                                ? const Color(0xFF3E1A1A)
+                                : const Color(0xFFFFEBEE),
+                            iconColor: const Color(0xFFEF5350),
+                            valueColor: const Color(0xFFEF5350),
+                            cardBgColor: cardBgColor,
+                            borderColor: borderColor,
+                            secondaryTextColor: secondaryTextColor,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'Close',
-                          value: '4415.10',
-                          icon: Icons.nightlight_round_outlined,
-                          iconBgColor: isDarkMode ? const Color(0xFF2C3E50) : const Color(0xFF1E293B),
-                          iconColor: Colors.amber,
-                          valueColor: primaryTextColor,
-                          cardBgColor: cardBgColor,
-                          borderColor: borderColor,
-                          secondaryTextColor: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'High',
-                          value: '4436.07',
-                          icon: Icons.trending_up,
-                          iconBgColor: isDarkMode ? const Color(0xFF1B3E20) : const Color(0xFFE8F5E9),
-                          iconColor: const Color(0xFF4CAF50),
-                          valueColor: const Color(0xFF4CAF50),
-                          cardBgColor: cardBgColor,
-                          borderColor: borderColor,
-                          secondaryTextColor: secondaryTextColor,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'Low',
-                          value: '4386.03',
-                          icon: Icons.trending_down,
-                          iconBgColor: isDarkMode ? const Color(0xFF3E1A1A) : const Color(0xFFFFEBEE),
-                          iconColor: const Color(0xFFEF5350),
-                          valueColor: const Color(0xFFEF5350),
-                          cardBgColor: cardBgColor,
-                          borderColor: borderColor,
-                          secondaryTextColor: secondaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                  // ================= TREND ANALYSIS =================
-                  _buildTrendAnalysisCard(
-                    primaryOrange: primaryOrange,
-                    isDarkMode: isDarkMode,
-                    cardBgColor: cardBgColor,
-                    borderColor: borderColor,
-                    primaryTextColor: primaryTextColor,
-                    secondaryTextColor: secondaryTextColor,
-                  ),
-
-                  const SizedBox(height: 100),
-                ],
+                    // ==================================================
+                    // INFO SUMBER DATA
+                    // ==================================================
+                    _buildSourceInfo(
+                      isDarkMode: isDarkMode,
+                      secondaryTextColor: secondaryTextColor,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -182,180 +270,338 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  // Card Last Price (Terhubung ke GoldViewModel)
+  // ============================================================
+  // USER HEADER
+  // ============================================================
+
+  Widget _buildUserHeader({required Color primaryOrange}) {
+    final String firstName = _user?.firstName.trim() ?? '';
+
+    final String greeting = _isLoadingUser
+        ? 'Hai, ...'
+        : firstName.isNotEmpty
+        ? 'Halo, $firstName'
+        : 'Halo, Pengguna';
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 19,
+          backgroundColor: Colors.grey[200],
+
+          backgroundImage:
+              _user?.photo != null && _user!.photo!.trim().isNotEmpty
+              ? NetworkImage(_user!.photo!)
+              : null,
+
+          child: _user?.photo == null || _user!.photo!.trim().isEmpty
+              ? Icon(Icons.person_rounded, color: Colors.grey[500], size: 22)
+              : null,
+        ),
+
+        const SizedBox(width: 12),
+
+        Text(
+          greeting,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: primaryOrange,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // LAST PRICE CARD
+  // ============================================================
+
   Widget _buildLastPriceCard({
+    required GoldPriceModel? gold,
+    required bool isLoading,
     required bool isDarkMode,
     required Color cardBgColor,
     required Color borderColor,
     required Color primaryTextColor,
     required Color secondaryTextColor,
-    required Color primaryOrange,
   }) {
+    final double change = gold?.changePercentage ?? 0;
+
+    final bool isPositive = change >= 0;
+
+    final Color changeColor = isPositive
+        ? const Color(0xFF4CAF50)
+        : const Color(0xFFEF5350);
+
     return Container(
-      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+
+      padding: const EdgeInsets.all(20),
+
       decoration: BoxDecoration(
         color: cardBgColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor),
-        gradient: LinearGradient(
-          begin: Alignment.bottomLeft,
-          end: Alignment.topRight,
-          colors: isDarkMode
-              ? [cardBgColor, cardBgColor, const Color(0xFF332200)]
-              : [Colors.white, Colors.white, const Color(0xFFFFF8E1)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Consumer<GoldViewModel>(
-        builder: (context, goldVM, child) {
-          return Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'HARGA EMAS REALTIME',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-
-                      // Kondisi Status Data
-                      if (goldVM.isLoading)
-                        const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF9800)),
-                        )
-                      else if (goldVM.errorMessage != null || goldVM.goldData == null)
-                        Text(
-                          'Gagal Memuat Data',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
-                          ),
-                        )
-                      else
-                        Text(
-                          'Rp ${goldVM.goldData!.pricePerGram.toStringAsFixed(0)} / gr',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: primaryTextColor,
-                          ),
-                        ),
-                    ],
-                  ),
-                  
-                  // Tombol Refresh / Status Persentase
-                  IconButton(
-                    onPressed: () => goldVM.loadGoldPrice(),
-                    icon: Icon(Icons.refresh, color: primaryOrange, size: 20),
-                    tooltip: 'Refresh Harga',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Divider(height: 1, color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE)),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  Column(
-                    children: [
-                      Text('Bid', style: GoogleFonts.poppins(color: secondaryTextColor, fontSize: 12)),
-                      const SizedBox(height: 2),
-                      Text(
-                        goldVM.goldData != null 
-                            ? 'Rp ${(goldVM.goldData!.pricePerGram * 0.98).toStringAsFixed(0)}' 
-                            : '-', 
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: primaryTextColor),
-                      ),
-                    ],
-                  ),
-                  const Icon(Icons.trending_down, color: Color(0xFFEF5350), size: 18),
-                  Container(width: 1, height: 24, color: isDarkMode ? Colors.grey[800] : const Color(0xFFEEEEEE)),
-                  const Icon(Icons.trending_up, color: Color(0xFF4CAF50), size: 18),
-                  Column(
-                    children: [
-                      Text('Ask', style: GoogleFonts.poppins(color: secondaryTextColor, fontSize: 12)),
-                      const SizedBox(height: 2),
-                      Text(
-                        goldVM.goldData != null 
-                            ? 'Rp ${(goldVM.goldData!.pricePerGram * 1.02).toStringAsFixed(0)}' 
-                            : '-', 
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: primaryTextColor),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  // Button Date Picker
-  Widget _buildDatePicker({
-    required Color primaryOrange,
-    required bool isDarkMode,
-    required Color cardBgColor,
-    required Color borderColor,
-    required Color textColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: borderColor),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // --------------------------------------------------------
+          // TITLE
+          // --------------------------------------------------------
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'HARGA EMAS GLOBAL',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: secondaryTextColor,
+                ),
+              ),
+
+              if (gold != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+
+                  decoration: BoxDecoration(
+                    color: changeColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+
+                  child: Text(
+                    '${isPositive ? '↑' : '↓'} '
+                    '${change.abs().toStringAsFixed(2)}%',
+
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: changeColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // --------------------------------------------------------
+          // PRICE
+          // --------------------------------------------------------
+          if (isLoading)
+            Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: changeColor,
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                Text(
+                  'Memuat harga...',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: secondaryTextColor,
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  gold != null ? '\$${gold.close.toStringAsFixed(2)}' : '---',
+
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: primaryTextColor,
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+
+                  child: Text(
+                    'USD / oz',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: secondaryTextColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            'Harga emas dunia per troy ounce',
+            style: GoogleFonts.poppins(fontSize: 11, color: secondaryTextColor),
+          ),
+
+          const Divider(height: 28),
+
+          // --------------------------------------------------------
+          // DATE
+          // --------------------------------------------------------
           Row(
             children: [
-              Icon(Icons.calendar_today_outlined, color: textColor, size: 18),
-              const SizedBox(width: 12),
+              Icon(
+                Icons.access_time_rounded,
+                size: 16,
+                color: secondaryTextColor,
+              ),
+
+              const SizedBox(width: 6),
+
               Text(
-                '26 Agustus 2026',
+                gold?.date ?? 'Belum tersedia',
                 style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: textColor,
+                  fontSize: 11,
+                  color: secondaryTextColor,
+                ),
+              ),
+
+              const Spacer(),
+
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.green,
+                      ),
+                    ),
+
+                    const SizedBox(width: 5),
+
+                    Text(
+                      'DATA TERBARU',
+                      style: GoogleFonts.poppins(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: primaryOrange,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
-          ),
         ],
       ),
     );
   }
 
-  // Card Metric (Open, Close, High, Low)
+  // ============================================================
+  // DATE PICKER
+  // ============================================================
+
+  Widget _buildDatePicker({
+    required Color primaryOrange,
+    required Color cardBgColor,
+    required Color borderColor,
+    required Color textColor,
+  }) {
+    final dateFormatted = DateFormat(
+      'dd MMMM yyyy',
+      'id_ID',
+    ).format(_selectedDate);
+
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: _selectedDate,
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+        );
+
+        if (picked != null) {
+          setState(() {
+            _selectedDate = picked;
+          });
+        }
+      },
+
+      child: Container(
+        width: double.infinity,
+
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+
+        decoration: BoxDecoration(
+          color: cardBgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+        ),
+
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today_rounded, size: 20, color: primaryOrange),
+
+            const SizedBox(width: 12),
+
+            Text(
+              dateFormatted,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+              ),
+            ),
+
+            const Spacer(),
+
+            Container(
+              width: 32,
+              height: 32,
+
+              decoration: BoxDecoration(
+                color: primaryOrange,
+                borderRadius: BorderRadius.circular(8),
+              ),
+
+              child: const Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // METRIC CARD
+  // ============================================================
+
   Widget _buildMetricCard({
     required String title,
     required String value,
@@ -367,210 +613,94 @@ class _HomeTabViewState extends State<HomeTabView> {
     required Color borderColor,
     required Color secondaryTextColor,
   }) {
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: cardBgColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: borderColor),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(16),
+
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderColor),
+      ),
+
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
+              Container(
+                width: 34,
+                height: 34,
+
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+
+                child: Icon(icon, size: 18, color: iconColor),
+              ),
+
+              const Spacer(),
+
               Text(
                 title,
                 style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
                   color: secondaryTextColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: valueColor,
                 ),
               ),
             ],
           ),
-        ),
-        Positioned(
-          top: 10,
-          right: 10,
-          child: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: iconBgColor,
-              shape: BoxShape.circle,
+
+          const SizedBox(height: 12),
+
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: valueColor,
             ),
-            child: Icon(icon, size: 14, color: iconColor),
+          ),
+
+          const SizedBox(height: 2),
+
+          Text(
+            'USD / oz',
+            style: GoogleFonts.poppins(fontSize: 9, color: secondaryTextColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // SOURCE INFO
+  // ============================================================
+
+  Widget _buildSourceInfo({
+    required bool isDarkMode,
+    required Color secondaryTextColor,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.info_outline_rounded, size: 16, color: secondaryTextColor),
+
+        const SizedBox(width: 8),
+
+        Expanded(
+          child: Text(
+            'Data harga emas global bersumber dari Newsmaker.id. '
+            'Harga ditampilkan dalam USD per troy ounce.',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              height: 1.5,
+              color: secondaryTextColor,
+            ),
           ),
         ),
       ],
     );
   }
-
-  // Card Trend Analysis
-  Widget _buildTrendAnalysisCard({
-    required Color primaryOrange,
-    required bool isDarkMode,
-    required Color cardBgColor,
-    required Color borderColor,
-    required Color primaryTextColor,
-    required Color secondaryTextColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Trend Analysis',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: primaryTextColor,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF2C2C2C) : const Color(0xFFF5F5F7),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    _buildTimeFilter('1D', false, primaryOrange, isDarkMode),
-                    _buildTimeFilter('1W', true, primaryOrange, isDarkMode),
-                    _buildTimeFilter('1M', false, primaryOrange, isDarkMode),
-                    _buildTimeFilter('1Y', false, primaryOrange, isDarkMode),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 140,
-            width: double.infinity,
-            child: CustomPaint(
-              painter: AreaChartPainter(primaryOrange: primaryOrange, isDarkMode: isDarkMode),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
-                .map((day) => Text(
-                      day,
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        color: secondaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ))
-                .toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimeFilter(String label, bool isSelected, Color primaryOrange, bool isDarkMode) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? (isDarkMode ? const Color(0xFF3A3A3A) : Colors.white)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.poppins(
-          fontSize: 10,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          color: isSelected ? primaryOrange : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-        ),
-      ),
-    );
-  }
-}
-
-// Custom Painter Grafik dengan Dukungan Dark Mode
-class AreaChartPainter extends CustomPainter {
-  final Color primaryOrange;
-  final bool isDarkMode;
-
-  AreaChartPainter({required this.primaryOrange, required this.isDarkMode});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // 1. Gambar Garis Grid Horizontal
-    final gridPaint = Paint()
-      ..color = isDarkMode ? Colors.grey[800]! : const Color(0xFFEEEEEE)
-      ..strokeWidth = 1.0;
-
-    canvas.drawLine(Offset(0, size.height * 0.25), Offset(size.width, size.height * 0.25), gridPaint);
-    canvas.drawLine(Offset(0, size.height * 0.55), Offset(size.width, size.height * 0.55), gridPaint);
-    canvas.drawLine(Offset(0, size.height * 0.85), Offset(size.width, size.height * 0.85), gridPaint);
-
-    // 2. Path Kurva Grafik
-    final path = Path();
-    path.moveTo(0, size.height * 0.8);
-    path.cubicTo(
-      size.width * 0.25, size.height * 0.8,
-      size.width * 0.35, size.height * 0.5,
-      size.width * 0.55, size.height * 0.45,
-    );
-    path.cubicTo(
-      size.width * 0.75, size.height * 0.4,
-      size.width * 0.8, size.height * 0.1,
-      size.width, size.height * 0.12,
-    );
-
-    // 3. Area Fill Gradient
-    final fillPath = Path.from(path);
-    fillPath.lineTo(size.width, size.height);
-    fillPath.lineTo(0, size.height);
-    fillPath.close();
-
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          primaryOrange.withOpacity(0.4),
-          primaryOrange.withOpacity(0.02),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    canvas.drawPath(fillPath, fillPaint);
-
-    // 4. Garis Utama Kurva
-    final strokePaint = Paint()
-      ..color = primaryOrange
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawPath(path, strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

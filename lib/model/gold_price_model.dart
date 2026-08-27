@@ -1,45 +1,33 @@
 class GoldPriceModel {
-  final double pricePerGram;
-  final String currency;
-  final DateTime updatedAt;
+  final DateTime date;
+  final double open;
+  final double high;
+  final double low;
+  final double close;
+  final double changePercentage;
 
   GoldPriceModel({
-    required this.pricePerGram,
-    required this.currency,
-    required this.updatedAt,
+    required this.date,
+    required this.open,
+    required this.high,
+    required this.low,
+    required this.close,
+    required this.changePercentage,
   });
 
-  factory GoldPriceModel.fromJson(Map<String, dynamic> json) {
-    // Parsing harga per troy ounce (oz) secara aman
-    final rawPrice = json['price'];
-    double pricePerOz = 0.0;
+  double get lastPrice => close;
 
-    if (rawPrice != null) {
-      if (rawPrice is num) {
-        pricePerOz = rawPrice.toDouble();
-      } else if (rawPrice is String) {
-        pricePerOz = double.tryParse(rawPrice) ?? 0.0;
-      }
-    }
-
-    // 1 troy ounce = 31.1034768 gram
-    double gramPrice = pricePerOz / 31.1034768;
-
-    // Parsing timestamp dari API jika tersedia (dalam format unix epoch seconds)
-    DateTime parsedDate = DateTime.now();
-    if (json['timestamp'] != null && json['timestamp'] is int) {
-      parsedDate = DateTime.fromMillisecondsSinceEpoch((json['timestamp'] as int) * 1000);
-    }
-
+  factory GoldPriceModel.fromJson(
+    Map<String, dynamic> json, {
+    double changePercentage = 0,
+  }) {
     return GoldPriceModel(
-      pricePerGram: gramPrice,
-      currency: json['currency']?.toString() ?? 'IDR',
-      updatedAt: parsedDate,
+      date: DateTime.parse(json['date'].toString()),
+      open: double.parse(json['open'].toString()),
+      high: double.parse(json['high'].toString()),
+      low: double.parse(json['low'].toString()),
+      close: double.parse(json['close'].toString()),
+      changePercentage: changePercentage,
     );
-  }
-
-  @override
-  String toString() {
-    return 'GoldPriceModel(pricePerGram: $pricePerGram, currency: $currency, updatedAt: $updatedAt)';
   }
 }

@@ -1,43 +1,32 @@
-import 'package:flutter/material.dart';
-import 'package:equate/model/gold_price_model.dart';
-import 'package:equate/service/gold_service.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import '../service/gold_price_service.dart';
+import '../model/gold_price_model.dart';
+import '../service/gold_api_service.dart';
 
 class GoldViewModel extends ChangeNotifier {
-  final GoldService _goldService = GoldService();
+  final GoldApiService _service = GoldApiService();
 
-  GoldPriceModel? _goldData;
-  bool _isLoading = false;
-  String? _errorMessage;
+  GoldPriceModel? goldPrice;
 
-  GoldPriceModel? get goldData => _goldData;
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
+  bool isLoading = false;
 
-  // Mengambil harga emas live
-  Future<void> loadGoldPrice() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
+  Future<void> fetchGoldPrice() async {
     try {
-      print('--> [GoldViewModel] Memanggil API harga emas...');
-      final result = await _goldService.fetchLiveGoldPrice();
+      isLoading = true;
+      notifyListeners();
 
-      if (result != null) {
-        _goldData = result;
-        print('--> [GoldViewModel] Berhasil mendapatkan harga emas!');
-      } else {
-        _errorMessage = 'Gagal mengambil harga emas terbaru (Result Null)';
-        print('--> [GoldViewModel] Error: fetchLiveGoldPrice() mengembalikan NULL.');
-      }
-    } catch (e, stackTrace) {
-      _errorMessage = e.toString();
-      print('================ ERROR GOLD SERVICE ================');
-      print('Detail Error: $e');
-      print('Stacktrace: $stackTrace');
-      print('==================================================');
+      final data = await _service.getGoldData();
+
+      // ambil data terbaru
+      final latest = data.first;
+
+      // convert ke GoldPriceModel
+      goldPrice = GoldPriceModel.fromJson(latest);
+    } catch (e) {
+      debugPrint('Gold API Error: $e');
     } finally {
-      _isLoading = false;
+      isLoading = false;
       notifyListeners();
     }
   }
