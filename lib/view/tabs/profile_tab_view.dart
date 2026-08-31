@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'package:equate/view/tabs/change_password_view.dart';
 import 'package:equate/view/tabs/edit_profile_view.dart';
 import 'package:equate/view/auth/login_view.dart';
+import 'package:equate/viewmodel/theme_viewmodel.dart';
 
-// 1. Import ThemeViewModel
-import 'package:equate/viewmodel/theme_viewmodel.dart'; // Sesuaikan path jika berbeda
+// Import AuthViewModel dan UserModel
+import 'package:equate/viewmodel/auth_viewmodel.dart';
+import 'package:equate/model/user_model.dart';
 
 class ProfileTabView extends StatefulWidget {
   const ProfileTabView({super.key});
@@ -15,6 +18,10 @@ class ProfileTabView extends StatefulWidget {
 }
 
 class _ProfileTabViewState extends State<ProfileTabView> {
+  final AuthViewModel _authViewModel = AuthViewModel();
+  UserModel? _user;
+  bool _isLoading = true;
+
   final List<Map<String, String>> _calculationHistory = [
     {
       'title': 'Kalkulasi Diskont & Pajak',
@@ -35,6 +42,29 @@ class _ProfileTabViewState extends State<ProfileTabView> {
       'date': '17 Aug 2026',
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  // Mengambil data pengguna nyata dari Firebase
+  Future<void> _fetchUserData() async {
+    try {
+      final user = await _authViewModel.getUserData();
+      if (!mounted) return;
+      setState(() {
+        _user = user;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   void _showLogoutDialog(bool isDarkMode) {
     showDialog(
@@ -79,12 +109,17 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                 ),
                 elevation: 0,
               ),
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                Navigator.pop(context); // Tutup dialog lebih dahulu
+                await _authViewModel.logout();
+                if (!mounted) return;
+                
+                // Navigasi ke Halaman Login & Bersihkan Stack Navigation
+                Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => const LoginView()),
+                  (route) => false,
                 );
-                // TODO: Logika logout
               },
               child: Text(
                 'Keluar',
@@ -118,19 +153,34 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         ? Colors.grey[400]!
         : Colors.grey[500]!;
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: bgColor,
+        body: const Center(
+          child: CircularProgressIndicator(color: primaryOrange),
+        ),
+      );
+    }
+
+    // fallback foto, nama, & email
+    final String userPhoto = _user?.photo ?? '';
+    final String fullName = '${_user?.firstName ?? ''} ${_user?.lastName ?? ''}'.trim();
+    final String userName = fullName.isNotEmpty ? fullName : 'Pengguna Equate';
+    final String userEmail = _user?.email ?? '-';
+
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
         child: Column(
           children: [
             // ==========================================
-            // 1. BAGIAN HEADER & PROFILE
+            // 1. BAGIAN HEADER & PROFILE DATA REAL
             // ==========================================
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Column(
                 children: [
-                  // Foto Profil
+                  // Foto Profil (Sesuai Data Firestore / Fallback Icon)
                   Center(
                     child: SizedBox(
                       width: 140,
@@ -147,11 +197,23 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 width: 3,
                               ),
                             ),
-                            child: const CircleAvatar(
+                            child: CircleAvatar(
                               radius: 58,
-                              backgroundImage: NetworkImage(
-                                'https://i.pravatar.cc/300?img=5',
-                              ),
+                              backgroundColor: isDarkMode 
+                                  ? Colors.grey[800] 
+                                  : Colors.grey[200],
+                              backgroundImage: userPhoto.isNotEmpty
+                                  ? NetworkImage(userPhoto)
+                                  : null,
+                              child: userPhoto.isEmpty
+                                  ? Icon(
+                                      Icons.person_rounded,
+                                      size: 58,
+                                      color: isDarkMode 
+                                          ? Colors.grey[400] 
+                                          : Colors.grey[600],
+                                    )
+                                  : null,
                             ),
                           ),
                           Positioned(
@@ -230,9 +292,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
                   const SizedBox(height: 12),
 
-                  // Nama User & Informasi
+                  // Nama User & Email Real
                   Text(
-                    'Vina Dwi Maulita',
+                    userName,
                     style: GoogleFonts.poppins(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -241,7 +303,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'vina@equate.com   •   7 Apr 2002',
+                    userEmail,
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: secondaryTextColor,
@@ -260,13 +322,14 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                         child: SizedBox(
                           height: 40,
                           child: ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
+                            onPressed: () async {
+                              await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => EditProfileView(),
-                                ), // FIX: Menggunakan EditProfileView tanpa 'const'
+                                ),
                               );
+                              _fetchUserData(); // Reload data setelah kembali dari Edit Profile
                             },
                             icon: const Icon(
                               Icons.edit_outlined,
@@ -387,7 +450,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             const SizedBox(height: 10),
 
             // ==========================================
-            // 2. BAGIAN RIWAYAT & LOGOUT (BISA DI-SCROLL)
+            // 2. BAGIAN RIWAYAT & LOGOUT
             // ==========================================
             Expanded(
               child: ListView(

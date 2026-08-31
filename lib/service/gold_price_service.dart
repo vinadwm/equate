@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
 import '../model/gold_price_model.dart';
 
 class GoldPriceService {
   static const String rawUrl = 'https://www.newsmaker.id/api/historical-data';
 
-  Future<List<GoldPriceModel>> getGoldPrices() async {
+  // Nama method disesuaikan menjadi fetchGoldPrices agar cocok dengan GoldViewModel
+  Future<List<GoldPriceModel>> fetchGoldPrices() async {
     final response = await http.get(Uri.parse(rawUrl));
 
     if (response.statusCode != 200) {
@@ -18,7 +18,6 @@ class GoldPriceService {
 
     final data = jsonDecode(response.body);
 
-    // Sementara kita cek bentuk response API.
     print('RESPONSE NEWSMAKER: $data');
 
     if (data is List) {
@@ -26,7 +25,8 @@ class GoldPriceService {
           .map(
             (item) => GoldPriceModel.fromMap(Map<String, dynamic>.from(item)),
           )
-          .toList();
+          .toList()
+          .cast<GoldPriceModel>(); // Ditambahkan agar tidak error List<dynamic>
     }
 
     if (data is Map<String, dynamic>) {
@@ -37,7 +37,8 @@ class GoldPriceService {
             .map(
               (item) => GoldPriceModel.fromMap(Map<String, dynamic>.from(item)),
             )
-            .toList();
+            .toList()
+            .cast<GoldPriceModel>(); // Ditambahkan agar tidak error List<dynamic>
       }
     }
 
@@ -45,7 +46,7 @@ class GoldPriceService {
   }
 
   Future<GoldPriceModel> getLatestGoldPrice() async {
-    final prices = await getGoldPrices();
+    final prices = await fetchGoldPrices();
 
     if (prices.isEmpty) {
       throw Exception('Data harga emas kosong.');

@@ -313,7 +313,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  // ============================================================
+ // ============================================================
   // LAST PRICE CARD
   // ============================================================
 
@@ -327,30 +327,23 @@ class _HomeTabViewState extends State<HomeTabView> {
     required Color secondaryTextColor,
   }) {
     final double change = gold?.changePercentage ?? 0;
-
     final bool isPositive = change >= 0;
-
     final Color changeColor = isPositive
         ? const Color(0xFF4CAF50)
         : const Color(0xFFEF5350);
 
     return Container(
       width: double.infinity,
-
       padding: const EdgeInsets.all(20),
-
       decoration: BoxDecoration(
         color: cardBgColor,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: borderColor),
       ),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --------------------------------------------------------
-          // TITLE
-          // --------------------------------------------------------
+          // TITLE & PERCENTAGE
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -362,23 +355,18 @@ class _HomeTabViewState extends State<HomeTabView> {
                   color: secondaryTextColor,
                 ),
               ),
-
               if (gold != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 5,
                   ),
-
                   decoration: BoxDecoration(
                     color: changeColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
-
                   child: Text(
-                    '${isPositive ? '↑' : '↓'} '
-                    '${change.abs().toStringAsFixed(2)}%',
-
+                    '${isPositive ? '↑' : '↓'} ${change.abs().toStringAsFixed(2)}%',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -391,9 +379,7 @@ class _HomeTabViewState extends State<HomeTabView> {
 
           const SizedBox(height: 8),
 
-          // --------------------------------------------------------
           // PRICE
-          // --------------------------------------------------------
           if (isLoading)
             Row(
               children: [
@@ -405,9 +391,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                     color: changeColor,
                   ),
                 ),
-
                 const SizedBox(width: 10),
-
                 Text(
                   'Memuat harga...',
                   style: GoogleFonts.poppins(
@@ -423,19 +407,15 @@ class _HomeTabViewState extends State<HomeTabView> {
               children: [
                 Text(
                   gold != null ? '\$${gold.close.toStringAsFixed(2)}' : '---',
-
                   style: GoogleFonts.poppins(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: primaryTextColor,
                   ),
                 ),
-
                 const SizedBox(width: 8),
-
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-
                   child: Text(
                     'USD / oz',
                     style: GoogleFonts.poppins(
@@ -456,9 +436,7 @@ class _HomeTabViewState extends State<HomeTabView> {
 
           const Divider(height: 28),
 
-          // --------------------------------------------------------
-          // DATE
-          // --------------------------------------------------------
+          // DATE & STATUS BADGE
           Row(
             children: [
               Icon(
@@ -466,27 +444,21 @@ class _HomeTabViewState extends State<HomeTabView> {
                 size: 16,
                 color: secondaryTextColor,
               ),
-
               const SizedBox(width: 6),
-
               Text(
-                gold?.date ?? 'Belum tersedia',
+                gold?.formattedDate ?? gold?.date.toString() ?? 'Belum tersedia',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
                   color: secondaryTextColor,
                 ),
               ),
-
               const Spacer(),
-
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-
                 decoration: BoxDecoration(
                   color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-
                 child: Row(
                   children: [
                     Container(
@@ -497,9 +469,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                         color: Colors.green,
                       ),
                     ),
-
                     const SizedBox(width: 5),
-
                     Text(
                       'DATA TERBARU',
                       style: GoogleFonts.poppins(

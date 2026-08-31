@@ -21,13 +21,29 @@ class GoldPriceModel {
     Map<String, dynamic> json, {
     double changePercentage = 0,
   }) {
+    // 1. Ambil tanggal dari key 'tanggal' atau fallback ke 'date'
+    final String rawDate = json['tanggal']?.toString() ?? json['date']?.toString() ?? '';
+
+    // 2. Ambil persentase perubahan dari key 'chg' atau fallback ke parameter
+    final double rawChg = double.tryParse(json['chg']?.toString() ?? '') ?? changePercentage;
+
     return GoldPriceModel(
-      date: DateTime.parse(json['date'].toString()),
-      open: double.parse(json['open'].toString()),
-      high: double.parse(json['high'].toString()),
-      low: double.parse(json['low'].toString()),
-      close: double.parse(json['close'].toString()),
-      changePercentage: changePercentage,
+      date: DateTime.tryParse(rawDate) ?? DateTime.now(),
+      open: double.tryParse(json['open']?.toString() ?? '0') ?? 0.0,
+      high: double.tryParse(json['high']?.toString() ?? '0') ?? 0.0,
+      low: double.tryParse(json['low']?.toString() ?? '0') ?? 0.0,
+      close: double.tryParse(json['close']?.toString() ?? '0') ?? 0.0,
+      changePercentage: rawChg,
     );
   }
+
+  factory GoldPriceModel.fromMap(
+    Map<String, dynamic> map, {
+    double changePercentage = 0,
+  }) {
+    return GoldPriceModel.fromJson(map, changePercentage: changePercentage);
+  }
+
+  String get formattedDate =>
+      "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
 }
