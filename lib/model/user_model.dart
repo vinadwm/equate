@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
   final String uid;
   final String firstName;
@@ -15,21 +17,29 @@ class UserModel {
     this.photo,
   });
 
-  // Nama lengkap
-  String get fullName {
-    return '$firstName $lastName'.trim();
-  }
+  // Getter nama lengkap
+  String get fullName => '$firstName $lastName'.trim();
+
+  // Getter alias agar photoUrl tetap kompatibel dengan EditProfileView
+  String? get photoUrl => photo;
 
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
+    DateTime? parsedDate;
+    if (map['birthDate'] != null) {
+      if (map['birthDate'] is Timestamp) {
+        parsedDate = (map['birthDate'] as Timestamp).toDate();
+      } else {
+        parsedDate = DateTime.tryParse(map['birthDate'].toString());
+      }
+    }
+
     return UserModel(
       uid: uid,
       firstName: map['firstName'] ?? '',
       lastName: map['lastName'] ?? '',
       email: map['email'] ?? '',
-      birthDate: map['birthDate'] != null
-          ? DateTime.tryParse(map['birthDate'])
-          : null,
-      photo: map['photo'],
+      birthDate: parsedDate,
+      photo: map['photo'] ?? map['photoUrl'],
     );
   }
 
@@ -41,5 +51,23 @@ class UserModel {
       'birthDate': birthDate?.toIso8601String(),
       'photo': photo,
     };
+  }
+
+  UserModel copyWith({
+    String? uid,
+    String? firstName,
+    String? lastName,
+    String? email,
+    DateTime? birthDate,
+    String? photo,
+  }) {
+    return UserModel(
+      uid: uid ?? this.uid,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      email: email ?? this.email,
+      birthDate: birthDate ?? this.birthDate,
+      photo: photo ?? this.photo,
+    );
   }
 }

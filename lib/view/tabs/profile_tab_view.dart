@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:equate/model/user_model.dart';
-import 'package:equate/viewmodel/auth_viewmodel.dart';
-import 'package:equate/viewmodel/theme_viewmodel.dart';
-
 import 'package:equate/view/tabs/change_password_view.dart';
 import 'package:equate/view/tabs/edit_profile_view.dart';
 import 'package:equate/view/auth/login_view.dart';
+import 'package:equate/viewmodel/theme_viewmodel.dart';
+
+// Import AuthViewModel dan UserModel
+import 'package:equate/viewmodel/auth_viewmodel.dart';
+import 'package:equate/model/user_model.dart';
 
 class ProfileTabView extends StatefulWidget {
   const ProfileTabView({super.key});
@@ -17,18 +18,9 @@ class ProfileTabView extends StatefulWidget {
 }
 
 class _ProfileTabViewState extends State<ProfileTabView> {
-  // ============================================================
-  // AUTH & USER
-  // ============================================================
-
   final AuthViewModel _authViewModel = AuthViewModel();
-
   UserModel? _user;
-  bool _isLoadingUser = true;
-
-  // ============================================================
-  // RIWAYAT SEMENTARA
-  // ============================================================
+  bool _isLoading = true;
 
   final List<Map<String, String>> _calculationHistory = [
     {
@@ -51,102 +43,28 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     },
   ];
 
-  // ============================================================
-  // INIT
-  // ============================================================
-
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _fetchUserData();
   }
 
-  // ============================================================
-  // LOAD USER DARI FIRESTORE
-  // ============================================================
-
-  Future<void> _loadUser() async {
+  // Mengambil data pengguna nyata dari Firebase
+  Future<void> _fetchUserData() async {
     try {
-      final user = await _authViewModel.getUserProfile();
-
+      final user = await _authViewModel.getUserData();
       if (!mounted) return;
-
       setState(() {
         _user = user;
-        _isLoadingUser = false;
+        _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Gagal mengambil data profil: $e');
-
       if (!mounted) return;
-
       setState(() {
-        _isLoadingUser = false;
+        _isLoading = false;
       });
     }
   }
-
-  // ============================================================
-  // FORMAT TANGGAL LAHIR
-  // ============================================================
-
-  String _formatBirthDate() {
-    final birthDate = _user?.birthDate;
-
-    if (birthDate == null) {
-      return '-';
-    }
-
-    return '${birthDate.day} '
-        '${_monthName(birthDate.month)} '
-        '${birthDate.year}';
-  }
-
-  String _monthName(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Agu',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des',
-    ];
-
-    return months[month - 1];
-  }
-
-  // ============================================================
-  // NAMA LENGKAP
-  // ============================================================
-
-  String _getFullName() {
-    final firstName = _user?.firstName.trim() ?? '';
-    final lastName = _user?.lastName.trim() ?? '';
-
-    if (firstName.isEmpty && lastName.isEmpty) {
-      return 'Pengguna';
-    }
-
-    if (lastName.isEmpty) {
-      return firstName;
-    }
-
-    if (firstName.isEmpty) {
-      return lastName;
-    }
-
-    return '$firstName $lastName';
-  }
-
-  // ============================================================
-  // LOGOUT DIALOG
-  // ============================================================
 
   void _showLogoutDialog(bool isDarkMode) {
     showDialog(
@@ -195,24 +113,16 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                 elevation: 0,
               ),
               onPressed: () async {
-                // Tutup dialog
-                Navigator.pop(context);
-
-                try {
-                  await _authViewModel.logout();
-
-                  if (!mounted) return;
-
-                  // Hapus semua halaman sebelumnya
-                  // supaya setelah logout tidak bisa kembali ke Home.
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginView()),
-                    (route) => false,
-                  );
-                } catch (e) {
-                  debugPrint('Logout gagal: $e');
-                }
+                Navigator.pop(context); // Tutup dialog lebih dahulu
+                await _authViewModel.logout();
+                if (!mounted) return;
+                
+                // Navigasi ke Halaman Login & Bersihkan Stack Navigation
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginView()),
+                  (route) => false,
+                );
               },
               child: Text(
                 'Keluar',
@@ -254,22 +164,35 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         ? Colors.grey[400]!
         : Colors.grey[500]!;
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: bgColor,
+        body: const Center(
+          child: CircularProgressIndicator(color: primaryOrange),
+        ),
+      );
+    }
+
+    // fallback foto, nama, & email
+    final String userPhoto = _user?.photo ?? '';
+    final String fullName = '${_user?.firstName ?? ''} ${_user?.lastName ?? ''}'.trim();
+    final String userName = fullName.isNotEmpty ? fullName : 'Pengguna Equate';
+    final String userEmail = _user?.email ?? '-';
+
     return Scaffold(
       backgroundColor: bgColor,
 
       body: SafeArea(
         child: Column(
           children: [
-            // ==================================================
-            // 1. HEADER & PROFILE
-            // ==================================================
+            // ==========================================
+            // 1. BAGIAN HEADER & PROFILE DATA REAL
+            // ==========================================
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Column(
                 children: [
-                  // ==================================================
-                  // FOTO PROFIL
-                  // ==================================================
+                  // Foto Profil (Sesuai Data Firestore / Fallback Icon)
                   Center(
                     child: SizedBox(
                       width: 140,
@@ -286,29 +209,21 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 width: 3,
                               ),
                             ),
-
                             child: CircleAvatar(
                               radius: 58,
-
-                              backgroundColor: isDarkMode
-                                  ? Colors.grey[800]
+                              backgroundColor: isDarkMode 
+                                  ? Colors.grey[800] 
                                   : Colors.grey[200],
-
-                              backgroundImage:
-                                  _user?.photo != null &&
-                                      _user!.photo!.trim().isNotEmpty
-                                  ? NetworkImage(_user!.photo!)
+                              backgroundImage: userPhoto.isNotEmpty
+                                  ? NetworkImage(userPhoto)
                                   : null,
-
-                              child:
-                                  _user?.photo == null ||
-                                      _user!.photo!.trim().isEmpty
+                              child: userPhoto.isEmpty
                                   ? Icon(
                                       Icons.person_rounded,
-                                      size: 55,
-                                      color: isDarkMode
-                                          ? Colors.grey[500]
-                                          : Colors.grey[400],
+                                      size: 58,
+                                      color: isDarkMode 
+                                          ? Colors.grey[400] 
+                                          : Colors.grey[600],
                                     )
                                   : null,
                             ),
@@ -395,42 +310,22 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
                   const SizedBox(height: 12),
 
-                  // ==================================================
-                  // NAMA USER
-                  // ==================================================
-                  _isLoadingUser
-                      ? SizedBox(
-                          height: 30,
-                          child: Center(
-                            child: Text(
-                              'Memuat profil...',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                color: secondaryTextColor,
-                              ),
-                            ),
-                          ),
-                        )
-                      : Text(
-                          _getFullName(),
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: primaryTextColor,
-                          ),
-                        ),
-
+                  // Nama User & Email Real
+                  Text(
+                    userName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: primaryTextColor,
+                    ),
+                  ),
                   const SizedBox(height: 2),
 
                   // ==================================================
                   // EMAIL + TANGGAL LAHIR
                   // ==================================================
                   Text(
-                    _isLoadingUser
-                        ? 'Memuat data...'
-                        : '${_user?.email ?? '-'}   •   ${_formatBirthDate()}',
-                    textAlign: TextAlign.center,
+                    userEmail,
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: secondaryTextColor,
@@ -460,10 +355,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                   builder: (context) => EditProfileView(),
                                 ),
                               );
-
-                              // Ambil ulang data setelah
-                              // Edit Profile ditutup.
-                              _loadUser();
+                              _fetchUserData(); // Reload data setelah kembali dari Edit Profile
                             },
                             icon: const Icon(
                               Icons.edit_outlined,
@@ -587,9 +479,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
             const SizedBox(height: 10),
 
-            // ==================================================
-            // 2. RIWAYAT & LOGOUT
-            // ==================================================
+            // ==========================================
+            // 2. BAGIAN RIWAYAT & LOGOUT
+            // ==========================================
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
