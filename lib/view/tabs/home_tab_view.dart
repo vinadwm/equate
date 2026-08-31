@@ -4,7 +4,7 @@ import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/model/user_model.dart';
 import 'package:equate/viewmodel/auth_viewmodel.dart';
 
-class HomeTabView extends StatefulWidget {
+class HomeTabView extends StatelessWidget {
   const HomeTabView({super.key});
 
   @override
