@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/viewmodel/auth_viewmodel.dart'; // Import AuthViewModel Anda
 
 class ChangePasswordView extends StatefulWidget {
   const ChangePasswordView({super.key});
@@ -10,6 +11,8 @@ class ChangePasswordView extends StatefulWidget {
 }
 
 class _ChangePasswordViewState extends State<ChangePasswordView> {
+  final AuthViewModel _authViewModel = AuthViewModel();
+
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
@@ -17,13 +20,36 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
   bool _obscureOld = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
+  bool _isLoading = false;
+
+  // Status Validasi Real-time
+  bool _hasUppercase = false;
+  bool _hasDigits = false;
+  bool _hasMinLength = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _newPasswordController.addListener(_validatePassword);
+  }
 
   @override
   void dispose() {
+    _newPasswordController.removeListener(_validatePassword);
     _oldPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  // Fungsi Cek Syarat Password Secara Real-time
+  void _validatePassword() {
+    final text = _newPasswordController.text;
+    setState(() {
+      _hasUppercase = text.contains(RegExp(r'[A-Z]'));
+      _hasDigits = text.contains(RegExp(r'[0-9]'));
+      _hasMinLength = text.length >= 8;
+    });
   }
 
   void _clearConfirmPassword() {
@@ -32,13 +58,63 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
     });
   }
 
-  // Fungsi untuk me-reset semua input kata sandi
   void _resetAllFields() {
     setState(() {
       _oldPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
     });
+  }
+
+  // Logika Simpan Password Baru ke Firebase/Backend melalui AuthViewModel
+  Future<void> _handleChangePassword() async {
+    final oldPassword = _oldPasswordController.text.trim();
+    final newPassword = _newPasswordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    if (oldPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
+      _showSnackBar('Harap isi semua bidang yang wajib diisi.');
+      return;
+    }
+
+    if (!_hasUppercase || !_hasDigits || !_hasMinLength) {
+      _showSnackBar('Password baru belum memenuhi semua kriteria keamanan.');
+      return;
+    }
+
+    if (newPassword != confirmPassword) {
+      _showSnackBar('Konfirmasi kata sandi tidak cocok.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _authViewModel.changePassword(
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+      );
+
+      if (mounted) {
+        _showSnackBar('Kata sandi berhasil diperbarui!', isError: false);
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(e.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.plusJakartaSans()),
+        backgroundColor: isError ? const Color(0xFFE53935) : const Color(0xFFFFA800),
+      ),
+    );
   }
 
   @override
@@ -50,7 +126,6 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
       builder: (context, currentThemeMode, child) {
         final isDarkMode = ThemeViewModel.isDarkMode;
 
-        // Penyesuaian Warna Dinamis
         final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
         final inputFillColor = isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFFAFAFA);
         final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF1D1D1F);
@@ -63,7 +138,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
           appBar: AppBar(
             backgroundColor: bgColor,
             elevation: 0,
-            titleSpacing: 0, // Menghilangkan jarak bawaan antara panah dan judul
+            titleSpacing: 0,
             leading: IconButton(
               icon: Icon(Icons.arrow_back, color: iconColor),
               onPressed: () => Navigator.pop(context),
@@ -84,7 +159,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header (Ikon Gembok + Subjudul)
+                // Header
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -128,8 +203,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                   controller: _oldPasswordController,
                   hintText: '••••••••••••',
                   isObscure: _obscureOld,
-                  onToggleObscure: () =>
-                      setState(() => _obscureOld = !_obscureOld),
+                  onToggleObscure: () => setState(() => _obscureOld = !_obscureOld),
                   primaryOrange: primaryOrange,
                   inputFillColor: inputFillColor,
                   textColor: primaryTextColor,
@@ -145,8 +219,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                   controller: _newPasswordController,
                   hintText: '••••••••••••',
                   isObscure: _obscureNew,
-                  onToggleObscure: () =>
-                      setState(() => _obscureNew = !_obscureNew),
+                  onToggleObscure: () => setState(() => _obscureNew = !_obscureNew),
                   primaryOrange: primaryOrange,
                   inputFillColor: inputFillColor,
                   textColor: primaryTextColor,
@@ -178,8 +251,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                   controller: _confirmPasswordController,
                   hintText: '••••••••••••',
                   isObscure: _obscureConfirm,
-                  onToggleObscure: () =>
-                      setState(() => _obscureConfirm = !_obscureConfirm),
+                  onToggleObscure: () => setState(() => _obscureConfirm = !_obscureConfirm),
                   primaryOrange: primaryOrange,
                   inputFillColor: inputFillColor,
                   textColor: primaryTextColor,
@@ -188,7 +260,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
 
                 const SizedBox(height: 16),
 
-                // Daftar Syarat Validasi
+                // Daftar Syarat Validasi Real-Time
                 Text(
                   'Kata sandi harus mengandung:',
                   style: GoogleFonts.plusJakartaSans(
@@ -199,15 +271,15 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                 ),
                 const SizedBox(height: 8),
 
-                _buildValidationItem('Minimal 1 huruf kapital', isChecked: true, secondaryTextColor: secondaryTextColor),
+                _buildValidationItem('Minimal 1 huruf kapital', isChecked: _hasUppercase, secondaryTextColor: secondaryTextColor),
                 const SizedBox(height: 6),
-                _buildValidationItem('Minimal 1 angka', isChecked: false, secondaryTextColor: secondaryTextColor),
+                _buildValidationItem('Minimal 1 angka', isChecked: _hasDigits, secondaryTextColor: secondaryTextColor),
                 const SizedBox(height: 6),
-                _buildValidationItem('Minimal 8 karakter', isChecked: false, secondaryTextColor: secondaryTextColor),
+                _buildValidationItem('Minimal 8 karakter', isChecked: _hasMinLength, secondaryTextColor: secondaryTextColor),
 
                 const SizedBox(height: 32),
 
-                // Tombol Aksi (Reset & Simpan Perubahan)
+                // Tombol Aksi
                 Row(
                   children: [
                     // Tombol Reset
@@ -222,7 +294,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                             ),
                             elevation: 0,
                           ),
-                          onPressed: _resetAllFields,
+                          onPressed: _isLoading ? null : _resetAllFields,
                           child: Text(
                             'Reset',
                             style: GoogleFonts.plusJakartaSans(
@@ -247,20 +319,24 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                             ),
                             elevation: 0,
                           ),
-                          onPressed: () {
-                            if (_newPasswordController.text ==
-                                _confirmPasswordController.text) {
-                              Navigator.pop(context);
-                            }
-                          },
-                          child: Text(
-                            'Simpan',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          onPressed: _isLoading ? null : _handleChangePassword,
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  'Simpan',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -362,8 +438,8 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
           text,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 12,
-            color: secondaryTextColor,
-            fontWeight: FontWeight.w500,
+            color: isChecked ? const Color(0xFF4CAF50) : secondaryTextColor,
+            fontWeight: isChecked ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
       ],
