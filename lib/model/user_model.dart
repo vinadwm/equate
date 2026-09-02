@@ -17,10 +17,7 @@ class UserModel {
     this.photo,
   });
 
-  // Getter nama lengkap
   String get fullName => '$firstName $lastName'.trim();
-
-  // Getter alias agar photoUrl tetap kompatibel dengan EditProfileView
   String? get photoUrl => photo;
 
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
@@ -39,7 +36,8 @@ class UserModel {
       lastName: map['lastName'] ?? '',
       email: map['email'] ?? '',
       birthDate: parsedDate,
-      photo: map['photo'] ?? map['photoUrl'],
+      // Membaca 'photo' atau fallback ke 'photoUrl' (jika ada data lama di Firestore)
+      photo: (map['photo'] as String?) ?? (map['photoUrl'] as String?),
     );
   }
 
@@ -48,7 +46,9 @@ class UserModel {
       'firstName': firstName,
       'lastName': lastName,
       'email': email,
-      'birthDate': birthDate?.toIso8601String(),
+      'birthDate': birthDate != null
+          ? Timestamp.fromDate(birthDate!)
+          : null, // Lebih disarankan menggunakan Timestamp untuk Firestore
       'photo': photo,
     };
   }

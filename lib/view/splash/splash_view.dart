@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../onboarding/onboarding_view.dart';
+import '../main_navigation_view.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -11,9 +14,8 @@ class SplashView extends StatefulWidget {
 }
 
 class _SplashViewState extends State<SplashView> {
-  // Flag state untuk mengontrol urutan animasi
-  bool _isScaled = false;   // Detik 0.5: Logo membesar di tengah
-  bool _isShifted = false;  // Detik 3.0: Logo bergeser ke kiri & teks muncul
+  bool _isScaled = false;
+  bool _isShifted = false;
 
   @override
   void initState() {
@@ -21,26 +23,60 @@ class _SplashViewState extends State<SplashView> {
     _startAnimationSequence();
   }
 
-  void _startAnimationSequence() async {
-    // 1. Detik 0.5: Logo Muncul di Tengah (Zoom In)
+  Future<void> _startAnimationSequence() async {
+    // ============================================================
+    // 1. LOGO MUNCUL
+    // ============================================================
+
     await Future.delayed(const Duration(milliseconds: 500));
-    if (mounted) {
-      setState(() {
-        _isScaled = true;
-      });
-    }
 
-    // 2. Detik 3.0: Logo diam selama 2.5 detik, lalu bergeser & teks muncul
+    if (!mounted) return;
+
+    setState(() {
+      _isScaled = true;
+    });
+
+    // ============================================================
+    // 2. LOGO BERGESER + TEKS MUNCUL
+    // ============================================================
+
     await Future.delayed(const Duration(milliseconds: 2500));
-    if (mounted) {
-      setState(() {
-        _isShifted = true;
-      });
-    }
 
-    // 3. Detik 6.0: Pindah ke halaman Onboarding
+    if (!mounted) return;
+
+    setState(() {
+      _isShifted = true;
+    });
+
+    // ============================================================
+    // 3. TUNGGU SELESAI ANIMASI
+    // ============================================================
+
     await Future.delayed(const Duration(milliseconds: 3000));
-    if (mounted) {
+
+    if (!mounted) return;
+
+    // ============================================================
+    // 4. CEK STATUS LOGIN
+    // ============================================================
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      // ==========================================================
+      // USER MASIH LOGIN
+      // → LANGSUNG HOME
+      // ==========================================================
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MainNavigationView()),
+      );
+    } else {
+      // ==========================================================
+      // USER BELUM LOGIN / SUDAH LOGOUT
+      // → ONBOARDING
+      // ==========================================================
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const OnboardingView()),
       );
@@ -50,18 +86,17 @@ class _SplashViewState extends State<SplashView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Latar belakang putih bersih (tanpa warna oranye)
+      backgroundColor: Colors.white,
       body: Center(
         child: AnimatedScale(
           scale: _isScaled ? 1.0 : 0.0,
           duration: const Duration(milliseconds: 1000),
           curve: Curves.easeOutBack,
           child: Row(
-            mainAxisSize: MainAxisSize.min, // Menjaga konten tetap di tengah layar
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center, // Perbaikan typo CrossAxisAlignment
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 1. LOGO GAMBAR (DIPERBESAR)
               SizedBox(
                 width: 110,
                 height: 110,
@@ -78,19 +113,18 @@ class _SplashViewState extends State<SplashView> {
                 ),
               ),
 
-              // 2. WIDGET TEKS (Mengembang dari lebar 0 secara halus agar logo bergeser)
               AnimatedContainer(
                 duration: const Duration(milliseconds: 1200),
                 curve: Curves.easeInOutCubic,
-                width: _isShifted ? 210 : 0, // Menggeser logo secara alami
+                width: _isShifted ? 210 : 0,
                 clipBehavior: Clip.hardEdge,
                 decoration: const BoxDecoration(),
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 1000),
                   curve: Curves.easeIn,
-                  opacity: _isShifted ? 1.0 : 0.0, // Fade In Teks
+                  opacity: _isShifted ? 1.0 : 0.0,
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 4), // Jarak SANGAT MEPET dengan logo
+                    padding: const EdgeInsets.only(left: 4),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       physics: const NeverScrollableScrollPhysics(),

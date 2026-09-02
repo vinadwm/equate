@@ -2,26 +2,50 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:intl/date_symbol_data_local.dart'; // 1. IMPORT DATE FORMATTING
+import 'package:intl/date_symbol_data_local.dart';
+
 import 'firebase_options.dart';
 
-// View & ViewModel
+// ============================================================
+// VIEW
+// ============================================================
 import 'package:equate/view/splash/splash_view.dart';
+
+// ============================================================
+// VIEWMODEL
+// ============================================================
 import 'package:equate/viewmodel/theme_viewmodel.dart';
-import 'package:equate/viewmodel/gold_viewmodel.dart';
+import 'package:equate/viewmodel/historical_data_viewmodel.dart';
+import 'package:equate/viewmodel/auth_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. INISIALISASI LOCALE INDONESIA
+  // ==========================================================
+  // INITIALIZE DATE LOCALE
+  // ==========================================================
   await initializeDateFormatting('id_ID', null);
 
+  // ==========================================================
+  // INITIALIZE FIREBASE
+  // ==========================================================
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // ==========================================================
+  // RUN APP
+  // ==========================================================
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => GoldViewModel()),
+        // ======================================================
+        // AUTH VIEWMODEL
+        // ======================================================
+        ChangeNotifierProvider(create: (_) => AuthViewModel()),
+
+        // ======================================================
+        // HISTORICAL DATA VIEWMODEL
+        // ======================================================
+        ChangeNotifierProvider(create: (_) => HistoricalDataViewModel()),
       ],
       child: const EquateApp(),
     ),
@@ -38,32 +62,46 @@ class EquateApp extends StatelessWidget {
       builder: (context, currentThemeMode, child) {
         return MaterialApp(
           title: 'Equate',
+
           debugShowCheckedModeBanner: false,
+
           themeMode: currentThemeMode,
 
-          // Theme Light
+          // ==================================================
+          // LIGHT THEME
+          // ==================================================
           theme: ThemeData(
             brightness: Brightness.light,
+
             colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.amber,
+              seedColor: const Color(0xFFFF9800),
               brightness: Brightness.light,
             ),
+
             scaffoldBackgroundColor: Colors.white,
+
             useMaterial3: true,
+
             textTheme: GoogleFonts.plusJakartaSansTextTheme(
               ThemeData.light().textTheme,
             ),
           ),
 
-          // Theme Dark
+          // ==================================================
+          // DARK THEME
+          // ==================================================
           darkTheme: ThemeData(
             brightness: Brightness.dark,
+
             colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.amber,
+              seedColor: const Color(0xFFFF9800),
               brightness: Brightness.dark,
             ),
+
             scaffoldBackgroundColor: const Color(0xFF121212),
+
             useMaterial3: true,
+
             textTheme: GoogleFonts.plusJakartaSansTextTheme(
               ThemeData.dark().textTheme,
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'tabs/home_tab_view.dart';
 import 'tabs/calculator_tab_view.dart';
@@ -15,20 +16,61 @@ class MainNavigationView extends StatefulWidget {
 class _MainNavigationViewState extends State<MainNavigationView> {
   int _currentIndex = 0;
 
-  final List<Widget> _tabs = const [HomeTabView(), ProfileTabView()];
+  // ============================================================
+  // KEY UNTUK HOME
+  // ============================================================
+
+  final GlobalKey<HomeTabViewState> _homeKey = GlobalKey<HomeTabViewState>();
+
+  // ============================================================
+  // TABS
+  // ============================================================
+
+  late final List<Widget> _tabs;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _tabs = [HomeTabView(key: _homeKey), const ProfileTabView()];
+  }
+
+  // ============================================================
+  // GANTI TAB
+  // ============================================================
+
+  void _changeTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+
+    // ==========================================================
+    // JIKA KEMBALI KE HOME
+    // MAKA AMBIL DATA USER TERBARU DARI FIRESTORE
+    // ==========================================================
+
+    if (index == 0) {
+      _homeKey.currentState?.refreshUser();
+    }
+  }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // Content Halaman (Menggunakan Safe Indexing)
-          IndexedStack(
-            index: _currentIndex > 1 ? 0 : _currentIndex,
-            children: _tabs,
-          ),
+          // ======================================================
+          // CONTENT HALAMAN
+          // ======================================================
+          IndexedStack(index: _currentIndex, children: _tabs),
 
-          // Floating Navbar Utama
+          // ======================================================
+          // FLOATING NAVBAR
+          // ======================================================
           ValueListenableBuilder<ThemeMode>(
             valueListenable: ThemeViewModel.themeMode,
             builder: (context, currentThemeMode, child) {
@@ -37,12 +79,15 @@ class _MainNavigationViewState extends State<MainNavigationView> {
               final navBgColor = isDarkMode
                   ? const Color(0xFF1E1E1E)
                   : Colors.white;
+
               final navBorderColor = isDarkMode
                   ? Colors.grey[800]!
                   : Colors.transparent;
+
               final defaultGreyColor = isDarkMode
                   ? const Color(0xFFA0A0A0)
                   : const Color(0xFF9E9E9E);
+
               final activeColor = isDarkMode
                   ? const Color(0xFFFF9800)
                   : defaultGreyColor;
@@ -71,7 +116,9 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // 1. HOME TAB
+                      // ==================================================
+                      // HOME
+                      // ==================================================
                       _buildNavItem(
                         index: 0,
                         label: 'Beranda',
@@ -81,7 +128,9 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                         inactiveColor: defaultGreyColor,
                       ),
 
-                      // 2. CALCULATOR BUTTON (BUKA HALAMAN BARU TANPA NAVBAR)
+                      // ==================================================
+                      // CALCULATOR
+                      // ==================================================
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -108,9 +157,11 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                         ),
                       ),
 
-                      // 3. PROFILE TAB
+                      // ==================================================
+                      // PROFILE
+                      // ==================================================
                       _buildNavItem(
-                        index: 1, // Index disesuaikan menjadi 1
+                        index: 1,
                         label: 'Profil',
                         activeIcon: Icons.person_rounded,
                         inactiveIcon: Icons.person_outline_rounded,
@@ -128,6 +179,10 @@ class _MainNavigationViewState extends State<MainNavigationView> {
     );
   }
 
+  // ============================================================
+  // NAV ITEM
+  // ============================================================
+
   Widget _buildNavItem({
     required int index,
     required String label,
@@ -137,13 +192,12 @@ class _MainNavigationViewState extends State<MainNavigationView> {
     required Color inactiveColor,
   }) {
     final isSelected = _currentIndex == index;
+
     final itemColor = isSelected ? activeColor : inactiveColor;
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
+        _changeTab(index);
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
@@ -174,6 +228,10 @@ class _MainNavigationViewState extends State<MainNavigationView> {
   }
 }
 
+// ============================================================
+// MATH SYMBOL PAINTER
+// ============================================================
+
 class MathSymbolsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -186,22 +244,27 @@ class MathSymbolsPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // --- 1. SIMBOL PLUS (+) ---
+    // PLUS
     canvas.drawLine(Offset(0, h * 0.22), Offset(w * 0.38, h * 0.22), paint);
+
     canvas.drawLine(Offset(w * 0.19, 0), Offset(w * 0.19, h * 0.44), paint);
 
-    // --- 2. SIMBOL MINUS (-) ---
+    // MINUS
     canvas.drawLine(Offset(w * 0.62, h * 0.22), Offset(w, h * 0.22), paint);
 
-    // --- 3. SIMBOL KALI (X) ---
+    // KALI
     canvas.drawLine(Offset(0, h * 0.6), Offset(w * 0.38, h * 0.98), paint);
+
     canvas.drawLine(Offset(0, h * 0.98), Offset(w * 0.38, h * 0.6), paint);
 
-    // --- 4. SIMBOL SAMA DENGAN (=) ---
+    // SAMA DENGAN
     canvas.drawLine(Offset(w * 0.62, h * 0.68), Offset(w, h * 0.68), paint);
+
     canvas.drawLine(Offset(w * 0.62, h * 0.90), Offset(w, h * 0.90), paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
+  }
 }
