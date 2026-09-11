@@ -87,7 +87,8 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const CalculatorTabView(),
+                              // DIBERSIHKAN DARI 'const' UNTUK MENGATASI ERROR
+                              builder: (context) => CalculatorTabView(),
                             ),
                           );
                         },
@@ -110,7 +111,7 @@ class _MainNavigationViewState extends State<MainNavigationView> {
 
                       // 3. PROFILE TAB
                       _buildNavItem(
-                        index: 1, // Index disesuaikan menjadi 1
+                        index: 1,
                         label: 'Profil',
                         activeIcon: Icons.person_rounded,
                         inactiveIcon: Icons.person_outline_rounded,
