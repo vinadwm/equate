@@ -1,4 +1,4 @@
-class CalculationHistoryModel {
+class PivotGoldModel {
   final String type;
   final DateTime createdAt;
 
@@ -16,7 +16,7 @@ class CalculationHistoryModel {
   final double s3;
   final double s4;
 
-  CalculationHistoryModel({
+  PivotGoldModel({
     required this.type,
     required this.createdAt,
     required this.high,

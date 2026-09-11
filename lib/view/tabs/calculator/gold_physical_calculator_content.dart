@@ -16,10 +16,7 @@ class GoldPhysicalCalculatorContent extends StatefulWidget {
   // 1. Tambahkan parameter callback onCalculate di constructor
   final Function(dynamic)? onCalculate;
 
-  const GoldPhysicalCalculatorContent({
-    super.key,
-    this.onCalculate,
-  });
+  const GoldPhysicalCalculatorContent({super.key, this.onCalculate});
 
   @override
   State<GoldPhysicalCalculatorContent> createState() =>
@@ -34,8 +31,9 @@ class _GoldPhysicalCalculatorContentState
   final TextEditingController _modalController = TextEditingController();
   final TextEditingController _kursController = TextEditingController();
   final TextEditingController _hargaBeliController = TextEditingController();
-  final TextEditingController _hargaJualController =
-      TextEditingController(text: "4320,08");
+  final TextEditingController _hargaJualController = TextEditingController(
+    text: "0,00",
+  );
 
   bool _hasInput = false;
   double? _hasilAkhir;
@@ -123,9 +121,9 @@ class _GoldPhysicalCalculatorContentState
       if (!mounted) return;
       Navigator.pop(context);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Terjadi kesalahan: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
     }
   }
 
@@ -136,7 +134,8 @@ class _GoldPhysicalCalculatorContentState
   }
 
   void _checkInputState() {
-    final hasText = _modalController.text.isNotEmpty ||
+    final hasText =
+        _modalController.text.isNotEmpty ||
         _kursController.text.isNotEmpty ||
         _hargaBeliController.text.isNotEmpty ||
         _hargaJualController.text.isNotEmpty;
@@ -164,7 +163,7 @@ class _GoldPhysicalCalculatorContentState
     final double? hargaJual = _parseFormattedNumber(_hargaJualController.text);
     final double? kurs = _parseFormattedNumber(_kursController.text);
 
-    const double toz = 31.1035;
+    const double toz = 31.1;
 
     if (modal != null &&
         hargaBeli != null &&
@@ -209,8 +208,9 @@ class _GoldPhysicalCalculatorContentState
         await Gal.requestAccess();
       }
 
-      final boundary = _globalKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          _globalKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) return;
 
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
@@ -250,8 +250,8 @@ class _GoldPhysicalCalculatorContentState
     final statusText = _hasilAkhir == null
         ? '-'
         : _hasilAkhir! >= 0
-            ? 'Untung'
-            : 'Rugi';
+        ? 'Untung'
+        : 'Rugi';
 
     final hasilText = _hasilAkhir == null
         ? 'Rp 0'
@@ -270,7 +270,9 @@ class _GoldPhysicalCalculatorContentState
                 pw.Text(
                   'KALKULATOR EMAS FISIK',
                   style: pw.TextStyle(
-                      fontSize: 18, fontWeight: pw.FontWeight.bold),
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
                 pw.SizedBox(height: 12),
                 pw.Table.fromTextArray(
@@ -306,8 +308,10 @@ class _GoldPhysicalCalculatorContentState
         child: Wrap(
           children: [
             ListTile(
-              leading:
-                  const Icon(Icons.image_rounded, color: Color(0xFFFF9E0F)),
+              leading: const Icon(
+                Icons.image_rounded,
+                color: Color(0xFFFF9E0F),
+              ),
               title: const Text('Export sebagai Gambar (PNG)'),
               onTap: () {
                 Navigator.pop(bottomSheetContext);
@@ -315,8 +319,10 @@ class _GoldPhysicalCalculatorContentState
               },
             ),
             ListTile(
-              leading: const Icon(Icons.picture_as_pdf_rounded,
-                  color: Colors.redAccent),
+              leading: const Icon(
+                Icons.picture_as_pdf_rounded,
+                color: Colors.redAccent,
+              ),
               title: const Text('Export sebagai PDF'),
               onTap: () {
                 Navigator.pop(bottomSheetContext);
@@ -337,8 +343,9 @@ class _GoldPhysicalCalculatorContentState
     final cardBgColor = isDarkMode
         ? const Color(0xFF1E1E24).withOpacity(0.9)
         : Colors.white.withOpacity(0.95);
-    final primaryTextColor =
-        isDarkMode ? Colors.white : const Color(0xFF161616);
+    final primaryTextColor = isDarkMode
+        ? Colors.white
+        : const Color(0xFF161616);
     final inputFillColor = isDarkMode
         ? const Color(0xFF262630)
         : const Color(0xFFF4F5F9);
@@ -403,8 +410,8 @@ class _GoldPhysicalCalculatorContentState
                     color: _glowAnimation.value > 0
                         ? primaryOrange
                         : (_hasInput
-                            ? primaryOrange.withOpacity(0.5)
-                            : borderColor),
+                              ? primaryOrange.withOpacity(0.5)
+                              : borderColor),
                     width: _glowAnimation.value > 0 ? 1.5 : 1.2,
                   ),
                   boxShadow: [
@@ -416,8 +423,9 @@ class _GoldPhysicalCalculatorContentState
                       )
                     else
                       BoxShadow(
-                        color: Colors.black
-                            .withOpacity(isDarkMode ? 0.3 : 0.03),
+                        color: Colors.black.withOpacity(
+                          isDarkMode ? 0.3 : 0.03,
+                        ),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -428,63 +436,6 @@ class _GoldPhysicalCalculatorContentState
             },
             child: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: (_isAutoFill
-                                    ? primaryOrange
-                                    : Colors.grey)
-                                .withOpacity(0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.api_rounded,
-                            size: 16,
-                            color: _isAutoFill ? primaryOrange : Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Isi Otomatis (API)',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: _isAutoFill
-                                ? primaryOrange
-                                : primaryTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(
-                      height: 24,
-                      child: Switch(
-                        value: _isAutoFill,
-                        activeColor: primaryOrange,
-                        activeTrackColor: primaryOrange.withOpacity(0.35),
-                        onChanged: (value) async {
-                          setState(() {
-                            _isAutoFill = value;
-                          });
-
-                          if (value) {
-                            await _autoFill();
-                          } else {
-                            _resetForm();
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Divider(height: 1, thickness: 1, color: dividerColor),
-                const SizedBox(height: 14),
                 _buildCompactInput(
                   'Modal',
                   _modalController,
@@ -584,8 +535,8 @@ class _GoldPhysicalCalculatorContentState
                             backgroundColor: _hasInput
                                 ? primaryOrange
                                 : (isDarkMode
-                                    ? const Color(0xFF2A2A34)
-                                    : const Color(0xFFF0F0F4)),
+                                      ? const Color(0xFF2A2A34)
+                                      : const Color(0xFFF0F0F4)),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -597,8 +548,9 @@ class _GoldPhysicalCalculatorContentState
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
-                              color:
-                                  _hasInput ? Colors.white : Colors.grey[400],
+                              color: _hasInput
+                                  ? Colors.white
+                                  : Colors.grey[400],
                             ),
                           ),
                         ),
@@ -621,8 +573,8 @@ class _GoldPhysicalCalculatorContentState
                 border: Border.all(
                   color: _isCalculated
                       ? (_hasilAkhir != null && _hasilAkhir! >= 0
-                          ? const Color(0xFF18B85A).withOpacity(0.6)
-                          : const Color(0xFFFF3B30).withOpacity(0.6))
+                            ? const Color(0xFF18B85A).withOpacity(0.6)
+                            : const Color(0xFFFF3B30).withOpacity(0.6))
                       : borderColor,
                   width: 1.2,
                 ),
@@ -699,18 +651,22 @@ class _GoldPhysicalCalculatorContentState
                               const SizedBox(height: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 5),
+                                  horizontal: 12,
+                                  vertical: 5,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: (_hasilAkhir! >= 0
-                                          ? const Color(0xFF18B85A)
-                                          : const Color(0xFFFF3B30))
-                                      .withOpacity(0.12),
+                                  color:
+                                      (_hasilAkhir! >= 0
+                                              ? const Color(0xFF18B85A)
+                                              : const Color(0xFFFF3B30))
+                                          .withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: (_hasilAkhir! >= 0
-                                            ? const Color(0xFF18B85A)
-                                            : const Color(0xFFFF3B30))
-                                        .withOpacity(0.3),
+                                    color:
+                                        (_hasilAkhir! >= 0
+                                                ? const Color(0xFF18B85A)
+                                                : const Color(0xFFFF3B30))
+                                            .withOpacity(0.3),
                                   ),
                                 ),
                                 child: Row(
@@ -763,8 +719,11 @@ class _GoldPhysicalCalculatorContentState
                 ),
               ),
               onPressed: () => _showExportModal(context),
-              icon: const Icon(Icons.ios_share_rounded,
-                  color: primaryOrange, size: 16),
+              icon: const Icon(
+                Icons.ios_share_rounded,
+                color: primaryOrange,
+                size: 16,
+              ),
               label: Text(
                 'EXPORT HASIL',
                 style: GoogleFonts.plusJakartaSans(
@@ -844,8 +803,10 @@ class _GoldPhysicalCalculatorContentState
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  const BorderSide(color: Color(0xFFFF9E0F), width: 1.8),
+              borderSide: const BorderSide(
+                color: Color(0xFFFF9E0F),
+                width: 1.8,
+              ),
             ),
           ),
         ),

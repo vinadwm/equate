@@ -32,9 +32,6 @@ dependencies:
   share_plus: ^11.0.0
 
   # DITAMBAHKAN UNTUK FITUR EXPORT PDF & GAMBAR
-  pdf: ^3.11.1
-  printing: ^5.13.2
-  path_provider: ^2.1.5
   gal: ^2.3.0 # <-- TAMBAHKAN BARIS INI
 
 dev_dependencies:

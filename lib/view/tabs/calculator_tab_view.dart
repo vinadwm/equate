@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/viewmodel/gold_digital_viewmodel.dart';
 
 // IMPORT PATH KE SUB-FOLDER CALCULATOR
 import 'calculator/gold_digital_calculator_content.dart';
@@ -51,6 +52,112 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     return formatter.format(amount.abs()).trim();
   }
 
+  Widget _buildCalculatorSwitcher({required bool isDarkMode}) {
+    const primaryOrange = Color(0xFFFFA800);
+
+    return PopupMenuButton<int>(
+      offset: const Offset(0, -150),
+      elevation: 8,
+      color: isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE9E9E9),
+
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
+      onSelected: (index) {
+        setState(() {
+          _selectedTab = index;
+        });
+      },
+
+      itemBuilder: (context) => [
+        PopupMenuItem<int>(
+          value: 1,
+          child: _buildCalculatorMenuItem(
+            icon: Icons.account_balance_wallet_rounded,
+            title: 'Emas Fisik',
+            selected: _selectedTab == 1,
+            isDarkMode: isDarkMode,
+          ),
+        ),
+
+        PopupMenuItem<int>(
+          value: 0,
+          child: _buildCalculatorMenuItem(
+            icon: Icons.show_chart_rounded,
+            title: 'Emas Digital',
+            selected: _selectedTab == 0,
+            isDarkMode: isDarkMode,
+          ),
+        ),
+
+        PopupMenuItem<int>(
+          value: 2,
+          child: _buildCalculatorMenuItem(
+            icon: Icons.auto_graph_rounded,
+            title: 'Pivot Point Emas',
+            selected: _selectedTab == 2,
+            isDarkMode: isDarkMode,
+          ),
+        ),
+      ],
+
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: primaryOrange,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.calculate_rounded,
+          color: Colors.white,
+          size: 25,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalculatorMenuItem({
+    required IconData icon,
+    required String title,
+    required bool selected,
+    required bool isDarkMode,
+  }) {
+    final textColor = isDarkMode ? Colors.white : const Color(0xFF666666);
+
+    return Row(
+      children: [
+        Icon(icon, size: 17, color: textColor),
+
+        const SizedBox(width: 8),
+
+        Expanded(
+          child: Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+        ),
+
+        if (selected)
+          Icon(
+            Icons.check_rounded,
+            size: 17,
+            color: isDarkMode ? Colors.white : const Color(0xFF666666),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const primaryOrange = Color(0xFFFFA800);
@@ -63,26 +170,16 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
         final bgColor = isDarkMode
             ? const Color(0xFF121212)
             : const Color(0xFFFBFBFB);
-        final tabBgColor = isDarkMode
-            ? const Color(0xFF1E1E1E)
-            : const Color(0xFFF2F2F2);
-        final activeTabBgColor = isDarkMode
-            ? const Color(0xFF2A2A2A)
-            : Colors.white;
         final iconColor = isDarkMode ? Colors.white : Colors.black;
         final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
-        final unselectedTextColor = isDarkMode
-            ? const Color(0xFFA0A0A0)
-            : Colors.grey[600]!;
-        final cardBgColor = isDarkMode
-            ? const Color(0xFF1E1E1E)
-            : Colors.white;
+        final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
         final borderColor = isDarkMode
             ? Colors.grey[800]!
             : const Color(0xFFEEEEEE);
 
         return Scaffold(
           backgroundColor: bgColor,
+
           appBar: AppBar(
             backgroundColor: bgColor,
             elevation: 0,
@@ -101,56 +198,36 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             ),
             centerTitle: true,
           ),
+
+          // ==========================================================
+          // FLOATING CALCULATOR SWITCHER
+          // ==========================================================
+          floatingActionButton: _buildCalculatorSwitcher(
+            isDarkMode: isDarkMode,
+          ),
+
+          // ==========================================================
+          // BODY
+          // ==========================================================
           body: SingleChildScrollView(
             child: Column(
               children: [
-                const SizedBox(height: 10),
-
-                // TAB SWITCHER (3 TOMBOL ATAS)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: tabBgColor,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildTabButton('EMAS DIGITAL', 0, activeTabBgColor,
-                          isDarkMode, primaryOrange, unselectedTextColor),
-                      _buildTabButton('EMAS FISIK', 1, activeTabBgColor,
-                          isDarkMode, primaryOrange, unselectedTextColor),
-                      _buildTabButton('PIVOT POINT', 2, activeTabBgColor,
-                          isDarkMode, primaryOrange, unselectedTextColor),
-                    ],
-                  ),
-                ),
-
                 const SizedBox(height: 10),
 
                 // TAB CONTENT
                 IndexedStack(
                   index: _selectedTab,
                   children: [
-                    GoldDigitalCalculatorContent(
-                      onCalculate: (data) => _addHistory(data),
-                    ),
+                    GoldDigitalCalculatorContent(),
+
                     GoldPhysicalCalculatorContent(
                       onCalculate: (data) => _addHistory(data),
                     ),
+
                     PivotPointCalculatorContent(
                       onCalculate: (data) => _addHistory(data),
                     ),
                   ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // SECTION RIWAYAT PERHITUNGAN
-                _buildHistorySection(
-                  cardBgColor: cardBgColor,
-                  primaryTextColor: primaryTextColor,
-                  borderColor: borderColor,
                 ),
 
                 const SizedBox(height: 24),
@@ -159,46 +236,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildTabButton(
-    String label,
-    int index,
-    Color activeBgColor,
-    bool isDarkMode,
-    Color activeTextColor,
-    Color unselectedTextColor,
-  ) {
-    final isSelected = _selectedTab == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedTab = index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? activeBgColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.05),
-                      blurRadius: 4,
-                    ),
-                  ]
-                : [],
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isSelected ? activeTextColor : unselectedTextColor,
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -274,15 +311,14 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _historyList.length,
-              separatorBuilder: (context, index) => Divider(
-                color: borderColor,
-                height: 16,
-              ),
+              separatorBuilder: (context, index) =>
+                  Divider(color: borderColor, height: 16),
               itemBuilder: (context, index) {
                 final item = _historyList[index];
                 final isPositive = item.result >= 0;
-                final timeFormatted =
-                    DateFormat('HH:mm - dd MMM').format(item.timestamp);
+                final timeFormatted = DateFormat(
+                  'HH:mm - dd MMM',
+                ).format(item.timestamp);
 
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
