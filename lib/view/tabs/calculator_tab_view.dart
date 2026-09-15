@@ -1,17 +1,27 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+
 import 'package:equate/viewmodel/theme_viewmodel.dart';
-import 'package:equate/viewmodel/gold_digital_viewmodel.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 
-// IMPORT PATH KE SUB-FOLDER CALCULATOR
+// ==========================================================
+// CALCULATOR CONTENT
+// ==========================================================
 import 'calculator/gold_digital_calculator_content.dart';
 import 'calculator/gold_physical_calculator_content.dart';
 import 'calculator/pivot_gold_calculator_content.dart';
+import 'calculator/pivot_hangseng_calculator_content.dart';
 
 // ==========================================================
-// MODEL SEDERHANA UNTUK DATA RIWAYAT
+// CUSTOM MENU
+// ==========================================================
+import 'custom_calculator_menu.dart';
+
+// ==========================================================
+// MODEL RIWAYAT
 // ==========================================================
 class CalculationHistory {
   final String title;
@@ -27,9 +37,13 @@ class CalculationHistory {
   });
 }
 
+// ==========================================================
+// CALCULATOR TAB VIEW
+// ==========================================================
 class CalculatorTabView extends StatefulWidget {
   // ========================================================
-  // HistoricalDataViewModel YANG SAMA DENGAN HOME
+  // SHARED HISTORICAL VIEWMODEL
+  // Dipakai juga oleh HomeTabView
   // ========================================================
   final HistoricalDataViewModel historicalDataViewModel;
 
@@ -40,37 +54,57 @@ class CalculatorTabView extends StatefulWidget {
 }
 
 class _CalculatorTabViewState extends State<CalculatorTabView> {
-  // 0 = Digital
-  // 1 = Fisik
-  // 2 = Pivot Point
-  int _selectedTab = 0;
+  // ==========================================================
+  // CALCULATOR YANG SEDANG DIPILIH
+  // ==========================================================
+  String? _selectedCalculatorType;
+
+  bool _isGoldDropdownOpen = false;
+  bool _isHangsengDropdownOpen = false;
 
   // ==========================================================
-  // JUDUL KALKULATOR
+  // OPTION EMAS
   // ==========================================================
-  String get _calculatorTitle {
-    switch (_selectedTab) {
-      case 1:
-        return 'Kalkulator Emas Fisik';
-
-      case 2:
-        return 'Kalkulator Pivot Point Emas';
-
-      case 0:
-      default:
-        return 'Kalkulator Emas Digital';
-    }
-  }
+  final List<Map<String, dynamic>> _goldOptions = [
+    {
+      'title': 'Emas Digital',
+      'description': 'Kalkulasi transaksi jual beli emas digital/online.',
+      'icon': Icons.account_balance_wallet_rounded,
+    },
+    {
+      'title': 'Emas Fisik',
+      'description': 'Hitung konversi & biaya cetak batang/perhiasan.',
+      'icon': Icons.view_in_ar_rounded,
+    },
+    {
+      'title': 'Pivot Point Emas',
+      'description': 'Analisis level Support & Resistance harian.',
+      'icon': Icons.analytics_rounded,
+    },
+  ];
 
   // ==========================================================
-  // RIWAYAT PERHITUNGAN
+  // OPTION HANGSENG
+  // ==========================================================
+  final List<Map<String, dynamic>> _hangsengOptions = [
+    {
+      'title': 'Pivot Point Hangseng',
+      'description': 'Analisis Support & Resistance transaksi indeks Hangseng.',
+      'icon': Icons.candlestick_chart_rounded,
+    },
+  ];
+
+  // ==========================================================
+  // HISTORY
   // ==========================================================
   final List<CalculationHistory> _historyList = [];
 
-  void _addHistory(CalculationHistory item) {
-    setState(() {
-      _historyList.insert(0, item);
-    });
+  void _addHistory(dynamic item) {
+    if (item is CalculationHistory) {
+      setState(() {
+        _historyList.insert(0, item);
+      });
+    }
   }
 
   // ==========================================================
@@ -87,237 +121,153 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
   }
 
   // ==========================================================
-  // CALCULATOR SWITCHER
-  // ==========================================================
-  Widget _buildCalculatorSwitcher({required bool isDarkMode}) {
-    const primaryOrange = Color(0xFFFFA800);
-
-    return PopupMenuButton<int>(
-      offset: const Offset(0, -150),
-      elevation: 8,
-      color: isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE9E9E9),
-
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-
-      onSelected: (index) {
-        setState(() {
-          _selectedTab = index;
-        });
-      },
-
-      itemBuilder: (context) => [
-        // ====================================================
-        // EMAS FISIK
-        // ====================================================
-        PopupMenuItem<int>(
-          value: 1,
-          child: _buildCalculatorMenuItem(
-            icon: Icons.account_balance_wallet_rounded,
-            title: 'Emas Fisik',
-            selected: _selectedTab == 1,
-            isDarkMode: isDarkMode,
-          ),
-        ),
-
-        // ====================================================
-        // EMAS DIGITAL
-        // ====================================================
-        PopupMenuItem<int>(
-          value: 0,
-          child: _buildCalculatorMenuItem(
-            icon: Icons.show_chart_rounded,
-            title: 'Emas Digital',
-            selected: _selectedTab == 0,
-            isDarkMode: isDarkMode,
-          ),
-        ),
-
-        // ====================================================
-        // PIVOT POINT
-        // ====================================================
-        PopupMenuItem<int>(
-          value: 2,
-          child: _buildCalculatorMenuItem(
-            icon: Icons.auto_graph_rounded,
-            title: 'Pivot Point Emas',
-            selected: _selectedTab == 2,
-            isDarkMode: isDarkMode,
-          ),
-        ),
-      ],
-
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: primaryOrange,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.calculate_rounded,
-          color: Colors.white,
-          size: 25,
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // MENU ITEM
-  // ==========================================================
-  Widget _buildCalculatorMenuItem({
-    required IconData icon,
-    required String title,
-    required bool selected,
-    required bool isDarkMode,
-  }) {
-    final textColor = isDarkMode ? Colors.white : const Color(0xFF666666);
-
-    return Row(
-      children: [
-        Icon(icon, size: 17, color: textColor),
-
-        const SizedBox(width: 8),
-
-        Expanded(
-          child: Text(
-            title,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
-          ),
-        ),
-
-        if (selected)
-          Icon(
-            Icons.check_rounded,
-            size: 17,
-            color: isDarkMode ? Colors.white : const Color(0xFF666666),
-          ),
-      ],
-    );
-  }
-
-  // ==========================================================
   // BUILD
   // ==========================================================
   @override
   Widget build(BuildContext context) {
-    const primaryOrange = Color(0xFFFFA800);
-
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeViewModel.themeMode,
       builder: (context, currentThemeMode, child) {
         final isDarkMode = ThemeViewModel.isDarkMode;
 
-        final bgColor = isDarkMode
-            ? const Color(0xFF121212)
-            : const Color(0xFFFBFBFB);
+        final primaryTextColor = isDarkMode
+            ? Colors.white
+            : const Color(0xFF2C2D30);
 
-        final iconColor = isDarkMode ? Colors.white : Colors.black;
+        final bgGradientStart = isDarkMode
+            ? const Color(0xFF16181F)
+            : Colors.white;
 
-        final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
-
-        final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-
-        final borderColor = isDarkMode
-            ? Colors.grey[800]!
-            : const Color(0xFFEEEEEE);
+        final bgGradientEnd = isDarkMode
+            ? const Color(0xFF0D0E12)
+            : Colors.white;
 
         return Scaffold(
-          backgroundColor: bgColor,
+          backgroundColor: isDarkMode ? const Color(0xFF0D0E12) : Colors.white,
 
-          // ====================================================
-          // APP BAR
-          // ====================================================
-          appBar: AppBar(
-            backgroundColor: bgColor,
-            elevation: 0,
-
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: iconColor),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-
-            title: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                _calculatorTitle,
-                style: GoogleFonts.plusJakartaSans(
-                  color: primaryTextColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  letterSpacing: 0.2,
+          body: Stack(
+            alignment: Alignment.center,
+            children: [
+              // ======================================================
+              // LAYER 1 - BACKGROUND
+              // ======================================================
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [bgGradientStart, bgGradientEnd],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
                 ),
               ),
-            ),
 
-            centerTitle: true,
-          ),
+              // ======================================================
+              // LAYER 2 - DARK MODE GLOW
+              // ======================================================
+              if (isDarkMode)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 0.8,
+                        colors: [
+                          const Color(0xFFFF9500).withOpacity(0.08),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
 
-          // ====================================================
-          // FLOATING CALCULATOR SWITCHER
-          // ====================================================
-          floatingActionButton: _buildCalculatorSwitcher(
-            isDarkMode: isDarkMode,
-          ),
+              // ======================================================
+              // LAYER 3 - LOGO WATERMARK
+              // ======================================================
+              Opacity(
+                opacity: isDarkMode ? 0.22 : 0.15,
+                child: Image.asset(
+                  'assets/images/logoEWF.png',
+                  width: 310,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
 
-          // ====================================================
-          // BODY
-          // ====================================================
-          body: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                // ==================================================
-                // TAB CONTENT
-                // ==================================================
-                IndexedStack(
-                  index: _selectedTab,
-
+              // ======================================================
+              // LAYER 4 - CONTENT
+              // ======================================================
+              SafeArea(
+                child: Column(
                   children: [
-                    // =================================================
-                    // 0. EMAS DIGITAL
-                    // =================================================
-                    GoldDigitalCalculatorContent(),
+                    // ==================================================
+                    // HEADER
+                    // ==================================================
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              size: 20,
+                              color: primaryTextColor,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              if (_selectedCalculatorType != null) {
+                                setState(() {
+                                  _selectedCalculatorType = null;
+                                });
+                              } else {
+                                Navigator.pop(context);
+                              }
+                            },
+                          ),
 
-                    // =================================================
-                    // 1. EMAS FISIK
-                    // =================================================
-                    GoldPhysicalCalculatorContent(
-                      onCalculate: (data) {
-                        _addHistory(data);
-                      },
+                          Expanded(
+                            child: Text(
+                              _selectedCalculatorType == null
+                                  ? 'Kalkulator'
+                                  : _getCalculatorTitle(),
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.plusJakartaSans(
+                                color: primaryTextColor,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(width: 20),
+                        ],
+                      ),
                     ),
 
-                    // =================================================
-                    // 2. PIVOT POINT EMAS
-                    // =================================================
-                    PivotGoldCalculatorContent(
-                      historicalDataViewModel: widget.historicalDataViewModel,
-
-                      onCalculate: (data) {
-                        _addHistory(data);
-                      },
+                    // ==================================================
+                    // CONTENT
+                    // ==================================================
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: _selectedCalculatorType == null
+                            ? _buildLobbyView(
+                                context,
+                                isDarkMode,
+                                primaryTextColor,
+                              )
+                            : _buildActiveCalculatorView(),
+                      ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 24),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -325,24 +275,404 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
   }
 
   // ==========================================================
-  // RIWAYAT PERHITUNGAN
+  // LOBBY VIEW
+  // ==========================================================
+  Widget _buildLobbyView(
+    BuildContext context,
+    bool isDarkMode,
+    Color primaryTextColor,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+
+        // ======================================================
+        // TITLE
+        // ======================================================
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pilih Pasar & Instrumen',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: primaryTextColor,
+                  letterSpacing: -0.3,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                'Hitung estimasi profit, margin, dan pivot point transaksi.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: isDarkMode
+                      ? const Color(0xFF9A9A9E)
+                      : const Color(0xFF7D828A),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // ======================================================
+        // MARKET BUTTONS
+        // ======================================================
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              // ==================================================
+              // EMAS
+              // ==================================================
+              _buildSoftClayButton(
+                context,
+                title: 'Emas (XUL)',
+                subtitle: 'Kalkulator Emas Digital, Fisik & Pivot',
+                icon: Icons.monetization_on_rounded,
+                isExpanded: _isGoldDropdownOpen,
+                onPressed: () {
+                  setState(() {
+                    _isGoldDropdownOpen = !_isGoldDropdownOpen;
+
+                    if (_isGoldDropdownOpen) {
+                      _isHangsengDropdownOpen = false;
+                    }
+                  });
+                },
+              ),
+
+              // ==================================================
+              // GOLD MENU
+              // ==================================================
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.fastOutSlowIn,
+                child: _isGoldDropdownOpen
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: CustomCalculatorMenu(
+                          options: _goldOptions,
+                          onCalculatorSelected: (selectedName) {
+                            setState(() {
+                              _isGoldDropdownOpen = false;
+
+                              if (selectedName == 'Emas Fisik') {
+                                _selectedCalculatorType = 'physical';
+                              } else if (selectedName == 'Emas Digital') {
+                                _selectedCalculatorType = 'digital';
+                              } else if (selectedName == 'Pivot Point Emas') {
+                                _selectedCalculatorType = 'pivot';
+                              }
+                            });
+                          },
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ==================================================
+              // HANGSENG
+              // ==================================================
+              _buildSoftClayButton(
+                context,
+                title: 'Hangseng (HKK)',
+                subtitle: 'Kalkulator Pivot Point Indeks',
+                icon: Icons.trending_up_rounded,
+                isExpanded: _isHangsengDropdownOpen,
+                onPressed: () {
+                  setState(() {
+                    _isHangsengDropdownOpen = !_isHangsengDropdownOpen;
+
+                    if (_isHangsengDropdownOpen) {
+                      _isGoldDropdownOpen = false;
+                    }
+                  });
+                },
+              ),
+
+              // ==================================================
+              // HANGSENG MENU
+              // ==================================================
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.fastOutSlowIn,
+                child: _isHangsengDropdownOpen
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: CustomCalculatorMenu(
+                          options: _hangsengOptions,
+                          onCalculatorSelected: (selectedName) {
+                            setState(() {
+                              _isHangsengDropdownOpen = false;
+
+                              if (selectedName == 'Pivot Point Hangseng') {
+                                _selectedCalculatorType = 'hangseng_pivot';
+                              }
+                            });
+                          },
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 32),
+
+        // ======================================================
+        // HISTORY
+        // ======================================================
+        _buildHistorySection(
+          isDarkMode: isDarkMode,
+          primaryTextColor: primaryTextColor,
+        ),
+
+        const SizedBox(height: 28),
+      ],
+    );
+  }
+
+  // ==========================================================
+  // ACTIVE CALCULATOR
+  // ==========================================================
+  Widget _buildActiveCalculatorView() {
+    switch (_selectedCalculatorType) {
+      // ======================================================
+      // EMAS DIGITAL
+      // ======================================================
+      case 'digital':
+        return GoldDigitalCalculatorContent();
+
+      // ======================================================
+      // EMAS FISIK
+      // ======================================================
+      case 'physical':
+        return GoldPhysicalCalculatorContent(
+          onCalculate: (data) {
+            _addHistory(data);
+          },
+        );
+
+      // ======================================================
+      // PIVOT EMAS
+      // ======================================================
+      case 'pivot':
+        return PivotGoldCalculatorContent(
+          historicalDataViewModel: widget.historicalDataViewModel,
+          onCalculate: (data) {
+            _addHistory(data);
+          },
+        );
+
+      // ======================================================
+      // PIVOT HANGSENG
+      // ======================================================
+      case 'hangseng_pivot':
+        return PivotHangsengCalculatorContent(
+          historicalDataViewModel: widget.historicalDataViewModel,
+          onCalculate: (data) {
+            _addHistory(data);
+          },
+        );
+
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  // ==========================================================
+  // TITLE
+  // ==========================================================
+  String _getCalculatorTitle() {
+    switch (_selectedCalculatorType) {
+      case 'digital':
+        return 'Emas Digital';
+
+      case 'physical':
+        return 'Emas Fisik';
+
+      case 'pivot':
+        return 'Pivot Point Emas';
+
+      case 'hangseng_pivot':
+        return 'Pivot Hangseng';
+
+      default:
+        return 'Kalkulator';
+    }
+  }
+
+  // ==========================================================
+  // SOFT CLAY BUTTON
+  // ==========================================================
+  Widget _buildSoftClayButton(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isExpanded,
+    required VoidCallback onPressed,
+  }) {
+    final isDarkMode = ThemeViewModel.isDarkMode;
+
+    const primaryOrange = Color(0xFFFF9500);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDarkMode
+            ? const Color(0xFF1E1F24).withOpacity(0.75)
+            : Colors.white.withOpacity(0.85),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isExpanded
+              ? primaryOrange.withOpacity(0.5)
+              : isDarkMode
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white.withOpacity(0.9),
+          width: isExpanded ? 0.8 : 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isExpanded
+                ? primaryOrange.withOpacity(0.18)
+                : Colors.black.withOpacity(isDarkMode ? 0.25 : 0.04),
+            blurRadius: isExpanded ? 16 : 12,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(22),
+          splashColor: primaryOrange.withOpacity(0.12),
+          highlightColor: primaryOrange.withOpacity(0.05),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: [
+                // ==================================================
+                // ICON
+                // ==================================================
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFB700), Color(0xFFFF9500)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF9500).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 22),
+                ),
+
+                const SizedBox(width: 16),
+
+                // ==================================================
+                // TEXT
+                // ==================================================
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: isDarkMode
+                              ? Colors.white
+                              : const Color(0xFF2C2D30),
+                        ),
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: isDarkMode
+                              ? const Color(0xFF8E8E93)
+                              : const Color(0xFF8A8E9B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ==================================================
+                // ARROW
+                // ==================================================
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: isExpanded
+                      ? primaryOrange
+                      : isDarkMode
+                      ? Colors.white54
+                      : const Color(0xFF8A8E9B),
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // HISTORY SECTION
   // ==========================================================
   Widget _buildHistorySection({
-    required Color cardBgColor,
+    required bool isDarkMode,
     required Color primaryTextColor,
-    required Color borderColor,
   }) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
-
       decoration: BoxDecoration(
-        color: cardBgColor,
+        color: isDarkMode
+            ? const Color(0xFF1E1F24).withOpacity(0.75)
+            : Colors.white.withOpacity(0.85),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: borderColor),
+        border: Border.all(
+          color: isDarkMode
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white.withOpacity(0.9),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -354,18 +684,25 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.history_rounded,
-                    color: Color(0xFFFFA800),
-                    size: 20,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9500).withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.history_rounded,
+                      color: Color(0xFFFF9500),
+                      size: 18,
+                    ),
                   ),
 
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
 
                   Text(
                     'Riwayat Perhitungan',
                     style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                       fontSize: 15,
                       color: primaryTextColor,
                     ),
@@ -381,10 +718,10 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                     });
                   },
                   child: Text(
-                    'Hapus Semua',
+                    'Hapus',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                       color: Colors.redAccent,
                     ),
                   ),
@@ -392,26 +729,26 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             ],
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // ======================================================
-          // EMPTY STATE
+          // EMPTY
           // ======================================================
           if (_historyList.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Text(
                   'Belum ada riwayat perhitungan',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: Colors.grey[500],
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
                   ),
                 ),
               ),
             )
           // ======================================================
-          // HISTORY LIST
+          // LIST
           // ======================================================
           else
             ListView.separated(
@@ -420,7 +757,12 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
               itemCount: _historyList.length,
 
               separatorBuilder: (context, index) {
-                return Divider(color: borderColor, height: 16);
+                return Divider(
+                  color: isDarkMode
+                      ? Colors.white.withOpacity(0.06)
+                      : Colors.black.withOpacity(0.04),
+                  height: 16,
+                );
               },
 
               itemBuilder: (context, index) {
@@ -434,55 +776,56 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
 
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                   children: [
                     // =================================================
                     // DETAIL
                     // =================================================
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-
-                      children: [
-                        Text(
-                          item.title,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: primaryTextColor,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: primaryTextColor,
+                            ),
                           ),
-                        ),
 
-                        const SizedBox(height: 2),
+                          const SizedBox(height: 2),
 
-                        Text(
-                          item.details,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: Colors.grey[500],
+                          Text(
+                            item.details,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
                           ),
-                        ),
 
-                        Text(
-                          timeFormatted,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
-                            color: Colors.grey[400],
+                          Text(
+                            timeFormatted,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              color: Colors.grey[400],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+
+                    const SizedBox(width: 12),
 
                     // =================================================
                     // RESULT
                     // =================================================
                     Text(
                       '${isPositive ? '+Rp ' : '-Rp '}${_formatCurrency(item.result)}',
-
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         color: isPositive
-                            ? const Color(0xFF00C853)
+                            ? const Color(0xFF34C759)
                             : const Color(0xFFFF3B30),
                       ),
                     ),

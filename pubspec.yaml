@@ -34,10 +34,11 @@ dependencies:
   # DITAMBAHKAN UNTUK FITUR EXPORT PDF & GAMBAR
   gal: ^2.3.0 # <-- TAMBAHKAN BARIS INI
 
+  popover: ^0.2.8
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^6.0.0
 
 flutter:

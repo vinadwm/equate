@@ -1,0 +1,1062 @@
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+
+import '../model/historical_data_model.dart';
+import 'historical_data_viewmodel.dart';
+
+enum PivotSignal { buy, sell, neutral, unavailable }
+
+class PivotHangsengViewModel extends ChangeNotifier {
+  final HistoricalDataViewModel historicalDataViewModel;
+
+  PivotHangsengViewModel({required this.historicalDataViewModel}) {
+    historicalDataViewModel.addListener(_onHistoricalDataChanged);
+
+    _initializeFromHistoricalData();
+  }
+
+  // ============================================================
+  // INPUT H / L / C
+  // ============================================================
+
+  String _high = '';
+  String _low = '';
+  String _close = '';
+
+  String get high => _high;
+  String get low => _low;
+  String get close => _close;
+
+  // ============================================================
+  // HASIL PIVOT
+  // ============================================================
+
+  double? _pp;
+
+  double? _r1;
+  double? _r2;
+  double? _r3;
+  double? _r4;
+
+  double? _s1;
+  double? _s2;
+  double? _s3;
+  double? _s4;
+
+  double? get pp => _pp;
+
+  double? get r1 => _r1;
+  double? get r2 => _r2;
+  double? get r3 => _r3;
+  double? get r4 => _r4;
+
+  double? get s1 => _s1;
+  double? get s2 => _s2;
+  double? get s3 => _s3;
+  double? get s4 => _s4;
+
+  bool _isCalculated = false;
+
+  bool get isCalculated => _isCalculated;
+
+  // ============================================================
+  // AUTO FILL
+  // ============================================================
+
+  bool _isAutoFilled = false;
+
+  bool get isAutoFilled => _isAutoFilled;
+
+  // ============================================================
+  // ERROR / INFO
+  // ============================================================
+
+  String? _errorMessage;
+
+  String? get errorMessage => _errorMessage;
+
+  // ============================================================
+  // TANGGAL PERHITUNGAN
+  // ============================================================
+
+  /// Tanggal yang sedang dihitung.
+  ///
+  /// PENTING:
+  /// Tidak menggunakan historicalDataViewModel.selectedDate
+  /// karena selectedDate bisa otomatis menjadi tanggal terakhir
+  /// yang tersedia di API.
+  ///
+  /// Contoh:
+  /// Hari ini 15 September
+  /// → calculationDate = 15 September
+  DateTime get calculationDate {
+    final now = DateTime.now();
+
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  // ============================================================
+  // DATA GOLD HARI INI
+  // ============================================================
+
+  /// Mengambil DATA GOLD TEPAT pada tanggal perhitungan.
+  ///
+  /// Digunakan untuk mengambil:
+  /// OPEN
+  ///
+  /// TIDAK ADA FALLBACK.
+  ///
+  /// Kalau tanggal 15 tidak tersedia,
+  /// maka hasilnya null.
+  HistoricalDataModel? get referenceData {
+    final date = calculationDate;
+
+    final data = historicalDataViewModel.getDataForMarket(
+      'HSI Daily',
+      date: date,
+    );
+
+    if (data == null) {
+      return null;
+    }
+
+    if (data.isBankHoliday) {
+      return null;
+    }
+
+    if (data.open <= 0) {
+      return null;
+    }
+
+    return data;
+  }
+
+  // ============================================================
+  // OPEN HARI INI
+  // ============================================================
+
+  /// Harga Open Hangseng pada tanggal perhitungan.
+  ///
+  /// Contoh:
+  /// 15 September → Open 15 September
+  double? get referenceOpen {
+    return referenceData?.open;
+  }
+
+  // ============================================================
+  // TANGGAL OPEN / SIGNAL
+  // ============================================================
+
+  DateTime? get referenceDate {
+    return referenceData?.date;
+  }
+
+  // ============================================================
+  // DATA HANGSENG HARI SEBELUMNYA
+  // ============================================================
+
+  /// Mengambil data Hangseng TEPAT satu hari kalender sebelum
+  /// tanggal perhitungan.
+  ///
+  /// Contoh:
+  ///
+  /// calculationDate = 15 September
+  /// previousDate   = 14 September
+  ///
+  /// Yang diambil:
+  /// High 14 September
+  /// Low 14 September
+  /// Close 14 September
+  ///
+  /// PENTING:
+  /// Tidak mencari "data terakhir sebelum tanggal".
+  ///
+  /// Jadi kalau:
+  ///
+  /// 15 = tidak ada
+  /// 14 = tidak ada
+  /// 13 = tidak ada
+  /// 12 = tidak ada
+  /// 11 = ada
+  ///
+  /// hasil tetap null.
+  HistoricalDataModel? get previousHangsengData {
+    final previousDate = calculationDate.subtract(const Duration(days: 1));
+
+    return historicalDataViewModel.getDataForMarket(
+      'HSI Daily',
+      date: previousDate,
+    );
+  }
+
+  // ============================================================
+  // TANGGAL DATA H/L/C
+  // ============================================================
+
+  DateTime? get previousDataDate {
+    return previousHangsengData?.date;
+  }
+
+  // ============================================================
+  // STATUS DATA
+  // ============================================================
+
+  bool get isOpenDataAvailable {
+    return referenceData != null;
+  }
+
+  bool get isPreviousDataAvailable {
+    final data = previousHangsengData;
+
+    if (data == null) {
+      return false;
+    }
+
+    if (data.isBankHoliday) {
+      return false;
+    }
+
+    if (data.high <= 0 || data.low <= 0 || data.close <= 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Apakah data H/L/C dan Open lengkap.
+  bool get isHistoricalDataComplete {
+    return isOpenDataAvailable && isPreviousDataAvailable;
+  }
+
+  // ============================================================
+  // DATA STATUS MESSAGE
+  // ============================================================
+
+  String get dataStatusMessage {
+    final openAvailable = isOpenDataAvailable;
+    final previousAvailable = isPreviousDataAvailable;
+
+    if (openAvailable && previousAvailable) {
+      return 'Data historical tersedia.';
+    }
+
+    if (!openAvailable && !previousAvailable) {
+      return 'Data Open ${_formatDate(calculationDate)} dan '
+          'data High, Low, Close ${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
+    }
+
+    if (!openAvailable) {
+      return 'Data Open ${_formatDate(calculationDate)} '
+          'belum tersedia.';
+    }
+
+    return 'Data High, Low, Close ${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
+  }
+
+  // ============================================================
+  // INITIALIZE
+  // ============================================================
+
+  Future<void> _initializeFromHistoricalData() async {
+    await Future<void>.delayed(Duration.zero);
+
+    fillFromPreviousDay();
+  }
+
+  // ============================================================
+  // AUTO FILL H/L/C
+  // ============================================================
+
+  bool fillFromPreviousDay() {
+    final previousData = previousHangsengData;
+
+    // ----------------------------------------------------------
+    // DATA H/L/C TIDAK TERSEDIA
+    // ----------------------------------------------------------
+
+    if (previousData == null) {
+      _high = '';
+      _low = '';
+      _close = '';
+
+      _isAutoFilled = false;
+
+      _errorMessage =
+          'Data High, Low, Close untuk '
+          '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
+
+      _clearCalculationResult(notify: false);
+
+      notifyListeners();
+
+      return false;
+    }
+
+    // ----------------------------------------------------------
+    // DATA BANK HOLIDAY
+    // ----------------------------------------------------------
+
+    if (previousData.isBankHoliday) {
+      _high = '';
+      _low = '';
+      _close = '';
+
+      _isAutoFilled = false;
+
+      _errorMessage =
+          'Data Hangseng ${_formatDate(previousData.date)} '
+          'tidak tersedia karena hari libur.';
+
+      _clearCalculationResult(notify: false);
+
+      notifyListeners();
+
+      return false;
+    }
+
+    // ----------------------------------------------------------
+    // VALIDASI NILAI
+    // ----------------------------------------------------------
+
+    if (previousData.high <= 0 ||
+        previousData.low <= 0 ||
+        previousData.close <= 0) {
+      _high = '';
+      _low = '';
+      _close = '';
+
+      _isAutoFilled = false;
+
+      _errorMessage =
+          'Data High, Low, Close ${_formatDate(previousData.date)} '
+          'belum tersedia.';
+
+      _clearCalculationResult(notify: false);
+
+      notifyListeners();
+
+      return false;
+    }
+
+    // ----------------------------------------------------------
+    // AUTO FILL
+    // ----------------------------------------------------------
+
+    _high = _numberToInput(previousData.high);
+    _low = _numberToInput(previousData.low);
+    _close = _numberToInput(previousData.close);
+
+    _isAutoFilled = true;
+
+    _errorMessage = null;
+
+    _clearCalculationResult(notify: false);
+
+    notifyListeners();
+
+    return true;
+  }
+
+  // ============================================================
+  // REFRESH H/L/C
+  // ============================================================
+
+  bool refreshPreviousDayInput() {
+    return fillFromPreviousDay();
+  }
+
+  // ============================================================
+  // INPUT HANDLER
+  // ============================================================
+
+  void setHigh(String value) {
+    _high = value;
+
+    // User sudah mengedit secara manual.
+    _isAutoFilled = false;
+
+    _errorMessage = null;
+
+    _clearCalculationResult(notify: false);
+
+    notifyListeners();
+  }
+
+  void setLow(String value) {
+    _low = value;
+
+    _isAutoFilled = false;
+
+    _errorMessage = null;
+
+    _clearCalculationResult(notify: false);
+
+    notifyListeners();
+  }
+
+  void setClose(String value) {
+    _close = value;
+
+    _isAutoFilled = false;
+
+    _errorMessage = null;
+
+    _clearCalculationResult(notify: false);
+
+    notifyListeners();
+  }
+
+  // ============================================================
+  // INPUT STATE
+  // ============================================================
+
+  bool get hasInput {
+    return _high.trim().isNotEmpty ||
+        _low.trim().isNotEmpty ||
+        _close.trim().isNotEmpty;
+  }
+
+  bool get canCalculate {
+    final highValue = _parseNumber(_high);
+    final lowValue = _parseNumber(_low);
+    final closeValue = _parseNumber(_close);
+
+    if (highValue == null || lowValue == null || closeValue == null) {
+      return false;
+    }
+
+    if (highValue <= 0 || lowValue <= 0 || closeValue <= 0) {
+      return false;
+    }
+
+    if (lowValue > highValue) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // ============================================================
+  // CALCULATE PIVOT
+  // ============================================================
+
+  bool calculatePivot() {
+    final highValue = _parseNumber(_high);
+    final lowValue = _parseNumber(_low);
+    final closeValue = _parseNumber(_close);
+
+    // ----------------------------------------------------------
+    // VALIDASI FORMAT
+    // ----------------------------------------------------------
+
+    if (highValue == null || lowValue == null || closeValue == null) {
+      _errorMessage =
+          'Harap masukkan High, Low, dan Close '
+          'dengan format angka yang valid.';
+
+      notifyListeners();
+
+      return false;
+    }
+
+    // ----------------------------------------------------------
+    // VALIDASI NILAI
+    // ----------------------------------------------------------
+
+    if (highValue <= 0 || lowValue <= 0 || closeValue <= 0) {
+      _errorMessage = 'Nilai High, Low, dan Close harus lebih dari 0.';
+
+      notifyListeners();
+
+      return false;
+    }
+
+    // ----------------------------------------------------------
+    // VALIDASI HIGH / LOW
+    // ----------------------------------------------------------
+
+    if (lowValue > highValue) {
+      _errorMessage = 'Nilai Low tidak boleh lebih besar dari High.';
+
+      notifyListeners();
+
+      return false;
+    }
+
+    // ----------------------------------------------------------
+    // PIVOT POINT
+    // ----------------------------------------------------------
+
+    final ppValue = (highValue + lowValue + closeValue) / 3;
+
+    final diff = highValue - lowValue;
+
+    _pp = ppValue;
+
+    // ----------------------------------------------------------
+    // RESISTANCE
+    // ----------------------------------------------------------
+
+    _r1 = (2 * ppValue) - lowValue;
+
+    _r2 = ppValue + diff;
+
+    _r3 = ppValue + (diff * 2);
+
+    _r4 = ppValue + (diff * 3);
+
+    // ----------------------------------------------------------
+    // SUPPORT
+    // ----------------------------------------------------------
+
+    _s1 = (2 * ppValue) - highValue;
+
+    _s2 = ppValue - diff;
+
+    _s3 = ppValue - (diff * 2);
+
+    _s4 = ppValue - (diff * 3);
+
+    // ----------------------------------------------------------
+    // STATUS
+    // ----------------------------------------------------------
+
+    _isCalculated = true;
+
+    _errorMessage = null;
+
+    notifyListeners();
+
+    return true;
+  }
+
+  // ============================================================
+  // SIGNAL
+  // ============================================================
+
+  PivotSignal get signal {
+    // Belum hitung Pivot
+    if (!_isCalculated || _pp == null) {
+      return PivotSignal.unavailable;
+    }
+
+    // Open tanggal perhitungan belum tersedia
+    final open = referenceOpen;
+
+    if (open == null) {
+      return PivotSignal.unavailable;
+    }
+
+    // ----------------------------------------------------------
+    // Sell
+    // ----------------------------------------------------------
+
+    if (_pp! > open) {
+      return PivotSignal.sell;
+    }
+
+    // ----------------------------------------------------------
+    // BUY
+    // ----------------------------------------------------------
+
+    if (_pp! < open) {
+      return PivotSignal.buy;
+    }
+
+    // ----------------------------------------------------------
+    // NEUTRAL
+    // ----------------------------------------------------------
+
+    return PivotSignal.neutral;
+  }
+
+  // ============================================================
+  // SIGNAL LABEL
+  // ============================================================
+
+  String get signalLabel {
+    switch (signal) {
+      case PivotSignal.buy:
+        return 'BUY';
+
+      case PivotSignal.sell:
+        return 'SELL';
+
+      case PivotSignal.neutral:
+        return 'BUY/SELL';
+
+      case PivotSignal.unavailable:
+        return 'BELUM TERSEDIA';
+    }
+  }
+
+  // ============================================================
+  // SIGNAL DESCRIPTION
+  // ============================================================
+
+  String get signalDescription {
+    final open = referenceOpen;
+
+    if (_pp == null) {
+      return 'Hitung Pivot Point terlebih dahulu.';
+    }
+
+    if (open == null) {
+      return 'Data Open ${_formatDate(calculationDate)} '
+          'belum tersedia.';
+    }
+
+    switch (signal) {
+      case PivotSignal.buy:
+        return 'PP lebih rendah dari harga Open.';
+
+      case PivotSignal.sell:
+        return 'PP lebih tinggi dari harga Open.';
+
+      case PivotSignal.neutral:
+        return 'PP sama dengan harga Open.';
+
+      case PivotSignal.unavailable:
+        return 'Data Open belum tersedia.';
+    }
+  }
+
+  // ============================================================
+  // SIGNAL COMPARISON
+  // ============================================================
+
+  String get signalComparison {
+    if (!_isCalculated || _pp == null) {
+      return '-';
+    }
+
+    final open = referenceOpen;
+
+    if (open == null) {
+      return 'Open belum tersedia';
+    }
+
+    final ppText = formatValue(_pp!);
+    final openText = formatValue(open);
+
+    if (_pp! > open) {
+      return 'PP $ppText > Open $openText';
+    }
+
+    if (_pp! < open) {
+      return 'PP $ppText < Open $openText';
+    }
+
+    return 'PP $ppText = Open $openText';
+  }
+
+  // ============================================================
+  // RESET
+  // ============================================================
+
+  void reset() {
+    _high = '';
+    _low = '';
+    _close = '';
+
+    _pp = null;
+
+    _r1 = null;
+    _r2 = null;
+    _r3 = null;
+    _r4 = null;
+
+    _s1 = null;
+    _s2 = null;
+    _s3 = null;
+    _s4 = null;
+
+    _isCalculated = false;
+
+    _isAutoFilled = false;
+
+    _errorMessage = null;
+
+    notifyListeners();
+  }
+
+  // ============================================================
+  // CLEAR CALCULATION RESULT
+  // ============================================================
+
+  void _clearCalculationResult({bool notify = true}) {
+    _pp = null;
+
+    _r1 = null;
+    _r2 = null;
+    _r3 = null;
+    _r4 = null;
+
+    _s1 = null;
+    _s2 = null;
+    _s3 = null;
+    _s4 = null;
+
+    _isCalculated = false;
+
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  // ============================================================
+  // HISTORICAL DATA LISTENER
+  // ============================================================
+
+  void _onHistoricalDataChanged() {
+    final previousData = previousHangsengData;
+
+    // ==========================================================
+    // DATA HISTORICAL BELUM ADA
+    // ==========================================================
+
+    if (previousData == null) {
+      // Jangan menghapus input manual user.
+      if (_isAutoFilled) {
+        _high = '';
+        _low = '';
+        _close = '';
+
+        _isAutoFilled = false;
+
+        _clearCalculationResult(notify: false);
+      }
+
+      if (referenceData == null) {
+        _errorMessage =
+            'Data Open ${_formatDate(calculationDate)} dan '
+            'data High, Low, Close '
+            '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
+      } else {
+        _errorMessage =
+            'Data High, Low, Close '
+            '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
+      }
+
+      notifyListeners();
+
+      return;
+    }
+
+    // ==========================================================
+    // DATA BANK HOLIDAY
+    // ==========================================================
+
+    if (previousData.isBankHoliday) {
+      if (_isAutoFilled) {
+        _high = '';
+        _low = '';
+        _close = '';
+
+        _isAutoFilled = false;
+
+        _clearCalculationResult(notify: false);
+      }
+
+      _errorMessage =
+          'Data Gold ${_formatDate(previousData.date)} '
+          'tidak tersedia karena hari libur.';
+
+      notifyListeners();
+
+      return;
+    }
+
+    // ==========================================================
+    // DATA VALID
+    // ==========================================================
+
+    if (previousData.high > 0 &&
+        previousData.low > 0 &&
+        previousData.close > 0) {
+      // Hanya update otomatis kalau input masih
+      // merupakan hasil auto-fill sebelumnya.
+      //
+      // Kalau user sudah mengedit manual,
+      // jangan timpa input user.
+      if (_isAutoFilled || (_high.isEmpty && _low.isEmpty && _close.isEmpty)) {
+        _high = _numberToInput(previousData.high);
+        _low = _numberToInput(previousData.low);
+        _close = _numberToInput(previousData.close);
+
+        _isAutoFilled = true;
+
+        _clearCalculationResult(notify: false);
+      }
+    }
+
+    // ==========================================================
+    // ERROR OPEN
+    // ==========================================================
+
+    if (referenceData == null) {
+      _errorMessage =
+          'Data Open ${_formatDate(calculationDate)} '
+          'belum tersedia.';
+    } else {
+      _errorMessage = null;
+    }
+
+    notifyListeners();
+  }
+
+  // ============================================================
+  // NUMBER PARSER
+  // ============================================================
+
+  double? _parseNumber(String value) {
+    var cleaned = value.trim();
+
+    if (cleaned.isEmpty) {
+      return null;
+    }
+
+    // Contoh:
+    // 3500
+    // 3500.50
+    // 3500,50
+    // 3.500,50
+
+    if (cleaned.contains('.') && cleaned.contains(',')) {
+      cleaned = cleaned.replaceAll('.', '');
+      cleaned = cleaned.replaceAll(',', '.');
+    } else if (cleaned.contains(',')) {
+      cleaned = cleaned.replaceAll(',', '.');
+    }
+
+    return double.tryParse(cleaned);
+  }
+
+  // ============================================================
+  // NUMBER TO INPUT
+  // ============================================================
+
+  String _numberToInput(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+
+    return value.toString();
+  }
+
+  // ============================================================
+  // FORMAT VALUE
+  // ============================================================
+
+  String formatValue(double? value) {
+    if (value == null) {
+      return '-';
+    }
+
+    return value.toStringAsFixed(2).replaceAll('.', ',');
+  }
+
+  // ============================================================
+  // FORMAT INPUT VALUE
+  // ============================================================
+
+  String formatInputValue(double? value) {
+    if (value == null) {
+      return '-';
+    }
+
+    return _numberToInput(value);
+  }
+
+  // ============================================================
+  // MIDPOINT
+  // ============================================================
+
+  double midpoint(double a, double b) {
+    return (a + b) / 2;
+  }
+
+  // ============================================================
+  // FORMAT DATE
+  // ============================================================
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+
+    final month = date.month.toString().padLeft(2, '0');
+
+    return '$day/$month/${date.year}';
+  }
+
+  // ============================================================
+  // BUILD PDF
+  // ============================================================
+
+  Future<Uint8List> buildPdf() async {
+    if (!_isCalculated) {
+      throw StateError('Hasil Pivot Point belum dihitung.');
+    }
+
+    final pdf = pw.Document();
+
+    final reference = referenceData;
+
+    final previous = previousHangsengData;
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(20),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'HASIL KALKULASI PIVOT POINT GOLD',
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+
+                pw.SizedBox(height: 12),
+
+                // ==================================================
+                // TANGGAL DATA H/L/C
+                // ==================================================
+                if (previous != null)
+                  pw.Text(
+                    'Tanggal H/L/C : '
+                    '${previous.dateFormatted}',
+                  ),
+
+                pw.Text(
+                  'High : '
+                  '${formatValue(_parseNumber(_high))}',
+                ),
+
+                pw.Text(
+                  'Low : '
+                  '${formatValue(_parseNumber(_low))}',
+                ),
+
+                pw.Text(
+                  'Close : '
+                  '${formatValue(_parseNumber(_close))}',
+                ),
+
+                pw.SizedBox(height: 10),
+
+                // ==================================================
+                // DATA OPEN
+                // ==================================================
+                if (reference != null) ...[
+                  pw.Text(
+                    'Tanggal Signal : '
+                    '${reference.dateFormatted}',
+                  ),
+
+                  pw.Text(
+                    'Open Newsmaker : '
+                    '${reference.openFormatted}',
+                  ),
+
+                  pw.Text(
+                    'Signal : $signalLabel',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+
+                  pw.SizedBox(height: 12),
+                ] else ...[
+                  pw.Text(
+                    'Tanggal Signal : '
+                    '${_formatDate(calculationDate)}',
+                  ),
+
+                  pw.Text(
+                    'Open Newsmaker : '
+                    'Data belum tersedia',
+                  ),
+
+                  pw.Text(
+                    'Signal : BELUM TERSEDIA',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+
+                  pw.SizedBox(height: 12),
+                ],
+
+                // ==================================================
+                // PIVOT TABLE
+                // ==================================================
+                pw.Table.fromTextArray(
+                  headers: ['Tingkat', 'Nilai'],
+                  data: [
+                    ['Resistance 4 (R4)', formatValue(_r4)],
+
+                    if (_r4 != null && _r3 != null)
+                      ['Midpoint R4-R3', formatValue(midpoint(_r4!, _r3!))],
+
+                    ['Resistance 3 (R3)', formatValue(_r3)],
+
+                    if (_r3 != null && _r2 != null)
+                      ['Midpoint R3-R2', formatValue(midpoint(_r3!, _r2!))],
+
+                    ['Resistance 2 (R2)', formatValue(_r2)],
+
+                    if (_r2 != null && _r1 != null)
+                      ['Midpoint R2-R1', formatValue(midpoint(_r2!, _r1!))],
+
+                    ['Resistance 1 (R1)', formatValue(_r1)],
+
+                    if (_r1 != null && _pp != null)
+                      ['Midpoint R1-PP', formatValue(midpoint(_r1!, _pp!))],
+
+                    ['Pivot Point (PP)', formatValue(_pp)],
+
+                    if (_pp != null && _s1 != null)
+                      ['Midpoint PP-S1', formatValue(midpoint(_pp!, _s1!))],
+
+                    ['Support 1 (S1)', formatValue(_s1)],
+
+                    if (_s1 != null && _s2 != null)
+                      ['Midpoint S1-S2', formatValue(midpoint(_s1!, _s2!))],
+
+                    ['Support 2 (S2)', formatValue(_s2)],
+
+                    if (_s2 != null && _s3 != null)
+                      ['Midpoint S2-S3', formatValue(midpoint(_s2!, _s3!))],
+
+                    ['Support 3 (S3)', formatValue(_s3)],
+
+                    if (_s3 != null && _s4 != null)
+                      ['Midpoint S3-S4', formatValue(midpoint(_s3!, _s4!))],
+
+                    ['Support 4 (S4)', formatValue(_s4)],
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
+
+  @override
+  void dispose() {
+    historicalDataViewModel.removeListener(_onHistoricalDataChanged);
+
+    super.dispose();
+  }
+}
