@@ -10,21 +10,19 @@ import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 
 class HomeTabView extends StatefulWidget {
-  const HomeTabView({super.key});
+  final HistoricalDataViewModel historicalDataViewModel;
+
+  const HomeTabView({super.key, required this.historicalDataViewModel});
 
   @override
   HomeTabViewState createState() => HomeTabViewState();
 }
 
 class HomeTabViewState extends State<HomeTabView> {
-  // ============================================================
-  // VIEWMODEL
-  // ============================================================
-
   final AuthViewModel _authViewModel = AuthViewModel();
 
-  final HistoricalDataViewModel _historicalViewModel =
-      HistoricalDataViewModel();
+  HistoricalDataViewModel get _historicalViewModel =>
+      widget.historicalDataViewModel;
 
   // ============================================================
   // STATE
@@ -48,8 +46,6 @@ class HomeTabViewState extends State<HomeTabView> {
     _historicalViewModel.addListener(_onHistoricalDataChanged);
 
     _loadUser();
-
-    // Ambil historical data pertama kali
     _loadHistoricalData();
   }
 
@@ -190,10 +186,7 @@ class HomeTabViewState extends State<HomeTabView> {
   @override
   void dispose() {
     _historicalViewModel.removeListener(_onHistoricalDataChanged);
-
-    _historicalViewModel.dispose();
     _authViewModel.dispose();
-
     super.dispose();
   }
 
