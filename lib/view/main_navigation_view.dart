@@ -5,6 +5,7 @@ import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'tabs/home_tab_view.dart';
 import 'tabs/calculator_tab_view.dart';
 import 'tabs/profile_tab_view.dart';
+import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 
 class MainNavigationView extends StatefulWidget {
   const MainNavigationView({super.key});
@@ -16,15 +17,10 @@ class MainNavigationView extends StatefulWidget {
 class _MainNavigationViewState extends State<MainNavigationView> {
   int _currentIndex = 0;
 
-  // ============================================================
-  // KEY UNTUK HOME
-  // ============================================================
-
   final GlobalKey<HomeTabViewState> _homeKey = GlobalKey<HomeTabViewState>();
 
-  // ============================================================
-  // TABS
-  // ============================================================
+  final HistoricalDataViewModel _historicalDataViewModel =
+      HistoricalDataViewModel();
 
   late final List<Widget> _tabs;
 
@@ -32,7 +28,13 @@ class _MainNavigationViewState extends State<MainNavigationView> {
   void initState() {
     super.initState();
 
-    _tabs = [HomeTabView(key: _homeKey), const ProfileTabView()];
+    _tabs = [
+      HomeTabView(
+        key: _homeKey,
+        historicalDataViewModel: _historicalDataViewModel,
+      ),
+      const ProfileTabView(),
+    ];
   }
 
   // ============================================================
@@ -137,7 +139,10 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                             context,
                             MaterialPageRoute(
                               // DIBERSIHKAN DARI 'const' UNTUK MENGATASI ERROR
-                              builder: (context) => CalculatorTabView(),
+                              builder: (context) => CalculatorTabView(
+                                historicalDataViewModel:
+                                    _historicalDataViewModel,
+                              ),
                             ),
                           );
                         },

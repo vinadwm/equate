@@ -1,15 +1,28 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:equate/viewmodel/theme_viewmodel.dart';
-import 'package:equate/viewmodel/gold_digital_viewmodel.dart';
 
+import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/viewmodel/historical_data_viewmodel.dart';
+
+// ==========================================================
+// CALCULATOR CONTENT
+// ==========================================================
 import 'calculator/gold_digital_calculator_content.dart';
 import 'calculator/gold_physical_calculator_content.dart';
-import 'calculator/pivot_point_calculator_content.dart';
+import 'calculator/pivot_gold_calculator_content.dart';
+import 'calculator/pivot_hangseng_calculator_content.dart';
+
+// ==========================================================
+// CUSTOM MENU
+// ==========================================================
 import 'custom_calculator_menu.dart';
 
+// ==========================================================
+// MODEL RIWAYAT
+// ==========================================================
 class CalculationHistory {
   final String title;
   final String details;
@@ -24,18 +37,34 @@ class CalculationHistory {
   });
 }
 
+// ==========================================================
+// CALCULATOR TAB VIEW
+// ==========================================================
 class CalculatorTabView extends StatefulWidget {
-  const CalculatorTabView({super.key});
+  // ========================================================
+  // SHARED HISTORICAL VIEWMODEL
+  // Dipakai juga oleh HomeTabView
+  // ========================================================
+  final HistoricalDataViewModel historicalDataViewModel;
+
+  const CalculatorTabView({super.key, required this.historicalDataViewModel});
 
   @override
   State<CalculatorTabView> createState() => _CalculatorTabViewState();
 }
 
 class _CalculatorTabViewState extends State<CalculatorTabView> {
+  // ==========================================================
+  // CALCULATOR YANG SEDANG DIPILIH
+  // ==========================================================
   String? _selectedCalculatorType;
+
   bool _isGoldDropdownOpen = false;
   bool _isHangsengDropdownOpen = false;
 
+  // ==========================================================
+  // OPTION EMAS
+  // ==========================================================
   final List<Map<String, dynamic>> _goldOptions = [
     {
       'title': 'Emas Digital',
@@ -54,6 +83,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     },
   ];
 
+  // ==========================================================
+  // OPTION HANGSENG
+  // ==========================================================
   final List<Map<String, dynamic>> _hangsengOptions = [
     {
       'title': 'Pivot Point Hangseng',
@@ -62,6 +94,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     },
   ];
 
+  // ==========================================================
+  // HISTORY
+  // ==========================================================
   final List<CalculationHistory> _historyList = [];
 
   void _addHistory(dynamic item) {
@@ -72,254 +107,108 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     }
   }
 
+  // ==========================================================
+  // FORMAT CURRENCY
+  // ==========================================================
   String _formatCurrency(double amount) {
     final formatter = NumberFormat.currency(
       locale: 'id_ID',
       symbol: '',
       decimalDigits: 0,
     );
+
     return formatter.format(amount.abs()).trim();
   }
 
-  Widget _buildCalculatorSwitcher({required bool isDarkMode}) {
-    const primaryOrange = Color(0xFFFFA800);
-
-    return PopupMenuButton<int>(
-      offset: const Offset(0, -150),
-      elevation: 8,
-      color: isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE9E9E9),
-
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-
-      onSelected: (index) {
-        setState(() {
-          _selectedTab = index;
-        });
-      },
-
-      itemBuilder: (context) => [
-        PopupMenuItem<int>(
-          value: 1,
-          child: _buildCalculatorMenuItem(
-            icon: Icons.account_balance_wallet_rounded,
-            title: 'Emas Fisik',
-            selected: _selectedTab == 1,
-            isDarkMode: isDarkMode,
-          ),
-        ),
-
-        PopupMenuItem<int>(
-          value: 0,
-          child: _buildCalculatorMenuItem(
-            icon: Icons.show_chart_rounded,
-            title: 'Emas Digital',
-            selected: _selectedTab == 0,
-            isDarkMode: isDarkMode,
-          ),
-        ),
-
-        PopupMenuItem<int>(
-          value: 2,
-          child: _buildCalculatorMenuItem(
-            icon: Icons.auto_graph_rounded,
-            title: 'Pivot Point Emas',
-            selected: _selectedTab == 2,
-            isDarkMode: isDarkMode,
-          ),
-        ),
-      ],
-
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: primaryOrange,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.calculate_rounded,
-          color: Colors.white,
-          size: 25,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCalculatorMenuItem({
-    required IconData icon,
-    required String title,
-    required bool selected,
-    required bool isDarkMode,
-  }) {
-    final textColor = isDarkMode ? Colors.white : const Color(0xFF666666);
-
-    return Row(
-      children: [
-        Icon(icon, size: 17, color: textColor),
-
-        const SizedBox(width: 8),
-
-        Expanded(
-          child: Text(
-            title,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
-          ),
-        ),
-
-        if (selected)
-          Icon(
-            Icons.check_rounded,
-            size: 17,
-            color: isDarkMode ? Colors.white : const Color(0xFF666666),
-          ),
-      ],
-    );
-  }
-
+  // ==========================================================
+  // BUILD
+  // ==========================================================
   @override
-Widget build(BuildContext context) {
-  return ValueListenableBuilder<ThemeMode>(
-    valueListenable: ThemeViewModel.themeMode,
-    builder: (context, currentThemeMode, child) {
-      final isDarkMode = ThemeViewModel.isDarkMode;
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeViewModel.themeMode,
+      builder: (context, currentThemeMode, child) {
+        final isDarkMode = ThemeViewModel.isDarkMode;
 
-      // SET WARNA PUTIH POLOS UNTUK LIGHT MODE
-      final bgGradientStart = isDarkMode ? const Color(0xFF16181F) : Colors.white;
-      final bgGradientEnd = isDarkMode ? const Color(0xFF0D0E12) : Colors.white;
-      final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF2C2D30);
+        final primaryTextColor = isDarkMode
+            ? Colors.white
+            : const Color(0xFF2C2D30);
 
-<<<<<<< HEAD
-        final bgColor = isDarkMode
-            ? const Color(0xFF121212)
-            : const Color(0xFFFBFBFB);
-        final iconColor = isDarkMode ? Colors.white : Colors.black;
-        final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
-        final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-        final borderColor = isDarkMode
-            ? Colors.grey[800]!
-            : const Color(0xFFEEEEEE);
+        final bgGradientStart = isDarkMode
+            ? const Color(0xFF16181F)
+            : Colors.white;
+
+        final bgGradientEnd = isDarkMode
+            ? const Color(0xFF0D0E12)
+            : Colors.white;
 
         return Scaffold(
-          backgroundColor: bgColor,
+          backgroundColor: isDarkMode ? const Color(0xFF0D0E12) : Colors.white,
 
-          appBar: AppBar(
-            backgroundColor: bgColor,
-            elevation: 0,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: iconColor),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Text(
-              'KALKULATOR',
-              style: GoogleFonts.plusJakartaSans(
-                color: primaryTextColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                letterSpacing: 0.5,
-              ),
-            ),
-            centerTitle: true,
-          ),
-
-          // ==========================================================
-          // FLOATING CALCULATOR SWITCHER
-          // ==========================================================
-          floatingActionButton: _buildCalculatorSwitcher(
-            isDarkMode: isDarkMode,
-          ),
-
-          // ==========================================================
-          // BODY
-          // ==========================================================
-          body: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                // TAB CONTENT
-                IndexedStack(
-                  index: _selectedTab,
-                  children: [
-                    GoldDigitalCalculatorContent(),
-
-                    GoldPhysicalCalculatorContent(
-                      onCalculate: (data) => _addHistory(data),
-                    ),
-
-                    PivotPointCalculatorContent(
-                      onCalculate: (data) => _addHistory(data),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-              ],
-            ),
-=======
-      return Scaffold(
-        backgroundColor: isDarkMode ? const Color(0xFF0D0E12) : Colors.white,
-        body: Stack(
-          alignment: Alignment.center,
-          children: [
-            // LAYER 1: Background Utama
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [bgGradientStart, bgGradientEnd],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-
-            // LAYER 2: Gradasi Glow Center (Matikan di Light Mode agar benar-benar putih bersih)
-            if (isDarkMode)
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 0.8,
-                      colors: [
-                        const Color(0xFFFF9500).withOpacity(0.08),
-                        Colors.transparent,
-                      ],
-                    ),
+          body: Stack(
+            alignment: Alignment.center,
+            children: [
+              // ======================================================
+              // LAYER 1 - BACKGROUND
+              // ======================================================
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [bgGradientStart, bgGradientEnd],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
                 ),
               ),
 
-            // LAYER 3: Gambar Logo EWF Watermark
-            Opacity(
-              opacity: isDarkMode ? 0.22 : 0.15,
-              child: Image.asset(
-                'assets/images/logoEWF.png',
-                width: 310,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const SizedBox.shrink();
-                },
-              ),
-            ),
+              // ======================================================
+              // LAYER 2 - DARK MODE GLOW
+              // ======================================================
+              if (isDarkMode)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 0.8,
+                        colors: [
+                          const Color(0xFFFF9500).withOpacity(0.08),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
 
-            // LAYER 4: Konten Utama
-            SafeArea(
-              child: Column(
+              // ======================================================
+              // LAYER 3 - LOGO WATERMARK
+              // ======================================================
+              Opacity(
+                opacity: isDarkMode ? 0.22 : 0.15,
+                child: Image.asset(
+                  'assets/images/logoEWF.png',
+                  width: 310,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+
+              // ======================================================
+              // LAYER 4 - CONTENT
+              // ======================================================
+              SafeArea(
+                child: Column(
                   children: [
-                    // Header Bar (Tombol kembali tanpa background bulat)
+                    // ==================================================
+                    // HEADER
+                    // ==================================================
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           IconButton(
@@ -332,15 +221,20 @@ Widget build(BuildContext context) {
                             constraints: const BoxConstraints(),
                             onPressed: () {
                               if (_selectedCalculatorType != null) {
-                                setState(() => _selectedCalculatorType = null);
+                                setState(() {
+                                  _selectedCalculatorType = null;
+                                });
                               } else {
                                 Navigator.pop(context);
                               }
                             },
                           ),
+
                           Expanded(
                             child: Text(
-                              _selectedCalculatorType == null ? 'Kalkulator' : _getCalculatorTitle(),
+                              _selectedCalculatorType == null
+                                  ? 'Kalkulator'
+                                  : _getCalculatorTitle(),
                               textAlign: TextAlign.center,
                               style: GoogleFonts.plusJakartaSans(
                                 color: primaryTextColor,
@@ -349,17 +243,24 @@ Widget build(BuildContext context) {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 20), // Spacer penyeimbang
+
+                          const SizedBox(width: 20),
                         ],
                       ),
                     ),
 
-                    // Content Scroll View
+                    // ==================================================
+                    // CONTENT
+                    // ==================================================
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
                         child: _selectedCalculatorType == null
-                            ? _buildLobbyView(context, isDarkMode, primaryTextColor)
+                            ? _buildLobbyView(
+                                context,
+                                isDarkMode,
+                                primaryTextColor,
+                              )
                             : _buildActiveCalculatorView(),
                       ),
                     ),
@@ -367,26 +268,30 @@ Widget build(BuildContext context) {
                 ),
               ),
             ],
->>>>>>> vina
           ),
         );
       },
     );
   }
 
-<<<<<<< HEAD
-  // Widget Tampilan Riwayat Perhitungan
-=======
-  // --- LOBBY VIEW ---
-  Widget _buildLobbyView(BuildContext context, bool isDarkMode, Color primaryTextColor) {
+  // ==========================================================
+  // LOBBY VIEW
+  // ==========================================================
+  Widget _buildLobbyView(
+    BuildContext context,
+    bool isDarkMode,
+    Color primaryTextColor,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
 
-        // Title & Subtitle Banner
+        // ======================================================
+        // TITLE
+        // ======================================================
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -399,12 +304,16 @@ Widget build(BuildContext context) {
                   letterSpacing: -0.3,
                 ),
               ),
+
               const SizedBox(height: 4),
+
               Text(
                 'Hitung estimasi profit, margin, dan pivot point transaksi.',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
-                  color: isDarkMode ? const Color(0xFF9A9A9E) : const Color(0xFF7D828A),
+                  color: isDarkMode
+                      ? const Color(0xFF9A9A9E)
+                      : const Color(0xFF7D828A),
                 ),
               ),
             ],
@@ -413,12 +322,16 @@ Widget build(BuildContext context) {
 
         const SizedBox(height: 24),
 
-        // Main Action Buttons Section
+        // ======================================================
+        // MARKET BUTTONS
+        // ======================================================
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              // 1. Tombol Emas (XUL)
+              // ==================================================
+              // EMAS
+              // ==================================================
               _buildSoftClayButton(
                 context,
                 title: 'Emas (XUL)',
@@ -428,12 +341,17 @@ Widget build(BuildContext context) {
                 onPressed: () {
                   setState(() {
                     _isGoldDropdownOpen = !_isGoldDropdownOpen;
-                    if (_isGoldDropdownOpen) _isHangsengDropdownOpen = false;
+
+                    if (_isGoldDropdownOpen) {
+                      _isHangsengDropdownOpen = false;
+                    }
                   });
                 },
               ),
 
-              // Dropdown Menu Emas
+              // ==================================================
+              // GOLD MENU
+              // ==================================================
               AnimatedSize(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.fastOutSlowIn,
@@ -445,6 +363,7 @@ Widget build(BuildContext context) {
                           onCalculatorSelected: (selectedName) {
                             setState(() {
                               _isGoldDropdownOpen = false;
+
                               if (selectedName == 'Emas Fisik') {
                                 _selectedCalculatorType = 'physical';
                               } else if (selectedName == 'Emas Digital') {
@@ -461,7 +380,9 @@ Widget build(BuildContext context) {
 
               const SizedBox(height: 16),
 
-              // 2. Tombol Hangseng (HKK)
+              // ==================================================
+              // HANGSENG
+              // ==================================================
               _buildSoftClayButton(
                 context,
                 title: 'Hangseng (HKK)',
@@ -471,12 +392,17 @@ Widget build(BuildContext context) {
                 onPressed: () {
                   setState(() {
                     _isHangsengDropdownOpen = !_isHangsengDropdownOpen;
-                    if (_isHangsengDropdownOpen) _isGoldDropdownOpen = false;
+
+                    if (_isHangsengDropdownOpen) {
+                      _isGoldDropdownOpen = false;
+                    }
                   });
                 },
               ),
 
-              // Dropdown Menu Hangseng
+              // ==================================================
+              // HANGSENG MENU
+              // ==================================================
               AnimatedSize(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.fastOutSlowIn,
@@ -488,6 +414,7 @@ Widget build(BuildContext context) {
                           onCalculatorSelected: (selectedName) {
                             setState(() {
                               _isHangsengDropdownOpen = false;
+
                               if (selectedName == 'Pivot Point Hangseng') {
                                 _selectedCalculatorType = 'hangseng_pivot';
                               }
@@ -503,52 +430,92 @@ Widget build(BuildContext context) {
 
         const SizedBox(height: 32),
 
-        // Riwayat Section
-        _buildHistorySection(isDarkMode: isDarkMode, primaryTextColor: primaryTextColor),
+        // ======================================================
+        // HISTORY
+        // ======================================================
+        _buildHistorySection(
+          isDarkMode: isDarkMode,
+          primaryTextColor: primaryTextColor,
+        ),
 
         const SizedBox(height: 28),
       ],
     );
   }
 
+  // ==========================================================
+  // ACTIVE CALCULATOR
+  // ==========================================================
   Widget _buildActiveCalculatorView() {
     switch (_selectedCalculatorType) {
+      // ======================================================
+      // EMAS DIGITAL
+      // ======================================================
       case 'digital':
-        return GoldDigitalCalculatorContent(
-          onCalculate: (data) => _addHistory(data),
-        );
+        return GoldDigitalCalculatorContent();
+
+      // ======================================================
+      // EMAS FISIK
+      // ======================================================
       case 'physical':
         return GoldPhysicalCalculatorContent(
-          onCalculate: (data) => _addHistory(data),
+          onCalculate: (data) {
+            _addHistory(data);
+          },
         );
+
+      // ======================================================
+      // PIVOT EMAS
+      // ======================================================
       case 'pivot':
-        return PivotPointCalculatorContent(
-          onCalculate: (data) => _addHistory(data),
+        return PivotGoldCalculatorContent(
+          historicalDataViewModel: widget.historicalDataViewModel,
+          onCalculate: (data) {
+            _addHistory(data);
+          },
         );
+
+      // ======================================================
+      // PIVOT HANGSENG
+      // ======================================================
       case 'hangseng_pivot':
-        return PivotPointCalculatorContent(
-          onCalculate: (data) => _addHistory(data),
+        return PivotHangsengCalculatorContent(
+          historicalDataViewModel: widget.historicalDataViewModel,
+          onCalculate: (data) {
+            _addHistory(data);
+          },
         );
+
       default:
         return const SizedBox.shrink();
     }
   }
 
+  // ==========================================================
+  // TITLE
+  // ==========================================================
   String _getCalculatorTitle() {
     switch (_selectedCalculatorType) {
       case 'digital':
         return 'Emas Digital';
+
       case 'physical':
         return 'Emas Fisik';
+
       case 'pivot':
         return 'Pivot Point Emas';
+
       case 'hangseng_pivot':
         return 'Pivot Hangseng';
+
       default:
         return 'Kalkulator';
     }
   }
 
+  // ==========================================================
+  // SOFT CLAY BUTTON
+  // ==========================================================
   Widget _buildSoftClayButton(
     BuildContext context, {
     required String title,
@@ -558,6 +525,7 @@ Widget build(BuildContext context) {
     required VoidCallback onPressed,
   }) {
     final isDarkMode = ThemeViewModel.isDarkMode;
+
     const primaryOrange = Color(0xFFFF9500);
 
     return Container(
@@ -569,7 +537,9 @@ Widget build(BuildContext context) {
         border: Border.all(
           color: isExpanded
               ? primaryOrange.withOpacity(0.5)
-              : (isDarkMode ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.9)),
+              : isDarkMode
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white.withOpacity(0.9),
           width: isExpanded ? 0.8 : 0.5,
         ),
         boxShadow: [
@@ -593,6 +563,9 @@ Widget build(BuildContext context) {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             child: Row(
               children: [
+                // ==================================================
+                // ICON
+                // ==================================================
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -612,7 +585,12 @@ Widget build(BuildContext context) {
                   ),
                   child: Icon(icon, color: Colors.white, size: 22),
                 ),
+
                 const SizedBox(width: 16),
+
+                // ==================================================
+                // TEXT
+                // ==================================================
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,27 +600,39 @@ Widget build(BuildContext context) {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: isDarkMode ? Colors.white : const Color(0xFF2C2D30),
+                          color: isDarkMode
+                              ? Colors.white
+                              : const Color(0xFF2C2D30),
                         ),
                       ),
+
                       const SizedBox(height: 2),
+
                       Text(
                         subtitle,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
-                          color: isDarkMode ? const Color(0xFF8E8E93) : const Color(0xFF8A8E9B),
+                          color: isDarkMode
+                              ? const Color(0xFF8E8E93)
+                              : const Color(0xFF8A8E9B),
                         ),
                       ),
                     ],
                   ),
                 ),
-                
-                // Ikon Panah Atas / Bawah untuk Indikator Dropdown
+
+                // ==================================================
+                // ARROW
+                // ==================================================
                 Icon(
-                  isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                  color: isExpanded 
-                      ? primaryOrange 
-                      : (isDarkMode ? Colors.white54 : const Color(0xFF8A8E9B)),
+                  isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: isExpanded
+                      ? primaryOrange
+                      : isDarkMode
+                      ? Colors.white54
+                      : const Color(0xFF8A8E9B),
                   size: 24,
                 ),
               ],
@@ -653,7 +643,9 @@ Widget build(BuildContext context) {
     );
   }
 
->>>>>>> vina
+  // ==========================================================
+  // HISTORY SECTION
+  // ==========================================================
   Widget _buildHistorySection({
     required bool isDarkMode,
     required Color primaryTextColor,
@@ -663,10 +655,14 @@ Widget build(BuildContext context) {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1F24).withOpacity(0.75) : Colors.white.withOpacity(0.85),
+        color: isDarkMode
+            ? const Color(0xFF1E1F24).withOpacity(0.75)
+            : Colors.white.withOpacity(0.85),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDarkMode ? Colors.white.withOpacity(0.08) : Colors.white.withOpacity(0.9),
+          color: isDarkMode
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white.withOpacity(0.9),
           width: 0.5,
         ),
         boxShadow: [
@@ -680,6 +676,9 @@ Widget build(BuildContext context) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ======================================================
+          // HEADER
+          // ======================================================
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -691,9 +690,15 @@ Widget build(BuildContext context) {
                       color: const Color(0xFFFF9500).withOpacity(0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.history_rounded, color: Color(0xFFFF9500), size: 18),
+                    child: const Icon(
+                      Icons.history_rounded,
+                      color: Color(0xFFFF9500),
+                      size: 18,
+                    ),
                   ),
+
                   const SizedBox(width: 10),
+
                   Text(
                     'Riwayat Perhitungan',
                     style: GoogleFonts.plusJakartaSans(
@@ -704,9 +709,14 @@ Widget build(BuildContext context) {
                   ),
                 ],
               ),
+
               if (_historyList.isNotEmpty)
                 GestureDetector(
-                  onTap: () => setState(() => _historyList.clear()),
+                  onTap: () {
+                    setState(() {
+                      _historyList.clear();
+                    });
+                  },
                   child: Text(
                     'Hapus',
                     style: GoogleFonts.plusJakartaSans(
@@ -718,7 +728,12 @@ Widget build(BuildContext context) {
                 ),
             ],
           ),
+
           const SizedBox(height: 14),
+
+          // ======================================================
+          // EMPTY
+          // ======================================================
           if (_historyList.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
@@ -732,62 +747,86 @@ Widget build(BuildContext context) {
                 ),
               ),
             )
+          // ======================================================
+          // LIST
+          // ======================================================
           else
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _historyList.length,
-<<<<<<< HEAD
-              separatorBuilder: (context, index) =>
-                  Divider(color: borderColor, height: 16),
+
+              separatorBuilder: (context, index) {
+                return Divider(
+                  color: isDarkMode
+                      ? Colors.white.withOpacity(0.06)
+                      : Colors.black.withOpacity(0.04),
+                  height: 16,
+                );
+              },
+
               itemBuilder: (context, index) {
                 final item = _historyList[index];
+
                 final isPositive = item.result >= 0;
+
                 final timeFormatted = DateFormat(
                   'HH:mm - dd MMM',
                 ).format(item.timestamp);
-=======
-              separatorBuilder: (context, index) => Divider(
-                color: isDarkMode ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.04),
-                height: 16,
-              ),
-              itemBuilder: (context, index) {
-                final item = _historyList[index];
-                final isPositive = item.result >= 0;
-                final timeFormatted = DateFormat('HH:mm - dd MMM').format(item.timestamp);
->>>>>>> vina
 
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.title,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: primaryTextColor,
+                    // =================================================
+                    // DETAIL
+                    // =================================================
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: primaryTextColor,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item.details,
-                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[500]),
-                        ),
-                        Text(
-                          timeFormatted,
-                          style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[400]),
-                        ),
-                      ],
+
+                          const SizedBox(height: 2),
+
+                          Text(
+                            item.details,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+
+                          Text(
+                            timeFormatted,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+
+                    const SizedBox(width: 12),
+
+                    // =================================================
+                    // RESULT
+                    // =================================================
                     Text(
                       '${isPositive ? '+Rp ' : '-Rp '}${_formatCurrency(item.result)}',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: isPositive ? const Color(0xFF34C759) : const Color(0xFFFF3B30),
+                        color: isPositive
+                            ? const Color(0xFF34C759)
+                            : const Color(0xFFFF3B30),
                       ),
                     ),
                   ],

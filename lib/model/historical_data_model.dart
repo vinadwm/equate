@@ -72,7 +72,33 @@ class HistoricalDataModel {
   }
 
   static double _parseDouble(dynamic value) {
-    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+    if (value == null) {
+      return 0.0;
+    }
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    var text = value.toString().trim();
+
+    if (text.isEmpty) {
+      return 0.0;
+    }
+
+    // Contoh:
+    // 4.434,50 -> 4434.50
+    if (text.contains('.') && text.contains(',')) {
+      text = text.replaceAll('.', '');
+      text = text.replaceAll(',', '.');
+    }
+    // Contoh:
+    // 4434,50 -> 4434.50
+    else if (text.contains(',')) {
+      text = text.replaceAll(',', '.');
+    }
+
+    return double.tryParse(text) ?? 0.0;
   }
 
   static double? _parseNullableDouble(dynamic value) {
@@ -80,9 +106,24 @@ class HistoricalDataModel {
       return null;
     }
 
-    final parsed = double.tryParse(value.toString());
+    if (value is num) {
+      return value.toDouble();
+    }
 
-    return parsed;
+    var text = value.toString().trim();
+
+    if (text.isEmpty) {
+      return null;
+    }
+
+    if (text.contains('.') && text.contains(',')) {
+      text = text.replaceAll('.', '');
+      text = text.replaceAll(',', '.');
+    } else if (text.contains(',')) {
+      text = text.replaceAll(',', '.');
+    }
+
+    return double.tryParse(text);
   }
 
   static DateTime _parseDate(String value) {

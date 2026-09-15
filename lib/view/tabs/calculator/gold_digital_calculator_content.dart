@@ -1,6 +1,15 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
+import 'package:gal/gal.dart';
+
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/gold_digital_viewmodel.dart';
 
@@ -14,7 +23,22 @@ class GoldDigitalCalculatorContent extends StatefulWidget {
 
 class _GoldDigitalCalculatorContentState
     extends State<GoldDigitalCalculatorContent> {
+  // ============================================================
+  // VIEWMODEL
+  // ============================================================
+
   late final GoldDigitalViewModel _viewModel;
+
+  // ============================================================
+  // REPAINT BOUNDARY
+  // Digunakan untuk export hasil sebagai gambar.
+  // ============================================================
+
+  final GlobalKey _globalKey = GlobalKey();
+
+  // ============================================================
+  // CONTROLLER
+  // ============================================================
 
   final TextEditingController _lotController = TextEditingController(text: '0');
 
@@ -25,6 +49,10 @@ class _GoldDigitalCalculatorContentState
   final TextEditingController _hargaCloseController = TextEditingController(
     text: '0,00',
   );
+
+  // ============================================================
+  // INIT
+  // ============================================================
 
   @override
   void initState() {
@@ -38,6 +66,10 @@ class _GoldDigitalCalculatorContentState
     _hargaOpenController.addListener(_onHargaOpenChanged);
     _hargaCloseController.addListener(_onHargaCloseChanged);
   }
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
 
   @override
   void dispose() {
@@ -86,7 +118,9 @@ class _GoldDigitalCalculatorContentState
     _viewModel.resetGoldDigital();
 
     _setControllerValue(_lotController, '0');
+
     _setControllerValue(_hargaOpenController, '0,00');
+
     _setControllerValue(_hargaCloseController, '0,00');
   }
 
@@ -116,8 +150,153 @@ class _GoldDigitalCalculatorContentState
   // CALCULATE
   // ============================================================
 
-  void _calculateGoldDigital() {
-    _viewModel.calculateGoldDigital();
+  Future<void> _calculateGoldDigital() async {
+    await _viewModel.calculateGoldDigital();
+  }
+
+  // ============================================================
+  // EXPORT - IMAGE
+  // ============================================================
+
+  Future<void> _exportAsImage() async {
+    try {
+      final hasAccess = await Gal.hasAccess();
+
+      if (!hasAccess) {
+        await Gal.requestAccess();
+      }
+
+      final boundary =
+          _globalKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+
+      if (boundary == null) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal mengambil hasil kalkulasi.')),
+        );
+
+        return;
+      }
+
+      // ==========================================================
+      // CAPTURE WIDGET
+      // ==========================================================
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+      if (byteData == null) {
+        throw Exception('Gagal mengubah hasil menjadi gambar.');
+      }
+
+      final pngBytes = byteData.buffer.asUint8List();
+
+      // ==========================================================
+      // SIMPAN FILE SEMENTARA
+      // ==========================================================
+
+      final output = await getTemporaryDirectory();
+
+      final filePath =
+          '${output.path}/gold_digital_${DateTime.now().millisecondsSinceEpoch}.png';
+
+      final file = File(filePath);
+
+      await file.writeAsBytes(pngBytes);
+
+      // ==========================================================
+      // SIMPAN KE GALERI
+      // ==========================================================
+
+      await Gal.putImage(filePath);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gambar berhasil disimpan ke Galeri!'),
+          backgroundColor: Color(0xFF18B85A),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan gambar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // EXPORT - PDF
+  // ============================================================
+
+  Future<void> _exportAsPdf() async {
+    try {
+      final pdfBytes = await _viewModel.buildDigitalGoldPdf();
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async {
+          return pdfBytes;
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal membuat PDF: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // EXPORT MODAL
+  // ============================================================
+
+  void _showExportModal(BuildContext parentContext) {
+    showModalBottomSheet(
+      context: parentContext,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(
+                Icons.image_rounded,
+                color: Color(0xFFFF9E0F),
+              ),
+              title: const Text('Export sebagai Gambar (PNG)'),
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                _exportAsImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.picture_as_pdf_rounded,
+                color: Colors.redAccent,
+              ),
+              title: const Text('Export sebagai PDF'),
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                _exportAsPdf();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ============================================================
@@ -277,9 +456,9 @@ class _GoldDigitalCalculatorContentState
                 // ==================================================
                 Row(
                   children: [
-                    // ============================
+                    // ==============================================
                     // HAPUS
-                    // ============================
+                    // ==============================================
                     Expanded(
                       child: SizedBox(
                         height: 52,
@@ -314,9 +493,9 @@ class _GoldDigitalCalculatorContentState
 
                     const SizedBox(width: 12),
 
-                    // ============================
+                    // ==============================================
                     // HITUNG
-                    // ============================
+                    // ==============================================
                     Expanded(
                       child: SizedBox(
                         height: 52,
@@ -362,108 +541,193 @@ class _GoldDigitalCalculatorContentState
           // ======================================================
           // RESULT CARD
           // ======================================================
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
-            decoration: BoxDecoration(
-              color: cardBgColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: borderColor),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.02),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+          RepaintBoundary(
+            key: _globalKey,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+              decoration: BoxDecoration(
+                color: cardBgColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: _viewModel.digitalIsCalculated
+                      ? (_viewModel.digitalHasilNetto! >= 0
+                            ? const Color(0xFF22C55E).withOpacity(0.45)
+                            : const Color(0xFFFF3B30).withOpacity(0.45))
+                      : borderColor,
                 ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // ==================================================
-                // HASIL TITLE
-                // ==================================================
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle_rounded,
-                      color: Color(0xFF22C55E),
-                      size: 20,
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    Text(
-                      'Hasil',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: primaryTextColor,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                // ==================================================
-                // HASIL NOMINAL
-                // ==================================================
-                SizedBox(
-                  width: double.infinity,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.center,
-                    child: Text(
-                      !_viewModel.digitalIsCalculated ||
-                              _viewModel.digitalHasilNetto == null
-                          ? 'Rp 0'
-                          : '${_viewModel.digitalHasilNetto! < 0 ? '-Rp ' : 'Rp '}${_viewModel.formatDigitalCurrency(_viewModel.digitalHasilNetto!)}',
-                      maxLines: 1,
-                      softWrap: false,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        color: primaryTextColor,
-                      ),
-                    ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.02),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-
-                // ==================================================
-                // UNTUNG / RUGI
-                // ==================================================
-                if (_viewModel.digitalIsCalculated &&
-                    _viewModel.digitalHasilNetto != null) ...[
-                  const SizedBox(height: 10),
-
+                ],
+              ),
+              child: Column(
+                children: [
+                  // ==================================================
+                  // HASIL TITLE
+                  // ==================================================
                   Row(
                     children: [
-                      Icon(
-                        _viewModel.digitalHasilNetto! < 0
-                            ? Icons.trending_down_rounded
-                            : Icons.trending_up_rounded,
-                        color: _viewModel.digitalHasilNetto! < 0
-                            ? const Color(0xFFFF3B30)
-                            : const Color(0xFF22C55E),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: Color(0xFF22C55E),
                         size: 20,
                       ),
 
                       const SizedBox(width: 8),
 
                       Text(
-                        _viewModel.digitalHasilNetto! < 0 ? 'Rugi' : 'Untung',
+                        'Hasil',
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: _viewModel.digitalHasilNetto! < 0
-                              ? const Color(0xFFFF3B30)
-                              : const Color(0xFF22C55E),
+                          fontSize: 16,
+                          color: primaryTextColor,
                         ),
                       ),
                     ],
                   ),
+
+                  const SizedBox(height: 18),
+
+                  // ==================================================
+                  // DIVIDER
+                  // ==================================================
+                  Divider(height: 1, color: borderColor),
+
+                  const SizedBox(height: 20),
+
+                  // ==================================================
+                  // HASIL NOMINAL
+                  // ==================================================
+                  SizedBox(
+                    width: double.infinity,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.center,
+                      child: Text(
+                        !_viewModel.digitalIsCalculated ||
+                                _viewModel.digitalHasilNetto == null
+                            ? 'Rp 0'
+                            : '${_viewModel.digitalHasilNetto! < 0 ? '-Rp ' : 'Rp '}${_viewModel.formatDigitalCurrency(_viewModel.digitalHasilNetto!)}',
+                        maxLines: 1,
+                        softWrap: false,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          color: primaryTextColor,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ==================================================
+                  // UNTUNG / RUGI
+                  // ==================================================
+                  if (_viewModel.digitalIsCalculated &&
+                      _viewModel.digitalHasilNetto != null) ...[
+                    const SizedBox(height: 10),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            (_viewModel.digitalHasilNetto! >= 0
+                                    ? const Color(0xFF22C55E)
+                                    : const Color(0xFFFF3B30))
+                                .withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color:
+                              (_viewModel.digitalHasilNetto! >= 0
+                                      ? const Color(0xFF22C55E)
+                                      : const Color(0xFFFF3B30))
+                                  .withOpacity(0.25),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _viewModel.digitalHasilNetto! < 0
+                                ? Icons.trending_down_rounded
+                                : Icons.trending_up_rounded,
+                            color: _viewModel.digitalHasilNetto! < 0
+                                ? const Color(0xFFFF3B30)
+                                : const Color(0xFF22C55E),
+                            size: 17,
+                          ),
+
+                          const SizedBox(width: 6),
+
+                          Text(
+                            _viewModel.digitalHasilNetto! < 0
+                                ? 'Rugi'
+                                : 'Untung',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: _viewModel.digitalHasilNetto! < 0
+                                  ? const Color(0xFFFF3B30)
+                                  : const Color(0xFF22C55E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
+            ),
+          ),
+
+          // ======================================================
+          // EXPORT BUTTON
+          // ======================================================
+          const SizedBox(height: 14),
+
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: _viewModel.digitalIsCalculated
+                      ? primaryOrange
+                      : borderColor,
+                  width: 1.2,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: _viewModel.digitalIsCalculated
+                  ? () => _showExportModal(context)
+                  : null,
+              icon: Icon(
+                Icons.ios_share_rounded,
+                size: 17,
+                color: _viewModel.digitalIsCalculated
+                    ? primaryOrange
+                    : Colors.grey[400],
+              ),
+              label: Text(
+                'EXPORT HASIL',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 0.5,
+                  color: _viewModel.digitalIsCalculated
+                      ? primaryOrange
+                      : Colors.grey[400],
+                ),
+              ),
             ),
           ),
         ],
