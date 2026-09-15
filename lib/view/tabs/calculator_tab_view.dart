@@ -3,13 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/gold_digital_viewmodel.dart';
+import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 
 // IMPORT PATH KE SUB-FOLDER CALCULATOR
 import 'calculator/gold_digital_calculator_content.dart';
 import 'calculator/gold_physical_calculator_content.dart';
-import 'calculator/pivot_point_calculator_content.dart';
+import 'calculator/pivot_gold_calculator_content.dart';
 
-// Model Sederhana untuk Data Riwayat
+// ==========================================================
+// MODEL SEDERHANA UNTUK DATA RIWAYAT
+// ==========================================================
 class CalculationHistory {
   final String title;
   final String details;
@@ -25,33 +28,67 @@ class CalculationHistory {
 }
 
 class CalculatorTabView extends StatefulWidget {
-  const CalculatorTabView({super.key});
+  // ========================================================
+  // HistoricalDataViewModel YANG SAMA DENGAN HOME
+  // ========================================================
+  final HistoricalDataViewModel historicalDataViewModel;
+
+  const CalculatorTabView({super.key, required this.historicalDataViewModel});
 
   @override
   State<CalculatorTabView> createState() => _CalculatorTabViewState();
 }
 
 class _CalculatorTabViewState extends State<CalculatorTabView> {
-  int _selectedTab = 0; // 0: Digital, 1: Fisik, 2: Pivot Point
+  // 0 = Digital
+  // 1 = Fisik
+  // 2 = Pivot Point
+  int _selectedTab = 0;
 
-  // List Global untuk Menampung Riwayat Perhitungan
+  // ==========================================================
+  // JUDUL KALKULATOR
+  // ==========================================================
+  String get _calculatorTitle {
+    switch (_selectedTab) {
+      case 1:
+        return 'Kalkulator Emas Fisik';
+
+      case 2:
+        return 'Kalkulator Pivot Point Emas';
+
+      case 0:
+      default:
+        return 'Kalkulator Emas Digital';
+    }
+  }
+
+  // ==========================================================
+  // RIWAYAT PERHITUNGAN
+  // ==========================================================
   final List<CalculationHistory> _historyList = [];
 
   void _addHistory(CalculationHistory item) {
     setState(() {
-      _historyList.insert(0, item); // Menambahkan ke paling atas
+      _historyList.insert(0, item);
     });
   }
 
+  // ==========================================================
+  // FORMAT CURRENCY
+  // ==========================================================
   String _formatCurrency(double amount) {
     final formatter = NumberFormat.currency(
       locale: 'id_ID',
       symbol: '',
       decimalDigits: 0,
     );
+
     return formatter.format(amount.abs()).trim();
   }
 
+  // ==========================================================
+  // CALCULATOR SWITCHER
+  // ==========================================================
   Widget _buildCalculatorSwitcher({required bool isDarkMode}) {
     const primaryOrange = Color(0xFFFFA800);
 
@@ -69,6 +106,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       },
 
       itemBuilder: (context) => [
+        // ====================================================
+        // EMAS FISIK
+        // ====================================================
         PopupMenuItem<int>(
           value: 1,
           child: _buildCalculatorMenuItem(
@@ -79,6 +119,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           ),
         ),
 
+        // ====================================================
+        // EMAS DIGITAL
+        // ====================================================
         PopupMenuItem<int>(
           value: 0,
           child: _buildCalculatorMenuItem(
@@ -89,6 +132,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           ),
         ),
 
+        // ====================================================
+        // PIVOT POINT
+        // ====================================================
         PopupMenuItem<int>(
           value: 2,
           child: _buildCalculatorMenuItem(
@@ -123,6 +169,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     );
   }
 
+  // ==========================================================
+  // MENU ITEM
+  // ==========================================================
   Widget _buildCalculatorMenuItem({
     required IconData icon,
     required String title,
@@ -158,6 +207,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     );
   }
 
+  // ==========================================================
+  // BUILD
+  // ==========================================================
   @override
   Widget build(BuildContext context) {
     const primaryOrange = Color(0xFFFFA800);
@@ -170,9 +222,13 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
         final bgColor = isDarkMode
             ? const Color(0xFF121212)
             : const Color(0xFFFBFBFB);
+
         final iconColor = isDarkMode ? Colors.white : Colors.black;
+
         final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
+
         final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+
         final borderColor = isDarkMode
             ? Colors.grey[800]!
             : const Color(0xFFEEEEEE);
@@ -180,52 +236,81 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
         return Scaffold(
           backgroundColor: bgColor,
 
+          // ====================================================
+          // APP BAR
+          // ====================================================
           appBar: AppBar(
             backgroundColor: bgColor,
             elevation: 0,
+
             leading: IconButton(
               icon: Icon(Icons.arrow_back, color: iconColor),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context);
+              },
             ),
-            title: Text(
-              'KALKULATOR',
-              style: GoogleFonts.plusJakartaSans(
-                color: primaryTextColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                letterSpacing: 0.5,
+
+            title: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                _calculatorTitle,
+                style: GoogleFonts.plusJakartaSans(
+                  color: primaryTextColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
+
             centerTitle: true,
           ),
 
-          // ==========================================================
+          // ====================================================
           // FLOATING CALCULATOR SWITCHER
-          // ==========================================================
+          // ====================================================
           floatingActionButton: _buildCalculatorSwitcher(
             isDarkMode: isDarkMode,
           ),
 
-          // ==========================================================
+          // ====================================================
           // BODY
-          // ==========================================================
+          // ====================================================
           body: SingleChildScrollView(
             child: Column(
               children: [
                 const SizedBox(height: 10),
 
+                // ==================================================
                 // TAB CONTENT
+                // ==================================================
                 IndexedStack(
                   index: _selectedTab,
+
                   children: [
+                    // =================================================
+                    // 0. EMAS DIGITAL
+                    // =================================================
                     GoldDigitalCalculatorContent(),
 
+                    // =================================================
+                    // 1. EMAS FISIK
+                    // =================================================
                     GoldPhysicalCalculatorContent(
-                      onCalculate: (data) => _addHistory(data),
+                      onCalculate: (data) {
+                        _addHistory(data);
+                      },
                     ),
 
-                    PivotPointCalculatorContent(
-                      onCalculate: (data) => _addHistory(data),
+                    // =================================================
+                    // 2. PIVOT POINT EMAS
+                    // =================================================
+                    PivotGoldCalculatorContent(
+                      historicalDataViewModel: widget.historicalDataViewModel,
+
+                      onCalculate: (data) {
+                        _addHistory(data);
+                      },
                     ),
                   ],
                 ),
@@ -239,7 +324,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     );
   }
 
-  // Widget Tampilan Riwayat Perhitungan
+  // ==========================================================
+  // RIWAYAT PERHITUNGAN
+  // ==========================================================
   Widget _buildHistorySection({
     required Color cardBgColor,
     required Color primaryTextColor,
@@ -249,14 +336,19 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(20),
+
       decoration: BoxDecoration(
         color: cardBgColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: borderColor),
       ),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ======================================================
+          // HEADER
+          // ======================================================
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -267,7 +359,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                     color: Color(0xFFFFA800),
                     size: 20,
                   ),
+
                   const SizedBox(width: 8),
+
                   Text(
                     'Riwayat Perhitungan',
                     style: GoogleFonts.plusJakartaSans(
@@ -278,9 +372,14 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                   ),
                 ],
               ),
+
               if (_historyList.isNotEmpty)
                 GestureDetector(
-                  onTap: () => setState(() => _historyList.clear()),
+                  onTap: () {
+                    setState(() {
+                      _historyList.clear();
+                    });
+                  },
                   child: Text(
                     'Hapus Semua',
                     style: GoogleFonts.plusJakartaSans(
@@ -292,7 +391,12 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                 ),
             ],
           ),
+
           const SizedBox(height: 12),
+
+          // ======================================================
+          // EMPTY STATE
+          // ======================================================
           if (_historyList.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -306,25 +410,38 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                 ),
               ),
             )
+          // ======================================================
+          // HISTORY LIST
+          // ======================================================
           else
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _historyList.length,
-              separatorBuilder: (context, index) =>
-                  Divider(color: borderColor, height: 16),
+
+              separatorBuilder: (context, index) {
+                return Divider(color: borderColor, height: 16);
+              },
+
               itemBuilder: (context, index) {
                 final item = _historyList[index];
+
                 final isPositive = item.result >= 0;
+
                 final timeFormatted = DateFormat(
                   'HH:mm - dd MMM',
                 ).format(item.timestamp);
 
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
                   children: [
+                    // =================================================
+                    // DETAIL
+                    // =================================================
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+
                       children: [
                         Text(
                           item.title,
@@ -334,7 +451,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                             color: primaryTextColor,
                           ),
                         ),
+
                         const SizedBox(height: 2),
+
                         Text(
                           item.details,
                           style: GoogleFonts.plusJakartaSans(
@@ -342,6 +461,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                             color: Colors.grey[500],
                           ),
                         ),
+
                         Text(
                           timeFormatted,
                           style: GoogleFonts.plusJakartaSans(
@@ -351,8 +471,13 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                         ),
                       ],
                     ),
+
+                    // =================================================
+                    // RESULT
+                    // =================================================
                     Text(
                       '${isPositive ? '+Rp ' : '-Rp '}${_formatCurrency(item.result)}',
+
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,

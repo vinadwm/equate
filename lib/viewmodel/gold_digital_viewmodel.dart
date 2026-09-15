@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../model/pivot_gold_model.dart';
@@ -658,6 +661,102 @@ class GoldDigitalViewModel extends ChangeNotifier {
     );
 
     return formatter.format(amount.abs()).trim();
+  }
+
+  // ============================================================
+  // EXPORT PDF
+  // ============================================================
+
+  Future<Uint8List> buildDigitalGoldPdf() async {
+    final pdf = pw.Document();
+
+    final String positionText = _digitalOpenPosition == PositionType.buy
+        ? 'BUY (Long)'
+        : 'SELL (Short)';
+
+    final String statusText = !_digitalIsCalculated ? '-' : digitalResultLabel;
+
+    final String hasilNettoText =
+        !_digitalIsCalculated || _digitalHasilNetto == null
+        ? 'Rp 0'
+        : '${_digitalHasilNetto! < 0 ? '-Rp ' : 'Rp '}${formatDigitalCurrency(_digitalHasilNetto!)}';
+
+    final String hasilGrossText = _digitalGross == null
+        ? 'Rp 0'
+        : '${_digitalGross! < 0 ? '-Rp ' : 'Rp '}${formatDigitalCurrency(_digitalGross!)}';
+
+    final String feeText = _digitalTotalFee == null
+        ? 'Rp 0'
+        : 'Rp ${formatDigitalCurrency(_digitalTotalFee!)}';
+
+    final String selisihPointText = _digitalSelisihPoint == null
+        ? '0,00'
+        : _digitalSelisihPoint!.toStringAsFixed(2).replaceAll('.', ',');
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(24),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'KALKULATOR EMAS DIGITAL',
+                  style: pw.TextStyle(
+                    fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+
+                pw.SizedBox(height: 5),
+
+                pw.Text('Equate', style: const pw.TextStyle(fontSize: 11)),
+
+                pw.SizedBox(height: 24),
+
+                pw.Table.fromTextArray(
+                  headers: ['Parameter', 'Nilai'],
+                  data: [
+                    ['Jumlah Lot', _digitalLot],
+                    ['Open Position', positionText],
+                    ['Harga Open', _digitalHargaOpen],
+                    ['Harga Close', _digitalHargaClose],
+                    ['Selisih Point', selisihPointText],
+                    ['Hasil Kotor', hasilGrossText],
+                    ['Fee', feeText],
+                    ['Status', statusText],
+                    ['Hasil Netto', hasilNettoText],
+                  ],
+                ),
+
+                pw.SizedBox(height: 30),
+
+                pw.Text(
+                  'Keterangan',
+                  style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+
+                pw.SizedBox(height: 6),
+
+                pw.Text(
+                  'Hasil perhitungan dibuat berdasarkan '
+                  'data yang dimasukkan pada '
+                  'Kalkulator Emas Digital Equate.',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
   }
 
   // ============================================================

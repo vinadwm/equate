@@ -33,6 +33,78 @@ class HistoricalDataViewModel extends ChangeNotifier {
   int get chartDays => _chartDays;
 
   // ============================================================
+  // GET DATA BERDASARKAN MARKET DAN TANGGAL
+  // ============================================================
+
+  HistoricalDataModel? getDataForMarket(String category, {DateTime? date}) {
+    final targetCategory = category.trim().toUpperCase();
+
+    final marketData = _allData.where((item) {
+      return item.category.trim().toUpperCase() == targetCategory;
+    }).toList();
+
+    if (marketData.isEmpty) {
+      debugPrint('❌ Tidak ada data untuk category: $targetCategory');
+      return null;
+    }
+
+    marketData.sort((a, b) => b.date.compareTo(a.date));
+
+    if (date == null) {
+      return marketData.first;
+    }
+
+    for (final item in marketData) {
+      if (_isSameDate(item.date, date)) {
+        return item;
+      }
+    }
+
+    debugPrint(
+      '❌ Tidak ada $targetCategory untuk tanggal '
+      '${date.day}/${date.month}/${date.year}',
+    );
+
+    return null;
+  }
+
+  // ============================================================
+  // GET DATA GOLD HARI SEBELUMNYA
+  // ============================================================
+
+  HistoricalDataModel? getPreviousGoldData(DateTime date) {
+    final previousDate = DateTime(date.year, date.month, date.day - 1);
+
+    for (final item in _allData) {
+      final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
+
+      if (item.category.trim().toUpperCase() == 'LGD DAILY' &&
+          itemDate.year == previousDate.year &&
+          itemDate.month == previousDate.month &&
+          itemDate.day == previousDate.day) {
+        return item;
+      }
+    }
+
+    return null;
+  }
+
+  HistoricalDataModel? getGoldDataForDate(DateTime date) {
+    for (final item in _allData) {
+      final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
+
+      if (item.category.trim().toUpperCase() == 'LGD DAILY' &&
+          itemDate.year == date.year &&
+          itemDate.month == date.month &&
+          itemDate.day == date.day) {
+        return item;
+      }
+    }
+
+    return null;
+  }
+
+  // ============================================================
   // CATEGORY
   // ============================================================
 

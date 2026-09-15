@@ -9,29 +9,87 @@ class HistoricalDataService {
 
   Future<List<HistoricalDataModel>> getHistoricalData() async {
     try {
-      final response = await http.get(Uri.parse(_baseUrl));
+      final response = await http.get(
+        Uri.parse(_baseUrl),
+        headers: {'Accept': 'application/json'},
+      );
+
+      print('========== HISTORICAL API ==========');
+      print('STATUS CODE: ${response.statusCode}');
+      print('BODY LENGTH: ${response.body.length}');
+      print('BODY: ${response.body}');
+      print('====================================');
 
       if (response.statusCode != 200) {
         throw Exception('Server mengembalikan status ${response.statusCode}');
       }
 
-      final Map<String, dynamic> jsonData = jsonDecode(response.body);
+      final dynamic decoded = jsonDecode(response.body);
 
-      if (jsonData['status'] != 200) {
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception('Format response API tidak valid.');
+      }
+
+      print('API KEYS: ${decoded.keys.toList()}');
+
+      final dynamic status = decoded['status'];
+
+      print('API STATUS: $status');
+
+      if (status != null &&
+          status.toString() != '200' &&
+          status.toString().toLowerCase() != 'success') {
         throw Exception(
-          jsonData['message']?.toString() ?? 'Gagal mengambil data historical.',
+          decoded['message']?.toString() ?? 'API mengembalikan status gagal.',
         );
       }
 
-      final List<dynamic> data = jsonData['data'] as List<dynamic>? ?? [];
+      final dynamic rawData = decoded['data'];
 
-      return data
-          .map(
-            (item) =>
-                HistoricalDataModel.fromJson(item as Map<String, dynamic>),
-          )
-          .toList();
+      print('TIPE DATA: ${rawData.runtimeType}');
+
+      if (rawData is! List) {
+        throw Exception(
+          'Field data bukan List. '
+          'Tipe yang diterima: ${rawData.runtimeType}',
+        );
+      }
+
+      print('JUMLAH RAW DATA: ${rawData.length}');
+
+      final List<HistoricalDataModel> result = [];
+
+      for (final item in rawData) {
+        if (item is! Map) {
+          continue;
+        }
+
+        final map = Map<String, dynamic>.from(item);
+
+        final model = HistoricalDataModel.fromJson(map);
+
+        result.add(model);
+
+        if (model.category.toUpperCase().contains('LGD')) {
+          print(
+            'GOLD: '
+            '${model.dateFormatted} | '
+            'Open=${model.open} | '
+            'High=${model.high} | '
+            'Low=${model.low} | '
+            'Close=${model.close} | '
+            'Category=${model.category}',
+          );
+        }
+      }
+
+      print('HASIL MODEL: ${result.length}');
+      print('====================================');
+
+      return result;
     } catch (e) {
+      print('HISTORICAL SERVICE ERROR: $e');
+
       throw Exception('Gagal mengambil data historical: $e');
     }
   }
