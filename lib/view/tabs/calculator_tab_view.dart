@@ -33,6 +33,7 @@ class CalculatorTabView extends StatefulWidget {
 
 class _CalculatorTabViewState extends State<CalculatorTabView> {
   String? _selectedCalculatorType;
+  int _selectedTab = 0; // Deklarasi variabel pendukung switcher
   bool _isGoldDropdownOpen = false;
   bool _isHangsengDropdownOpen = false;
 
@@ -88,15 +89,15 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       offset: const Offset(0, -150),
       elevation: 8,
       color: isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE9E9E9),
-
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-
       onSelected: (index) {
         setState(() {
           _selectedTab = index;
+          if (index == 0) _selectedCalculatorType = 'digital';
+          if (index == 1) _selectedCalculatorType = 'physical';
+          if (index == 2) _selectedCalculatorType = 'pivot';
         });
       },
-
       itemBuilder: (context) => [
         PopupMenuItem<int>(
           value: 1,
@@ -107,7 +108,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             isDarkMode: isDarkMode,
           ),
         ),
-
         PopupMenuItem<int>(
           value: 0,
           child: _buildCalculatorMenuItem(
@@ -117,7 +117,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             isDarkMode: isDarkMode,
           ),
         ),
-
         PopupMenuItem<int>(
           value: 2,
           child: _buildCalculatorMenuItem(
@@ -128,7 +127,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           ),
         ),
       ],
-
       child: Container(
         width: 52,
         height: 52,
@@ -163,9 +161,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     return Row(
       children: [
         Icon(icon, size: 17, color: textColor),
-
         const SizedBox(width: 8),
-
         Expanded(
           child: Text(
             title,
@@ -176,7 +172,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             ),
           ),
         ),
-
         if (selected)
           Icon(
             Icons.check_rounded,
@@ -188,136 +183,67 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
   }
 
   @override
-Widget build(BuildContext context) {
-  return ValueListenableBuilder<ThemeMode>(
-    valueListenable: ThemeViewModel.themeMode,
-    builder: (context, currentThemeMode, child) {
-      final isDarkMode = ThemeViewModel.isDarkMode;
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeViewModel.themeMode,
+      builder: (context, currentThemeMode, child) {
+        final isDarkMode = ThemeViewModel.isDarkMode;
 
-      // SET WARNA PUTIH POLOS UNTUK LIGHT MODE
-      final bgGradientStart = isDarkMode ? const Color(0xFF16181F) : Colors.white;
-      final bgGradientEnd = isDarkMode ? const Color(0xFF0D0E12) : Colors.white;
-      final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF2C2D30);
-
-<<<<<<< HEAD
-        final bgColor = isDarkMode
-            ? const Color(0xFF121212)
-            : const Color(0xFFFBFBFB);
-        final iconColor = isDarkMode ? Colors.white : Colors.black;
-        final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
-        final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-        final borderColor = isDarkMode
-            ? Colors.grey[800]!
-            : const Color(0xFFEEEEEE);
+        final bgGradientStart = isDarkMode ? const Color(0xFF16181F) : Colors.white;
+        final bgGradientEnd = isDarkMode ? const Color(0xFF0D0E12) : Colors.white;
+        final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF2C2D30);
 
         return Scaffold(
-          backgroundColor: bgColor,
-
-          appBar: AppBar(
-            backgroundColor: bgColor,
-            elevation: 0,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: iconColor),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Text(
-              'KALKULATOR',
-              style: GoogleFonts.plusJakartaSans(
-                color: primaryTextColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                letterSpacing: 0.5,
-              ),
-            ),
-            centerTitle: true,
-          ),
-
-          // ==========================================================
-          // FLOATING CALCULATOR SWITCHER
-          // ==========================================================
-          floatingActionButton: _buildCalculatorSwitcher(
-            isDarkMode: isDarkMode,
-          ),
-
-          // ==========================================================
-          // BODY
-          // ==========================================================
-          body: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                // TAB CONTENT
-                IndexedStack(
-                  index: _selectedTab,
-                  children: [
-                    GoldDigitalCalculatorContent(),
-
-                    GoldPhysicalCalculatorContent(
-                      onCalculate: (data) => _addHistory(data),
-                    ),
-
-                    PivotPointCalculatorContent(
-                      onCalculate: (data) => _addHistory(data),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-              ],
-            ),
-=======
-      return Scaffold(
-        backgroundColor: isDarkMode ? const Color(0xFF0D0E12) : Colors.white,
-        body: Stack(
-          alignment: Alignment.center,
-          children: [
-            // LAYER 1: Background Utama
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [bgGradientStart, bgGradientEnd],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-
-            // LAYER 2: Gradasi Glow Center (Matikan di Light Mode agar benar-benar putih bersih)
-            if (isDarkMode)
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 0.8,
-                      colors: [
-                        const Color(0xFFFF9500).withOpacity(0.08),
-                        Colors.transparent,
-                      ],
-                    ),
+          backgroundColor: isDarkMode ? const Color(0xFF0D0E12) : Colors.white,
+          body: Stack(
+            alignment: Alignment.center,
+            children: [
+              // LAYER 1: Background Utama
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [bgGradientStart, bgGradientEnd],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
                 ),
               ),
 
-            // LAYER 3: Gambar Logo EWF Watermark
-            Opacity(
-              opacity: isDarkMode ? 0.22 : 0.15,
-              child: Image.asset(
-                'assets/images/logoEWF.png',
-                width: 310,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const SizedBox.shrink();
-                },
-              ),
-            ),
+              // LAYER 2: Gradasi Glow Center
+              if (isDarkMode)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 0.8,
+                        colors: [
+                          const Color(0xFFFF9500).withOpacity(0.08),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
 
-            // LAYER 4: Konten Utama
-            SafeArea(
-              child: Column(
+              // LAYER 3: Gambar Logo EWF Watermark
+              Opacity(
+                opacity: isDarkMode ? 0.22 : 0.15,
+                child: Image.asset(
+                  'assets/images/logoEWF.png',
+                  width: 310,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+
+              // LAYER 4: Konten Utama
+              SafeArea(
+                child: Column(
                   children: [
-                    // Header Bar (Tombol kembali tanpa background bulat)
+                    // Header Bar
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       child: Row(
@@ -349,7 +275,7 @@ Widget build(BuildContext context) {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 20), // Spacer penyeimbang
+                          const SizedBox(width: 20),
                         ],
                       ),
                     ),
@@ -367,16 +293,12 @@ Widget build(BuildContext context) {
                 ),
               ),
             ],
->>>>>>> vina
           ),
         );
       },
     );
   }
 
-<<<<<<< HEAD
-  // Widget Tampilan Riwayat Perhitungan
-=======
   // --- LOBBY VIEW ---
   Widget _buildLobbyView(BuildContext context, bool isDarkMode, Color primaryTextColor) {
     return Column(
@@ -447,10 +369,13 @@ Widget build(BuildContext context) {
                               _isGoldDropdownOpen = false;
                               if (selectedName == 'Emas Fisik') {
                                 _selectedCalculatorType = 'physical';
+                                _selectedTab = 1;
                               } else if (selectedName == 'Emas Digital') {
                                 _selectedCalculatorType = 'digital';
+                                _selectedTab = 0;
                               } else if (selectedName == 'Pivot Point Emas') {
                                 _selectedCalculatorType = 'pivot';
+                                _selectedTab = 2;
                               }
                             });
                           },
@@ -636,8 +561,6 @@ Widget build(BuildContext context) {
                     ],
                   ),
                 ),
-                
-                // Ikon Panah Atas / Bawah untuk Indikator Dropdown
                 Icon(
                   isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                   color: isExpanded 
@@ -653,7 +576,6 @@ Widget build(BuildContext context) {
     );
   }
 
->>>>>>> vina
   Widget _buildHistorySection({
     required bool isDarkMode,
     required Color primaryTextColor,
@@ -737,16 +659,6 @@ Widget build(BuildContext context) {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _historyList.length,
-<<<<<<< HEAD
-              separatorBuilder: (context, index) =>
-                  Divider(color: borderColor, height: 16),
-              itemBuilder: (context, index) {
-                final item = _historyList[index];
-                final isPositive = item.result >= 0;
-                final timeFormatted = DateFormat(
-                  'HH:mm - dd MMM',
-                ).format(item.timestamp);
-=======
               separatorBuilder: (context, index) => Divider(
                 color: isDarkMode ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.04),
                 height: 16,
@@ -755,7 +667,6 @@ Widget build(BuildContext context) {
                 final item = _historyList[index];
                 final isPositive = item.result >= 0;
                 final timeFormatted = DateFormat('HH:mm - dd MMM').format(item.timestamp);
->>>>>>> vina
 
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

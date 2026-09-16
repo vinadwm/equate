@@ -4,8 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/gold_digital_viewmodel.dart';
 
+import '../calculator_tab_view.dart';
+
 class GoldDigitalCalculatorContent extends StatefulWidget {
-  const GoldDigitalCalculatorContent({super.key});
+  final Function(CalculationHistory)? onCalculate;
+
+  const GoldDigitalCalculatorContent({
+    super.key,
+    this.onCalculate,
+  });
 
   @override
   State<GoldDigitalCalculatorContent> createState() =>
@@ -116,8 +123,24 @@ class _GoldDigitalCalculatorContentState
   // CALCULATE
   // ============================================================
 
-  void _calculateGoldDigital() {
-    _viewModel.calculateGoldDigital();
+  Future<void> _calculateGoldDigital() async {
+    final success = await _viewModel.calculateGoldDigital();
+
+    if (!success || !mounted) {
+      return;
+    }
+
+    if (widget.onCalculate != null) {
+      widget.onCalculate!(
+        CalculationHistory(
+          title: 'Emas Digital',
+          details:
+              'Lot: ${_viewModel.digitalLot} | Open: ${_viewModel.digitalHargaOpen} | Close: ${_viewModel.digitalHargaClose}',
+          result: _viewModel.digitalHasilNetto ?? 0,
+          timestamp: DateTime.now(),
+        ),
+      );
+    }
   }
 
   // ============================================================
