@@ -12,6 +12,7 @@ import 'package:gal/gal.dart';
 import '../calculator_tab_view.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 import 'package:equate/viewmodel/pivot_gold_viewmodel.dart';
+import 'package:equate/model/pivot_gold_model.dart';
 
 class PivotGoldCalculatorContent extends StatefulWidget {
   final HistoricalDataViewModel historicalDataViewModel;
@@ -43,6 +44,8 @@ class _PivotGoldCalculatorContentState
   final TextEditingController _lowController = TextEditingController();
 
   final TextEditingController _closeController = TextEditingController();
+
+  final TextEditingController _openController = TextEditingController();
 
   // ==========================================================
   // VIEWMODEL
@@ -85,6 +88,7 @@ class _PivotGoldCalculatorContentState
     _highController.addListener(_onHighChanged);
     _lowController.addListener(_onLowChanged);
     _closeController.addListener(_onCloseChanged);
+    _openController.addListener(_onOpenChanged);
 
     _updateInputState();
   }
@@ -97,10 +101,12 @@ class _PivotGoldCalculatorContentState
     _highController.removeListener(_onHighChanged);
     _lowController.removeListener(_onLowChanged);
     _closeController.removeListener(_onCloseChanged);
+    _openController.removeListener(_onOpenChanged);
 
     _highController.dispose();
     _lowController.dispose();
     _closeController.dispose();
+    _openController.dispose();
 
     super.dispose();
   }
@@ -144,6 +150,13 @@ class _PivotGoldCalculatorContentState
       );
     }
 
+    if (_openController.text != _viewModel.open) {
+      _openController.value = TextEditingValue(
+        text: _viewModel.open,
+        selection: TextSelection.collapsed(offset: _viewModel.open.length),
+      );
+    }
+
     _syncingControllers = false;
   }
 
@@ -171,11 +184,19 @@ class _PivotGoldCalculatorContentState
     _updateInputState();
   }
 
+  void _onOpenChanged() {
+    if (_syncingControllers) return;
+
+    _viewModel.setOpen(_openController.text);
+    _updateInputState();
+  }
+
   void _updateInputState() {
     final hasText =
         _highController.text.trim().isNotEmpty ||
         _lowController.text.trim().isNotEmpty ||
-        _closeController.text.trim().isNotEmpty;
+        _closeController.text.trim().isNotEmpty ||
+        _openController.text.trim().isNotEmpty;
 
     if (mounted && hasText != _hasInput) {
       setState(() {
@@ -209,7 +230,8 @@ class _PivotGoldCalculatorContentState
           details:
               'H: ${_viewModel.high} | '
               'L: ${_viewModel.low} | '
-              'C: ${_viewModel.close}',
+              'C: ${_viewModel.close} | '
+              'O: ${_viewModel.open}',
           result: _viewModel.pp ?? 0,
           timestamp: DateTime.now(),
         ),
@@ -481,7 +503,7 @@ class _PivotGoldCalculatorContentState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Data Pivot Point',
+                            'Data Pivot Point Emas',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -493,9 +515,8 @@ class _PivotGoldCalculatorContentState
 
                           Text(
                             previousData != null
-                                ? 'Gold hari sebelumnya • '
-                                      '${previousData.dateFormatted}'
-                                : 'Menunggu data Gold...',
+                                ? 'Emas pada tanggal ${previousData.dateFormatted}'
+                                : 'Menunggu data Emas...',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
                               color: Colors.grey[500],
@@ -556,7 +577,8 @@ class _PivotGoldCalculatorContentState
                       Expanded(
                         child: Text(
                           'High, Low, dan Close otomatis '
-                          'diambil dari data Gold hari sebelumnya. '
+                          'diambil dari data Gold pada hari perdagangan terakhir. '
+                          'Open otomoatis diambil dari data Gold pada hari ini. '
                           'Input tetap dapat diedit secara manual.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
@@ -654,6 +676,17 @@ class _PivotGoldCalculatorContentState
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // ==================================================
+                // OPEN
+                // ==================================================
+                _buildOpenInput(
+                  textColor: primaryTextColor,
+                  inputFillColor: inputFillColor,
+                  borderColor: borderColor,
                 ),
 
                 const SizedBox(height: 12),
@@ -912,11 +945,11 @@ class _PivotGoldCalculatorContentState
                       // =================================================
                       // PIVOT POINT
                       // =================================================
-                      _buildResultRow(
-                        label: 'Pivot Point',
+                      _buildPivotPointRow(
                         value: _viewModel.formatValue(_viewModel.pp),
-                        labelColor: pivotColor,
+                        textColor: primaryTextColor,
                         valueColor: pivotValueColor,
+                        borderColor: dividerColor,
                       ),
 
                       // =================================================
@@ -1096,123 +1129,49 @@ class _PivotGoldCalculatorContentState
     final signal = _viewModel.signal;
 
     Color signalColor;
-    Color backgroundColor;
-    IconData icon;
+    String label;
 
     switch (signal) {
       case PivotSignal.buy:
         signalColor = const Color(0xFF18B85A);
-        backgroundColor = const Color(0xFF18B85A);
-        icon = Icons.trending_up_rounded;
+        label = 'BUY';
         break;
 
       case PivotSignal.sell:
         signalColor = const Color(0xFFFF3B30);
-        backgroundColor = const Color(0xFFFF3B30);
-        icon = Icons.trending_down_rounded;
+        label = 'SELL';
         break;
 
       case PivotSignal.neutral:
         signalColor = const Color(0xFFFFA800);
-        backgroundColor = const Color(0xFFFFA800);
-        icon = Icons.remove_rounded;
+        label = 'BUY/SELL';
         break;
 
       case PivotSignal.unavailable:
         signalColor = Colors.grey;
-        backgroundColor = Colors.grey;
-        icon = Icons.help_outline_rounded;
+        label = 'BELUM TERSEDIA';
         break;
     }
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: signalColor.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: signalColor.withOpacity(0.18)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: backgroundColor.withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: signalColor, size: 18),
+    return Center(
+      child: Container(
+        width: 206,
+        height: 37,
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: signalColor.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: signalColor.withOpacity(0.45)),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: signalColor,
           ),
-
-          const SizedBox(width: 10),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Sinyal',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[500],
-                  ),
-                ),
-
-                const SizedBox(height: 1),
-
-                Text(
-                  _viewModel.signalLabel,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: signalColor,
-                  ),
-                ),
-
-                const SizedBox(height: 2),
-
-                Text(
-                  _viewModel.signalDescription,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 9,
-                    height: 1.3,
-                    color: primaryTextColor.withOpacity(0.65),
-                  ),
-                ),
-
-                if (_viewModel.signalComparison != '-')
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      _viewModel.signalComparison,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: primaryTextColor.withOpacity(0.8),
-                      ),
-                    ),
-                  ),
-
-                if (_viewModel.referenceData != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      'Open Newsmaker '
-                      '${_viewModel.referenceData!.dateFormatted}: '
-                      '${_viewModel.referenceData!.openFormatted}',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 8,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1286,6 +1245,76 @@ class _PivotGoldCalculatorContentState
                 color: Color(0xFFFF9E0F),
                 width: 1.5,
               ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ==========================================================
+  // OPEN INPUT - OTOMATIS + BISA DIEDIT
+  // ==========================================================
+  Widget _buildOpenInput({
+    required Color textColor,
+    required Color inputFillColor,
+    required Color borderColor,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Open',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+
+        const SizedBox(height: 4),
+
+        TextField(
+          controller: _openController,
+
+          // Open otomatis terisi dari Newsmaker,
+          // tetapi user tetap bisa mengedit.
+          readOnly: false,
+
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+
+          decoration: InputDecoration(
+            isDense: true,
+
+            hintText: '0,00',
+
+            hintStyle: GoogleFonts.plusJakartaSans(
+              color: Colors.grey[400],
+              fontSize: 12,
+            ),
+
+            filled: true,
+            fillColor: inputFillColor,
+
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 8,
+            ),
+
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: borderColor),
+            ),
+
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide(color: Color(0xFFFF9E0F), width: 1.5),
             ),
           ),
         ),
@@ -1372,6 +1401,47 @@ class _PivotGoldCalculatorContentState
                 else
                   const SizedBox(width: 28),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPivotPointRow({
+    required String value,
+    required Color textColor,
+    required Color valueColor,
+    required Color borderColor,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: borderColor),
+          bottom: BorderSide(color: borderColor),
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'PIVOT POINT',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: valueColor,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          Text(
+            value,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: textColor,
             ),
           ),
         ],

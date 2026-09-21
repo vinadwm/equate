@@ -35,6 +35,15 @@ class _MainNavigationViewState extends State<MainNavigationView> {
       ),
       const ProfileTabView(),
     ];
+
+    // Ambil data historical saat MainNavigation pertama kali dibuka
+    _historicalDataViewModel.loadHistoricalData();
+  }
+
+  @override
+  void dispose() {
+    _historicalDataViewModel.dispose();
+    super.dispose();
   }
 
   // ============================================================

@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class DigitalGoldHistoryModel {
+class DigitalGoldModel {
   final String id;
   final String uid;
 
@@ -17,7 +17,7 @@ class DigitalGoldHistoryModel {
 
   final DateTime createdAt;
 
-  DigitalGoldHistoryModel({
+  DigitalGoldModel({
     required this.id,
     required this.uid,
     required this.lot,
@@ -46,13 +46,10 @@ class DigitalGoldHistoryModel {
     };
   }
 
-  factory DigitalGoldHistoryModel.fromFirestore(
-    String id,
-    Map<String, dynamic> data,
-  ) {
+  factory DigitalGoldModel.fromFirestore(String id, Map<String, dynamic> data) {
     final timestamp = data['createdAt'];
 
-    return DigitalGoldHistoryModel(
+    return DigitalGoldModel(
       id: id,
       uid: data['uid'] ?? '',
       lot: (data['lot'] ?? 0).toInt(),

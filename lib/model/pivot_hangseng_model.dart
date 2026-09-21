@@ -2,7 +2,7 @@ import 'package:equate/model/historical_data_model.dart';
 
 enum PivotSignal { buy, sell, neutral, unavailable }
 
-class PivotGoldModel {
+class PivotHangsengModel {
   // ============================================================
   // TANGGAL
   // ============================================================
@@ -54,7 +54,7 @@ class PivotGoldModel {
   final HistoricalDataModel? previousData;
   final HistoricalDataModel? referenceData;
 
-  const PivotGoldModel({
+  const PivotHangsengModel({
     required this.calculationDate,
     this.previousDataDate,
     this.referenceDate,
@@ -102,7 +102,7 @@ class PivotGoldModel {
   // COPY WITH
   // ============================================================
 
-  PivotGoldModel copyWith({
+  PivotHangsengModel copyWith({
     DateTime? calculationDate,
     DateTime? previousDataDate,
     DateTime? referenceDate,
@@ -123,7 +123,7 @@ class PivotGoldModel {
     HistoricalDataModel? previousData,
     HistoricalDataModel? referenceData,
   }) {
-    return PivotGoldModel(
+    return PivotHangsengModel(
       calculationDate: calculationDate ?? this.calculationDate,
       previousDataDate: previousDataDate ?? this.previousDataDate,
       referenceDate: referenceDate ?? this.referenceDate,

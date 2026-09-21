@@ -72,16 +72,46 @@ class HistoricalDataViewModel extends ChangeNotifier {
   // GET DATA GOLD HARI SEBELUMNYA
   // ============================================================
 
-  HistoricalDataModel? getPreviousGoldData(DateTime date) {
-    final previousDate = DateTime(date.year, date.month, date.day - 1);
+  // ============================================================
+  // GET DATA MARKET HARI SEBELUMNYA
+  // ============================================================
 
-    for (final item in _allData) {
+  HistoricalDataModel? getPreviousMarketData(DateTime date, String category) {
+    final targetCategory = category.trim().toUpperCase();
+
+    final marketData = _allData.where((item) {
+      return item.category.trim().toUpperCase() == targetCategory;
+    }).toList();
+
+    if (marketData.isEmpty) {
+      return null;
+    }
+
+    // Urutkan dari tanggal terbaru → terlama
+    marketData.sort((a, b) => b.date.compareTo(a.date));
+
+    final targetDate = DateTime(date.year, date.month, date.day);
+
+    // Ambil data terakhir yang benar-benar
+    // berada sebelum tanggal kalkulasi.
+    //
+    // Contoh:
+    // Senin 21
+    // Minggu 20 -> tidak ada
+    // Sabtu 19  -> tidak ada
+    // Jumat 18  -> ambil Jumat
+    //
+    // Kalau Jumat juga libur:
+    // Kamis 17 -> ambil Kamis
+
+    for (final item in marketData) {
+      if (item.isBankHoliday) {
+        continue;
+      }
+
       final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
 
-      if (item.category.trim().toUpperCase() == 'LGD DAILY' &&
-          itemDate.year == previousDate.year &&
-          itemDate.month == previousDate.month &&
-          itemDate.day == previousDate.day) {
+      if (itemDate.isBefore(targetDate)) {
         return item;
       }
     }
@@ -178,21 +208,20 @@ class HistoricalDataViewModel extends ChangeNotifier {
   // ============================================================
 
   List<HistoricalDataModel> get chartData {
-    final data = List<HistoricalDataModel>.from(marketData);
+    final data = marketData;
 
-    data.sort((a, b) => a.date.compareTo(b.date));
+    if (data.isEmpty) {
+      return [];
+    }
 
     if (_chartDays == -1) {
-      return data;
+      return data.reversed.toList();
     }
 
-    if (data.length <= _chartDays) {
-      return data;
-    }
+    final count = data.length < _chartDays ? data.length : _chartDays;
 
-    return data.sublist(data.length - _chartDays);
+    return data.sublist(0, count).reversed.toList();
   }
-
   // ============================================================
   // LOAD DATA
   // ============================================================

@@ -44,9 +44,7 @@ class HomeTabViewState extends State<HomeTabView> {
     super.initState();
 
     _historicalViewModel.addListener(_onHistoricalDataChanged);
-
     _loadUser();
-    _loadHistoricalData();
   }
 
   // ============================================================
@@ -82,14 +80,6 @@ class HomeTabViewState extends State<HomeTabView> {
         _isLoadingUser = false;
       });
     }
-  }
-
-  // ============================================================
-  // LOAD HISTORICAL DATA
-  // ============================================================
-
-  Future<void> _loadHistoricalData() async {
-    await _historicalViewModel.loadHistoricalData();
   }
 
   // ============================================================
@@ -176,7 +166,7 @@ class HomeTabViewState extends State<HomeTabView> {
   // ============================================================
 
   Future<void> _refresh() async {
-    await _loadHistoricalData();
+    await _historicalViewModel.loadHistoricalData();
   }
 
   // ============================================================
@@ -775,6 +765,32 @@ class HomeTabViewState extends State<HomeTabView> {
     required Color primaryOrange,
   }) {
     final chartData = _historicalViewModel.chartData;
+    double minPrice = double.infinity;
+    double maxPrice = double.negativeInfinity;
+
+    for (final item in chartData) {
+      if (item.close < minPrice) minPrice = item.close;
+      if (item.close > maxPrice) maxPrice = item.close;
+    }
+
+    if (minPrice == double.infinity || maxPrice == double.negativeInfinity) {
+      minPrice = 0;
+      maxPrice = 100;
+    }
+
+    final priceRange = maxPrice - minPrice;
+
+    final double gridInterval;
+
+    if (priceRange <= 50) {
+      gridInterval = 10;
+    } else if (priceRange <= 200) {
+      gridInterval = 25;
+    } else if (priceRange <= 500) {
+      gridInterval = 50;
+    } else {
+      gridInterval = 100;
+    }
 
     return Container(
       width: double.infinity,
@@ -863,7 +879,7 @@ class HomeTabViewState extends State<HomeTabView> {
 
                 _buildChartRangeButton(
                   label: 'Semua',
-                  days: 99999,
+                  days: -1,
                   primaryOrange: primaryOrange,
                   isDarkMode: isDarkMode,
                 ),
@@ -904,7 +920,15 @@ class HomeTabViewState extends State<HomeTabView> {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    horizontalInterval: 1,
+                    horizontalInterval: gridInterval,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: isDarkMode
+                            ? const Color(0xFF333333)
+                            : const Color(0xFFE5E5E5),
+                        strokeWidth: 1,
+                      );
+                    },
                   ),
 
                   borderData: FlBorderData(show: false),
@@ -946,6 +970,12 @@ class HomeTabViewState extends State<HomeTabView> {
                         showTitles: true,
                         reservedSize: 30,
 
+                        interval: chartData.length <= 30
+                            ? 5
+                            : chartData.length <= 90
+                            ? 15
+                            : 30,
+
                         getTitlesWidget: (value, meta) {
                           final index = value.toInt();
 
@@ -978,14 +1008,29 @@ class HomeTabViewState extends State<HomeTabView> {
 
                       isCurved: true,
 
+                      curveSmoothness: 0.2,
+
+                      color: primaryOrange,
+
                       barWidth: 2.5,
 
                       dotData: const FlDotData(show: false),
 
-                      belowBarData: BarAreaData(show: true),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            primaryOrange.withOpacity(0.18),
+                            primaryOrange.withOpacity(0.02),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
+                duration: Duration.zero,
               ),
             ),
         ],
@@ -1133,7 +1178,7 @@ class HomeTabViewState extends State<HomeTabView> {
           const SizedBox(height: 14),
 
           TextButton(
-            onPressed: _loadHistoricalData,
+            onPressed: () => _historicalViewModel.loadHistoricalData(),
             child: Text(
               'Coba Lagi',
               style: GoogleFonts.poppins(
