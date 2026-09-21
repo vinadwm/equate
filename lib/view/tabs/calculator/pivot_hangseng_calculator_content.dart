@@ -577,10 +577,10 @@ class _PivotHangsengCalculatorContentState
 
                       Expanded(
                         child: Text(
-                          'High, Low, dan Close otomatis diambil dari '
-                          'data Hangseng hari sebelumnya. Open otomatis '
-                          'diambil dari data Hangseng hari ini. Input tetap '
-                          'dapat diedit secara manual.',
+                          'High, Low, dan Close otomatis '
+                          'diambil dari data Hangseng pada hari perdagangan terakhir. '
+                          'Open otomoatis diambil dari data Hangseng pada hari ini. '
+                          'Input tetap dapat diedit secara manual.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             height: 1.4,
