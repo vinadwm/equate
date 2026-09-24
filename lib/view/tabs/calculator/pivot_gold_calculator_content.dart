@@ -1,21 +1,21 @@
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'package:pdf/pdf.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
-import 'package:gal/gal.dart';
 
-import '../calculator_tab_view.dart';
+import 'package:equate/model/pivot_gold_model.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 import 'package:equate/viewmodel/pivot_gold_viewmodel.dart';
 
 class PivotGoldCalculatorContent extends StatefulWidget {
   final HistoricalDataViewModel historicalDataViewModel;
-  final Function(CalculationHistory)? onCalculate;
+  final Function(dynamic)? onCalculate;
 
   const PivotGoldCalculatorContent({
     super.key,
@@ -24,40 +24,25 @@ class PivotGoldCalculatorContent extends StatefulWidget {
   });
 
   @override
-  State<PivotGoldCalculatorContent> createState() =>
-      _PivotGoldCalculatorContentState();
+  State<PivotGoldCalculatorContent> createState() => _PivotGoldCalculatorContentState();
 }
 
-class _PivotGoldCalculatorContentState
-    extends State<PivotGoldCalculatorContent> {
-  // ==========================================================
+class _PivotGoldCalculatorContentState extends State<PivotGoldCalculatorContent> {
   // GLOBAL KEY UNTUK EXPORT GAMBAR
-  // ==========================================================
   final GlobalKey _globalKey = GlobalKey();
 
-  // ==========================================================
   // CONTROLLER INPUT
-  // ==========================================================
   final TextEditingController _highController = TextEditingController();
-
   final TextEditingController _lowController = TextEditingController();
-
   final TextEditingController _closeController = TextEditingController();
 
-  // ==========================================================
-  // VIEWMODEL
-  // ==========================================================
   late final PivotGoldViewModel _viewModel;
 
-  // Mencegah controller listener dianggap sebagai input manual
-  // ketika controller sedang disinkronkan dari ViewModel.
+  // Mencegah listener controller dianggap input manual saat sinkronisasi.
   bool _syncingControllers = false;
 
-  // ==========================================================
   // UI STATE
-  // ==========================================================
   bool _hasInput = false;
-
   bool _isR4Expanded = false;
   bool _isS4Expanded = false;
 
@@ -65,23 +50,14 @@ class _PivotGoldCalculatorContentState
   void initState() {
     super.initState();
 
-    // ========================================================
-    // INIT VIEWMODEL
-    // ========================================================
     _viewModel = PivotGoldViewModel(
       historicalDataViewModel: widget.historicalDataViewModel,
     );
 
     _viewModel.addListener(_onViewModelChanged);
 
-    // ========================================================
-    // SINKRONISASI AWAL
-    // ========================================================
     _syncControllers();
 
-    // ========================================================
-    // LISTENER INPUT
-    // ========================================================
     _highController.addListener(_onHighChanged);
     _lowController.addListener(_onLowChanged);
     _closeController.addListener(_onCloseChanged);
@@ -105,9 +81,6 @@ class _PivotGoldCalculatorContentState
     super.dispose();
   }
 
-  // ==========================================================
-  // VIEWMODEL LISTENER
-  // ==========================================================
   void _onViewModelChanged() {
     if (!mounted) return;
 
@@ -117,9 +90,6 @@ class _PivotGoldCalculatorContentState
     setState(() {});
   }
 
-  // ==========================================================
-  // SYNC CONTROLLER DARI VIEWMODEL
-  // ==========================================================
   void _syncControllers() {
     _syncingControllers = true;
 
@@ -147,9 +117,6 @@ class _PivotGoldCalculatorContentState
     _syncingControllers = false;
   }
 
-  // ==========================================================
-  // INPUT LISTENER
-  // ==========================================================
   void _onHighChanged() {
     if (_syncingControllers) return;
 
@@ -172,8 +139,7 @@ class _PivotGoldCalculatorContentState
   }
 
   void _updateInputState() {
-    final hasText =
-        _highController.text.trim().isNotEmpty ||
+    final hasText = _highController.text.trim().isNotEmpty ||
         _lowController.text.trim().isNotEmpty ||
         _closeController.text.trim().isNotEmpty;
 
@@ -195,23 +161,36 @@ class _PivotGoldCalculatorContentState
         _viewModel.errorMessage ?? 'Harap masukkan data yang valid.',
         backgroundColor: Colors.red,
       );
-
       return;
     }
 
-    // ========================================================
     // SIMPAN KE HISTORY
-    // ========================================================
     if (widget.onCalculate != null) {
+      final highVal = _viewModel.highValue ?? 0.0;
+      final lowVal = _viewModel.lowValue ?? 0.0;
+      final closeVal = _viewModel.closeValue ?? 0.0;
+
       widget.onCalculate!(
-        CalculationHistory(
-          title: 'Pivot Point',
-          details:
-              'H: ${_viewModel.high} | '
-              'L: ${_viewModel.low} | '
-              'C: ${_viewModel.close}',
-          result: _viewModel.pp ?? 0,
-          timestamp: DateTime.now(),
+        PivotGoldModel(
+          title: 'Pivot Point Gold',
+          type: _viewModel.type,
+          high: highVal,
+          low: lowVal,
+          close: closeVal,
+          pp: _viewModel.pp ?? 0.0,
+          r1: _viewModel.r1 ?? 0.0,
+          r2: _viewModel.r2 ?? 0.0,
+          r3: _viewModel.r3 ?? 0.0,
+          r4: _viewModel.r4 ?? 0.0,
+          s1: _viewModel.s1 ?? 0.0,
+          s2: _viewModel.s2 ?? 0.0,
+          s3: _viewModel.s3 ?? 0.0,
+          s4: _viewModel.s4 ?? 0.0,
+          result: _viewModel.pp ?? 0.0,
+          details: 'H: ${highVal.toStringAsFixed(2)} | '
+              'L: ${lowVal.toStringAsFixed(2)} | '
+              'C: ${closeVal.toStringAsFixed(2)}',
+          createdAt: DateTime.now(),
         ),
       );
     }
@@ -219,9 +198,6 @@ class _PivotGoldCalculatorContentState
     setState(() {});
   }
 
-  // ==========================================================
-  // RESET
-  // ==========================================================
   void _resetForm() {
     _viewModel.reset();
 
@@ -234,11 +210,9 @@ class _PivotGoldCalculatorContentState
     setState(() {});
   }
 
-  // ==========================================================
-  // MUAT ULANG DATA GOLD HARI SEBELUMNYA
-  // ==========================================================
+  // MUAT ULANG DATA (hanya mode Otomatis)
   void _reloadPreviousDay() {
-    final success = _viewModel.fillFromPreviousDay();
+    final success = _viewModel.refreshPreviousDayInput();
 
     if (success) {
       _showSnackBar(
@@ -247,21 +221,47 @@ class _PivotGoldCalculatorContentState
       );
     } else {
       _showSnackBar(
-        _viewModel.errorMessage ?? 'Data Gold hari sebelumnya belum tersedia.',
+        _viewModel.errorMessage ??
+            'Data Gold hari sebelumnya belum tersedia.',
         backgroundColor: Colors.red,
       );
     }
   }
 
-  // ==========================================================
-  // SNACKBAR
-  // ==========================================================
   void _showSnackBar(String message, {Color? backgroundColor}) {
     if (!mounted) return;
 
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: backgroundColor),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
+  }
+
+  String _fmt(DateTime date) {
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+
+    return '$d/$m/${date.year}';
+  }
+
+  Color _signalColorOf(PivotSignal signal) {
+    switch (signal) {
+      case PivotSignal.buy:
+        return const Color(0xFF18B85A);
+
+      case PivotSignal.sell:
+        return const Color(0xFFFF3B30);
+
+      case PivotSignal.neutral:
+        return const Color(0xFFFFA800);
+
+      case PivotSignal.unavailable:
+        return Colors.grey;
+    }
   }
 
   // ==========================================================
@@ -284,9 +284,8 @@ class _PivotGoldCalculatorContentState
         return;
       }
 
-      final boundary =
-          _globalKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
+      final boundary = _globalKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
 
       if (boundary == null) {
         _showSnackBar(
@@ -297,7 +296,6 @@ class _PivotGoldCalculatorContentState
       }
 
       final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
       if (byteData == null) {
@@ -306,17 +304,12 @@ class _PivotGoldCalculatorContentState
       }
 
       final pngBytes = byteData.buffer.asUint8List();
-
       final output = await getTemporaryDirectory();
-
-      final filePath =
-          '${output.path}/pivot_point_'
+      final filePath = '${output.path}/pivot_gold_'
           '${DateTime.now().millisecondsSinceEpoch}.png';
 
       final file = File(filePath);
-
       await file.writeAsBytes(pngBytes);
-
       await Gal.putImage(filePath);
 
       _showSnackBar(
@@ -328,9 +321,6 @@ class _PivotGoldCalculatorContentState
     }
   }
 
-  // ==========================================================
-  // EXPORT PDF
-  // ==========================================================
   Future<void> _exportAsPdf() async {
     try {
       final pdfBytes = await _viewModel.buildPdf();
@@ -345,9 +335,6 @@ class _PivotGoldCalculatorContentState
     }
   }
 
-  // ==========================================================
-  // EXPORT MODAL
-  // ==========================================================
   void _showExportModal(BuildContext context) {
     if (!_viewModel.isCalculated) {
       _showSnackBar(
@@ -401,7 +388,6 @@ class _PivotGoldCalculatorContentState
   @override
   Widget build(BuildContext context) {
     const primaryOrange = Color(0xFFFF9E0F);
-
     const resistanceColor = Color(0xFFFFB800);
     const supportColor = Color(0xFF4295FF);
     const pivotColor = Color(0xFF18B85A);
@@ -409,27 +395,53 @@ class _PivotGoldCalculatorContentState
     const pivotValueColor = Color(0xFF10B981);
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     final cardBgColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-
-    final inputFillColor = isDarkMode
-        ? const Color(0xFF2A2A2A)
-        : const Color(0xFFF8F8FA);
-
-    final primaryTextColor = isDarkMode
-        ? Colors.white
-        : const Color(0xFF161616);
-
-    final borderColor = isDarkMode
-        ? Colors.grey[800]!
-        : const Color(0xFFE7E7E7);
-
+    final inputFillColor =
+        isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF8F8FA);
+    final primaryTextColor =
+        isDarkMode ? Colors.white : const Color(0xFF161616);
+    final borderColor =
+        isDarkMode ? Colors.grey[800]! : const Color(0xFFE7E7E7);
     final dividerColor = isDarkMode
-        ? Colors.white.withOpacity(0.08)
+        ? Colors.white.withValues(alpha: 0.08)
         : const Color(0xFFEEEEEE);
 
-    final previousData = _viewModel.previousGoldData;
-    final referenceData = _viewModel.referenceData;
+    final vm = _viewModel;
+    final previousData = vm.previousGoldData;
+    final autoMode = vm.autoMode;
+
+    // Baris level (R/S) dan midpoint, dibuat ringkas.
+    Widget lvl(
+      String label,
+      double? value,
+      Color color, {
+      IconData? icon,
+      VoidCallback? onTap,
+    }) {
+      return _buildResultRow(
+        label: label,
+        value: vm.formatValue(value),
+        labelColor: color,
+        valueColor: primaryTextColor,
+        trailingIcon: icon,
+        trailingIconColor: color,
+        onTrailingIconTap: onTap,
+      );
+    }
+
+    Widget mid(double? a, double? b) {
+      if (a == null || b == null) {
+        return const SizedBox.shrink();
+      }
+
+      return _buildResultRow(
+        label: 'Midpoint',
+        value: vm.formatValue(vm.midpoint(a, b)),
+        labelColor: midpointColor,
+        valueColor: primaryTextColor,
+        isMidpoint: true,
+      );
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -446,7 +458,8 @@ class _PivotGoldCalculatorContentState
               border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.035),
+                  color:
+                      Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.035),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -454,9 +467,7 @@ class _PivotGoldCalculatorContentState
             ),
             child: Column(
               children: [
-                // ==================================================
-                // HEADER DATA OTOMATIS
-                // ==================================================
+                // Header
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -464,7 +475,7 @@ class _PivotGoldCalculatorContentState
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: primaryOrange.withOpacity(0.12),
+                        color: primaryOrange.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
@@ -473,28 +484,23 @@ class _PivotGoldCalculatorContentState
                         size: 18,
                       ),
                     ),
-
                     const SizedBox(width: 10),
-
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Data Pivot Point',
+                            'Data Pivot Point Gold',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: primaryTextColor,
                             ),
                           ),
-
                           const SizedBox(height: 2),
-
                           Text(
                             previousData != null
-                                ? 'Gold hari sebelumnya • '
-                                      '${previousData.dateFormatted}'
+                                ? 'Gold • H/L/C ${previousData.dateFormatted}'
                                 : 'Menunggu data Gold...',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
@@ -504,32 +510,34 @@ class _PivotGoldCalculatorContentState
                         ],
                       ),
                     ),
-
-                    // ==================================================
-                    // REFRESH
-                    // ==================================================
-                    IconButton(
-                      tooltip: 'Muat data Gold hari sebelumnya',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: _reloadPreviousDay,
-                      icon: Icon(
-                        Icons.refresh_rounded,
-                        size: 20,
-                        color: primaryOrange,
+                    if (autoMode)
+                      IconButton(
+                        tooltip: 'Muat ulang data Gold',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _reloadPreviousDay,
+                        icon: const Icon(
+                          Icons.refresh_rounded,
+                          size: 20,
+                          color: primaryOrange,
+                        ),
                       ),
-                    ),
                   ],
                 ),
 
                 const SizedBox(height: 10),
-
                 Divider(height: 1, thickness: 1, color: dividerColor),
-
                 const SizedBox(height: 10),
 
-                // ==================================================
-                // INFO
-                // ==================================================
+                // Toggle Otomatis / Manual
+                _buildModeToggle(
+                  isDarkMode: isDarkMode,
+                  primaryTextColor: primaryTextColor,
+                  borderColor: borderColor,
+                ),
+
+                const SizedBox(height: 8),
+
+                // Info Box
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -545,19 +553,20 @@ class _PivotGoldCalculatorContentState
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.info_outline_rounded,
                         size: 16,
                         color: primaryOrange,
                       ),
-
                       const SizedBox(width: 7),
-
                       Expanded(
                         child: Text(
-                          'High, Low, dan Close otomatis '
-                          'diambil dari data Gold hari sebelumnya. '
-                          'Input tetap dapat diedit secara manual.',
+                          autoMode
+                              ? 'High, Low, dan Close otomatis diambil dari data Gold '
+                                  'hari sebelumnya (atau data terakhir yang tersedia jika libur). '
+                                  'Matikan mode Otomatis untuk mengisi sendiri.'
+                              : 'Mode Manual aktif. Isi High, Low, dan Close sesuai '
+                                  'kebutuhan, lalu tekan HITUNG.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             height: 1.4,
@@ -571,53 +580,22 @@ class _PivotGoldCalculatorContentState
                   ),
                 ),
 
+                // Catatan fallback
+                if (autoMode &&
+                    vm.isPreviousDataFallback &&
+                    previousData != null) ...[
+                  const SizedBox(height: 8),
+                  _buildNote(
+                    'Data ${_fmt(vm.previousDate)} belum ada (weekend/libur '
+                    'newsmaker), jadi dipakai data terakhir yang tersedia: '
+                    '${previousData.dateFormatted}.',
+                    isDarkMode,
+                  ),
+                ],
+
                 const SizedBox(height: 10),
 
-                // ==================================================
-                // STATUS INPUT
-                // ==================================================
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Sumber Input',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _viewModel.isAutoFilled
-                            ? primaryOrange.withOpacity(0.1)
-                            : Colors.grey.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _viewModel.isAutoFilled ? 'Otomatis' : 'Manual',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: _viewModel.isAutoFilled
-                              ? primaryOrange
-                              : Colors.grey[600],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // ==================================================
-                // HIGH / LOW / CLOSE
-                // ==================================================
+                // Inputs
                 Row(
                   children: [
                     Expanded(
@@ -627,11 +605,10 @@ class _PivotGoldCalculatorContentState
                         primaryTextColor,
                         inputFillColor,
                         borderColor,
+                        autoMode,
                       ),
                     ),
-
                     const SizedBox(width: 8),
-
                     Expanded(
                       child: _buildCompactInput(
                         'Low',
@@ -639,11 +616,10 @@ class _PivotGoldCalculatorContentState
                         primaryTextColor,
                         inputFillColor,
                         borderColor,
+                        autoMode,
                       ),
                     ),
-
                     const SizedBox(width: 8),
-
                     Expanded(
                       child: _buildCompactInput(
                         'Close',
@@ -651,6 +627,7 @@ class _PivotGoldCalculatorContentState
                         primaryTextColor,
                         inputFillColor,
                         borderColor,
+                        autoMode,
                       ),
                     ),
                   ],
@@ -658,9 +635,7 @@ class _PivotGoldCalculatorContentState
 
                 const SizedBox(height: 12),
 
-                // ==================================================
-                // BUTTON
-                // ==================================================
+                // Action Buttons
                 Row(
                   children: [
                     Expanded(
@@ -689,9 +664,7 @@ class _PivotGoldCalculatorContentState
                         ),
                       ),
                     ),
-
                     const SizedBox(width: 8),
-
                     Expanded(
                       child: SizedBox(
                         height: 38,
@@ -700,8 +673,8 @@ class _PivotGoldCalculatorContentState
                             backgroundColor: _hasInput
                                 ? primaryOrange
                                 : (isDarkMode
-                                      ? const Color(0xFF2A2A2A)
-                                      : const Color(0xFFF4F4F4)),
+                                    ? const Color(0xFF2A2A2A)
+                                    : const Color(0xFFF4F4F4)),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -713,9 +686,8 @@ class _PivotGoldCalculatorContentState
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
-                              color: _hasInput
-                                  ? Colors.white
-                                  : Colors.grey[400],
+                              color:
+                                  _hasInput ? Colors.white : Colors.grey[400],
                             ),
                           ),
                         ),
@@ -743,7 +715,8 @@ class _PivotGoldCalculatorContentState
                 border: Border.all(color: borderColor),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.035),
+                    color: Colors.black
+                        .withValues(alpha: isDarkMode ? 0.25 : 0.035),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -751,9 +724,6 @@ class _PivotGoldCalculatorContentState
               ),
               child: Stack(
                 children: [
-                  // ==================================================
-                  // LOGO WATERMARK
-                  // ==================================================
                   Positioned.fill(
                     child: Align(
                       alignment: Alignment.center,
@@ -767,14 +737,10 @@ class _PivotGoldCalculatorContentState
                       ),
                     ),
                   ),
-
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // =================================================
-                      // HEADER
-                      // =================================================
                       Row(
                         children: [
                           const Icon(
@@ -782,9 +748,7 @@ class _PivotGoldCalculatorContentState
                             color: pivotColor,
                             size: 18,
                           ),
-
                           const SizedBox(width: 6),
-
                           Text(
                             'Hasil',
                             style: GoogleFonts.plusJakartaSans(
@@ -795,245 +759,71 @@ class _PivotGoldCalculatorContentState
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 10),
-
                       Divider(height: 1, thickness: 1, color: dividerColor),
 
-                      // =================================================
-                      // R4 - R1
-                      // =================================================
+                      // Resistance
                       if (_isR4Expanded) ...[
-                        _buildResultRow(
-                          label: 'R4',
-                          value: _viewModel.formatValue(_viewModel.r4),
-                          labelColor: resistanceColor,
-                          valueColor: primaryTextColor,
-                          trailingIcon: Icons.arrow_circle_up,
-                          trailingIconColor: resistanceColor,
-                          onTrailingIconTap: () {
-                            setState(() {
-                              _isR4Expanded = false;
-                            });
-                          },
+                        lvl(
+                          'R4',
+                          vm.r4,
+                          resistanceColor,
+                          icon: Icons.arrow_circle_up,
+                          onTap: () => setState(() => _isR4Expanded = false),
                         ),
-
-                        if (_viewModel.r4 != null && _viewModel.r3 != null)
-                          _buildResultRow(
-                            label: 'Midpoint',
-                            value: _viewModel.formatValue(
-                              _viewModel.midpoint(
-                                _viewModel.r4!,
-                                _viewModel.r3!,
-                              ),
-                            ),
-                            labelColor: midpointColor,
-                            valueColor: primaryTextColor,
-                            isMidpoint: true,
-                          ),
-
-                        _buildResultRow(
-                          label: 'R3',
-                          value: _viewModel.formatValue(_viewModel.r3),
-                          labelColor: resistanceColor,
-                          valueColor: primaryTextColor,
-                        ),
-
-                        if (_viewModel.r3 != null && _viewModel.r2 != null)
-                          _buildResultRow(
-                            label: 'Midpoint',
-                            value: _viewModel.formatValue(
-                              _viewModel.midpoint(
-                                _viewModel.r3!,
-                                _viewModel.r2!,
-                              ),
-                            ),
-                            labelColor: midpointColor,
-                            valueColor: primaryTextColor,
-                            isMidpoint: true,
-                          ),
-
-                        _buildResultRow(
-                          label: 'R2',
-                          value: _viewModel.formatValue(_viewModel.r2),
-                          labelColor: resistanceColor,
-                          valueColor: primaryTextColor,
-                        ),
-
-                        if (_viewModel.r2 != null && _viewModel.r1 != null)
-                          _buildResultRow(
-                            label: 'Midpoint',
-                            value: _viewModel.formatValue(
-                              _viewModel.midpoint(
-                                _viewModel.r2!,
-                                _viewModel.r1!,
-                              ),
-                            ),
-                            labelColor: midpointColor,
-                            valueColor: primaryTextColor,
-                            isMidpoint: true,
-                          ),
-
-                        _buildResultRow(
-                          label: 'R1',
-                          value: _viewModel.formatValue(_viewModel.r1),
-                          labelColor: resistanceColor,
-                          valueColor: primaryTextColor,
-                        ),
-
-                        if (_viewModel.r1 != null && _viewModel.pp != null)
-                          _buildResultRow(
-                            label: 'Midpoint',
-                            value: _viewModel.formatValue(
-                              _viewModel.midpoint(
-                                _viewModel.r1!,
-                                _viewModel.pp!,
-                              ),
-                            ),
-                            labelColor: midpointColor,
-                            valueColor: primaryTextColor,
-                            isMidpoint: true,
-                          ),
+                        mid(vm.r4, vm.r3),
+                        lvl('R3', vm.r3, resistanceColor),
+                        mid(vm.r3, vm.r2),
+                        lvl('R2', vm.r2, resistanceColor),
+                        mid(vm.r2, vm.r1),
+                        lvl('R1', vm.r1, resistanceColor),
+                        mid(vm.r1, vm.pp),
                       ] else
-                        _buildResultRow(
-                          label: 'R4',
-                          value: _viewModel.formatValue(_viewModel.r4),
-                          labelColor: resistanceColor,
-                          valueColor: primaryTextColor,
-                          trailingIcon: Icons.arrow_drop_down_circle,
-                          trailingIconColor: resistanceColor,
-                          onTrailingIconTap: () {
-                            setState(() {
-                              _isR4Expanded = true;
-                            });
-                          },
+                        lvl(
+                          'R4',
+                          vm.r4,
+                          resistanceColor,
+                          icon: Icons.arrow_drop_down_circle,
+                          onTap: () => setState(() => _isR4Expanded = true),
                         ),
 
-                      // =================================================
-                      // PIVOT POINT
-                      // =================================================
+                      // Pivot Point
                       _buildResultRow(
                         label: 'Pivot Point',
-                        value: _viewModel.formatValue(_viewModel.pp),
+                        value: vm.formatValue(vm.pp),
                         labelColor: pivotColor,
                         valueColor: pivotValueColor,
                       ),
 
-                      // =================================================
-                      // SIGNAL BUY / SELL
-                      // =================================================
+                      // Signal Card
                       _buildSignalCard(
                         primaryTextColor: primaryTextColor,
                         borderColor: dividerColor,
                       ),
 
-                      // =================================================
-                      // S1 - S4
-                      // =================================================
+                      // Support
                       if (_isS4Expanded) ...[
-                        if (_viewModel.pp != null && _viewModel.s1 != null)
-                          _buildResultRow(
-                            label: 'Midpoint',
-                            value: _viewModel.formatValue(
-                              _viewModel.midpoint(
-                                _viewModel.pp!,
-                                _viewModel.s1!,
-                              ),
-                            ),
-                            labelColor: midpointColor,
-                            valueColor: primaryTextColor,
-                            isMidpoint: true,
-                          ),
-
-                        _buildResultRow(
-                          label: 'S1',
-                          value: _viewModel.formatValue(_viewModel.s1),
-                          labelColor: supportColor,
-                          valueColor: primaryTextColor,
-                        ),
-
-                        if (_viewModel.s1 != null && _viewModel.s2 != null)
-                          _buildResultRow(
-                            label: 'Midpoint',
-                            value: _viewModel.formatValue(
-                              _viewModel.midpoint(
-                                _viewModel.s1!,
-                                _viewModel.s2!,
-                              ),
-                            ),
-                            labelColor: midpointColor,
-                            valueColor: primaryTextColor,
-                            isMidpoint: true,
-                          ),
-
-                        _buildResultRow(
-                          label: 'S2',
-                          value: _viewModel.formatValue(_viewModel.s2),
-                          labelColor: supportColor,
-                          valueColor: primaryTextColor,
-                        ),
-
-                        if (_viewModel.s2 != null && _viewModel.s3 != null)
-                          _buildResultRow(
-                            label: 'Midpoint',
-                            value: _viewModel.formatValue(
-                              _viewModel.midpoint(
-                                _viewModel.s2!,
-                                _viewModel.s3!,
-                              ),
-                            ),
-                            labelColor: midpointColor,
-                            valueColor: primaryTextColor,
-                            isMidpoint: true,
-                          ),
-
-                        _buildResultRow(
-                          label: 'S3',
-                          value: _viewModel.formatValue(_viewModel.s3),
-                          labelColor: supportColor,
-                          valueColor: primaryTextColor,
-                        ),
-
-                        if (_viewModel.s3 != null && _viewModel.s4 != null)
-                          _buildResultRow(
-                            label: 'Midpoint',
-                            value: _viewModel.formatValue(
-                              _viewModel.midpoint(
-                                _viewModel.s3!,
-                                _viewModel.s4!,
-                              ),
-                            ),
-                            labelColor: midpointColor,
-                            valueColor: primaryTextColor,
-                            isMidpoint: true,
-                          ),
-
-                        _buildResultRow(
-                          label: 'S4',
-                          value: _viewModel.formatValue(_viewModel.s4),
-                          labelColor: supportColor,
-                          valueColor: primaryTextColor,
-                          trailingIcon: Icons.arrow_circle_up,
-                          trailingIconColor: supportColor,
-                          onTrailingIconTap: () {
-                            setState(() {
-                              _isS4Expanded = false;
-                            });
-                          },
+                        mid(vm.pp, vm.s1),
+                        lvl('S1', vm.s1, supportColor),
+                        mid(vm.s1, vm.s2),
+                        lvl('S2', vm.s2, supportColor),
+                        mid(vm.s2, vm.s3),
+                        lvl('S3', vm.s3, supportColor),
+                        mid(vm.s3, vm.s4),
+                        lvl(
+                          'S4',
+                          vm.s4,
+                          supportColor,
+                          icon: Icons.arrow_circle_up,
+                          onTap: () => setState(() => _isS4Expanded = false),
                         ),
                       ] else
-                        _buildResultRow(
-                          label: 'S4',
-                          value: _viewModel.formatValue(_viewModel.s4),
-                          labelColor: supportColor,
-                          valueColor: primaryTextColor,
-                          trailingIcon: Icons.arrow_drop_down_circle,
-                          trailingIconColor: supportColor,
-                          onTrailingIconTap: () {
-                            setState(() {
-                              _isS4Expanded = true;
-                            });
-                          },
+                        lvl(
+                          'S4',
+                          vm.s4,
+                          supportColor,
+                          icon: Icons.arrow_drop_down_circle,
+                          onTap: () => setState(() => _isS4Expanded = true),
                         ),
                     ],
                   ),
@@ -1045,43 +835,323 @@ class _PivotGoldCalculatorContentState
           const SizedBox(height: 10),
 
           // ======================================================
-          // EXPORT
+          // SARAN SETELAH HASIL
           // ======================================================
+          if (vm.isCalculated) ...[
+            _buildRecommendationCard(
+              signalColor: _signalColorOf(vm.signal),
+              cardBgColor: cardBgColor,
+              borderColor: dividerColor,
+              primaryTextColor: primaryTextColor,
+              isDarkMode: isDarkMode,
+            ),
+            const SizedBox(height: 10),
+          ],
+
+          if (vm.errorMessage != null) ...[
+            _buildErrorBox(vm.errorMessage!),
+            const SizedBox(height: 10),
+          ],
+
+          // Export Button
           SizedBox(
             width: double.infinity,
             height: 40,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 side: BorderSide(
-                  color: _viewModel.isCalculated ? primaryOrange : borderColor,
+                  color: vm.isCalculated ? primaryOrange : borderColor,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              onPressed: _viewModel.isCalculated
-                  ? () => _showExportModal(context)
-                  : null,
+              onPressed:
+                  vm.isCalculated ? () => _showExportModal(context) : null,
               icon: Icon(
                 Icons.ios_share_rounded,
-                color: _viewModel.isCalculated
-                    ? primaryOrange
-                    : Colors.grey[400],
+                color: vm.isCalculated ? primaryOrange : Colors.grey[400],
                 size: 16,
               ),
               label: Text(
                 'EXPORT HASIL',
                 style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.bold,
-                  color: _viewModel.isCalculated
-                      ? primaryOrange
-                      : Colors.grey[400],
+                  color: vm.isCalculated ? primaryOrange : Colors.grey[400],
                   fontSize: 12,
                 ),
               ),
             ),
           ),
+
+          const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // TOGGLE OTOMATIS / MANUAL
+  // ============================================================
+
+  Widget _buildModeToggle({
+    required bool isDarkMode,
+    required Color primaryTextColor,
+    required Color borderColor,
+  }) {
+    const primaryOrange = Color(0xFFFF9E0F);
+    final auto = _viewModel.autoMode;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: auto
+            ? primaryOrange.withValues(alpha: 0.08)
+            : (isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF8F8FA)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: auto ? primaryOrange.withValues(alpha: 0.4) : borderColor,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            auto ? Icons.bolt_rounded : Icons.edit_rounded,
+            size: 18,
+            color: auto ? primaryOrange : Colors.grey[500],
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  auto ? 'Mode Otomatis' : 'Mode Manual',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: primaryTextColor,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  auto
+                      ? 'Data diisi otomatis dari historical'
+                      : 'Isi data sendiri sesuai kebutuhan',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 9,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: auto,
+            activeTrackColor: primaryOrange,
+            thumbColor: WidgetStateProperty.all(Colors.white),
+            onChanged: (value) {
+              _viewModel.setAutoMode(value);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // CATATAN FALLBACK (LIBUR / WEEKEND)
+  // ============================================================
+
+  Widget _buildNote(String text, bool isDarkMode) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFA800).withValues(alpha: isDarkMode ? 0.12 : 0.1),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(
+          color: const Color(0xFFFFA800).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.event_busy_rounded,
+            size: 15,
+            color: Color(0xFFFFA800),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                height: 1.4,
+                color: isDarkMode ? Colors.grey[300] : Colors.grey[800],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // KARTU SARAN / REKOMENDASI
+  // ============================================================
+
+  Widget _buildRecommendationCard({
+    required Color signalColor,
+    required Color cardBgColor,
+    required Color borderColor,
+    required Color primaryTextColor,
+    required bool isDarkMode,
+  }) {
+    final steps = _viewModel.recommendationSteps;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: signalColor.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.035),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: signalColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(
+                  Icons.tips_and_updates_rounded,
+                  size: 18,
+                  color: signalColor,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Apa yang sebaiknya dilakukan?',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: primaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _viewModel.recommendationTitle,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: signalColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (var i = 0; i < steps.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: signalColor.withValues(alpha: 0.14),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${i + 1}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: signalColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      steps[i],
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        height: 1.5,
+                        color: primaryTextColor.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 2),
+          Divider(height: 1, color: borderColor),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 14,
+                color: Colors.grey[500],
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _viewModel.recommendationDisclaimer,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 9,
+                    height: 1.45,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBox(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.15)),
+      ),
+      child: Text(
+        message,
+        style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.red),
       ),
     );
   }
@@ -1094,33 +1164,24 @@ class _PivotGoldCalculatorContentState
     required Color borderColor,
   }) {
     final signal = _viewModel.signal;
+    final signalColor = _signalColorOf(signal);
 
-    Color signalColor;
-    Color backgroundColor;
     IconData icon;
 
     switch (signal) {
       case PivotSignal.buy:
-        signalColor = const Color(0xFF18B85A);
-        backgroundColor = const Color(0xFF18B85A);
         icon = Icons.trending_up_rounded;
         break;
 
       case PivotSignal.sell:
-        signalColor = const Color(0xFFFF3B30);
-        backgroundColor = const Color(0xFFFF3B30);
         icon = Icons.trending_down_rounded;
         break;
 
       case PivotSignal.neutral:
-        signalColor = const Color(0xFFFFA800);
-        backgroundColor = const Color(0xFFFFA800);
         icon = Icons.remove_rounded;
         break;
 
       case PivotSignal.unavailable:
-        signalColor = Colors.grey;
-        backgroundColor = Colors.grey;
         icon = Icons.help_outline_rounded;
         break;
     }
@@ -1130,9 +1191,9 @@ class _PivotGoldCalculatorContentState
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: signalColor.withOpacity(0.08),
+        color: signalColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: signalColor.withOpacity(0.18)),
+        border: Border.all(color: signalColor.withValues(alpha: 0.18)),
       ),
       child: Row(
         children: [
@@ -1140,14 +1201,12 @@ class _PivotGoldCalculatorContentState
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: backgroundColor.withOpacity(0.12),
+              color: signalColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: signalColor, size: 18),
           ),
-
           const SizedBox(width: 10),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1160,9 +1219,7 @@ class _PivotGoldCalculatorContentState
                     color: Colors.grey[500],
                   ),
                 ),
-
                 const SizedBox(height: 1),
-
                 Text(
                   _viewModel.signalLabel,
                   style: GoogleFonts.plusJakartaSans(
@@ -1171,18 +1228,15 @@ class _PivotGoldCalculatorContentState
                     color: signalColor,
                   ),
                 ),
-
                 const SizedBox(height: 2),
-
                 Text(
                   _viewModel.signalDescription,
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 9,
                     height: 1.3,
-                    color: primaryTextColor.withOpacity(0.65),
+                    color: primaryTextColor.withValues(alpha: 0.65),
                   ),
                 ),
-
                 if (_viewModel.signalComparison != '-')
                   Padding(
                     padding: const EdgeInsets.only(top: 3),
@@ -1191,11 +1245,10 @@ class _PivotGoldCalculatorContentState
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
-                        color: primaryTextColor.withOpacity(0.8),
+                        color: primaryTextColor.withValues(alpha: 0.8),
                       ),
                     ),
                   ),
-
                 if (_viewModel.referenceData != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
@@ -1226,60 +1279,54 @@ class _PivotGoldCalculatorContentState
     Color textColor,
     Color inputFillColor,
     Color borderColor,
+    bool readOnly,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w600,
-            color: textColor,
-            fontSize: 11,
-          ),
+        Row(
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+                color: textColor,
+                fontSize: 11,
+              ),
+            ),
+            if (readOnly) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.lock_rounded, size: 10, color: Colors.grey[500]),
+            ],
+          ],
         ),
-
         const SizedBox(height: 4),
-
         TextField(
           controller: controller,
-
-          // ====================================================
-          // TETAP BISA DIEDIT
-          // ====================================================
-          readOnly: false,
-
+          readOnly: readOnly,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-
           style: GoogleFonts.plusJakartaSans(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: textColor,
           ),
-
           decoration: InputDecoration(
             isDense: true,
-
             hintText: '0,00',
-
             hintStyle: GoogleFonts.plusJakartaSans(
               color: Colors.grey[400],
               fontSize: 12,
             ),
-
             filled: true,
             fillColor: inputFillColor,
-
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 10,
               vertical: 8,
             ),
-
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: borderColor),
             ),
-
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(
@@ -1307,9 +1354,8 @@ class _PivotGoldCalculatorContentState
     VoidCallback? onTrailingIconTap,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     final rowBorderColor = isDarkMode
-        ? Colors.white.withOpacity(0.08)
+        ? Colors.white.withValues(alpha: 0.08)
         : const Color(0xFFEEEEEE);
 
     final displayValueColor = isMidpoint
@@ -1336,9 +1382,7 @@ class _PivotGoldCalculatorContentState
               ),
             ),
           ),
-
           Container(width: 1, height: 36, color: rowBorderColor),
-
           Expanded(
             child: Row(
               children: [
@@ -1348,15 +1392,13 @@ class _PivotGoldCalculatorContentState
                       value,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
-                        fontWeight: isMidpoint
-                            ? FontWeight.w500
-                            : FontWeight.w600,
+                        fontWeight:
+                            isMidpoint ? FontWeight.w500 : FontWeight.w600,
                         color: displayValueColor,
                       ),
                     ),
                   ),
                 ),
-
                 if (trailingIcon != null)
                   Padding(
                     padding: const EdgeInsets.only(right: 10),

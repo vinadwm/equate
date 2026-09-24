@@ -1,13 +1,13 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../model/historical_data_model.dart';
 import 'historical_data_viewmodel.dart';
+import '../model/pivot_signal.dart';
 
-enum PivotSignal { buy, sell, neutral, unavailable }
+// Enum PivotSignal hanya satu sumber di model/pivot_signal.dart.
+export '../model/pivot_signal.dart';
 
 class PivotGoldViewModel extends ChangeNotifier {
   final HistoricalDataViewModel historicalDataViewModel;
@@ -29,6 +29,56 @@ class PivotGoldViewModel extends ChangeNotifier {
   String get high => _high;
   String get low => _low;
   String get close => _close;
+
+  // Nilai numerik (sudah di-parse, mendukung format 3.500,50)
+  double? get highValue => _parseNumber(_high);
+  double? get lowValue => _parseNumber(_low);
+  double? get closeValue => _parseNumber(_close);
+
+  // ============================================================
+  // JENIS PERHITUNGAN PIVOT
+  // ============================================================
+
+  String _type = 'Standard';
+
+  String get type => _type;
+
+  void setType(String value) {
+    if (_type == value) return;
+    _type = value;
+    notifyListeners();
+  }
+
+  // ============================================================
+  // MODE OTOMATIS / MANUAL
+  // ============================================================
+  //
+  // true  -> H/L/C diisi otomatis dari data historical
+  //          (dengan fallback ke data terakhir yang tersedia).
+  // false -> User mengisi H/L/C sendiri.
+
+  bool _autoMode = true;
+
+  bool get autoMode => _autoMode;
+
+  void setAutoMode(bool value) {
+    if (_autoMode == value) {
+      return;
+    }
+
+    _autoMode = value;
+
+    if (_autoMode) {
+      fillFromPreviousDay();
+    } else {
+      _isAutoFilled = false;
+      _errorMessage = null;
+
+      _clearCalculationResult(notify: false);
+
+      notifyListeners();
+    }
+  }
 
   // ============================================================
   // HASIL PIVOT
@@ -82,41 +132,32 @@ class PivotGoldViewModel extends ChangeNotifier {
   // TANGGAL PERHITUNGAN
   // ============================================================
 
-  /// Tanggal yang sedang dihitung.
-  ///
-  /// PENTING:
-  /// Tidak menggunakan historicalDataViewModel.selectedDate
-  /// karena selectedDate bisa otomatis menjadi tanggal terakhir
-  /// yang tersedia di API.
-  ///
-  /// Contoh:
-  /// Hari ini 15 September
-  /// → calculationDate = 15 September
+  /// Tanggal hari ini (tidak memakai selectedDate dari historical).
   DateTime get calculationDate {
     final now = DateTime.now();
 
     return DateTime(now.year, now.month, now.day);
   }
 
-  // ============================================================
-  // DATA GOLD HARI INI
-  // ============================================================
+  /// H-1 (kalender). Kalau data H-1 tidak ada, data diambil mundur
+  /// otomatis lewat getLatestAvailableData().
+  DateTime get previousDate {
+    final d = calculationDate;
 
-  /// Mengambil DATA GOLD TEPAT pada tanggal perhitungan.
-  ///
-  /// Digunakan untuk mengambil:
-  /// OPEN
-  ///
-  /// TIDAK ADA FALLBACK.
-  ///
-  /// Kalau tanggal 15 tidak tersedia,
-  /// maka hasilnya null.
+    return DateTime(d.year, d.month, d.day - 1);
+  }
+
+  // ============================================================
+  // DATA GOLD HARI INI (UNTUK OPEN / SIGNAL)
+  // ============================================================
+  //
+  // TANPA fallback: Open harus tepat pada tanggal hari ini, karena
+  // dipakai sebagai pembanding sinyal.
+
   HistoricalDataModel? get referenceData {
-    final date = calculationDate;
-
     final data = historicalDataViewModel.getDataForMarket(
       'LGD Daily',
-      date: date,
+      date: calculationDate,
     );
 
     if (data == null) {
@@ -134,70 +175,46 @@ class PivotGoldViewModel extends ChangeNotifier {
     return data;
   }
 
-  // ============================================================
-  // OPEN HARI INI
-  // ============================================================
-
-  /// Harga Open Gold pada tanggal perhitungan.
-  ///
-  /// Contoh:
-  /// 15 September → Open 15 September
   double? get referenceOpen {
     return referenceData?.open;
   }
-
-  // ============================================================
-  // TANGGAL OPEN / SIGNAL
-  // ============================================================
 
   DateTime? get referenceDate {
     return referenceData?.date;
   }
 
   // ============================================================
-  // DATA GOLD HARI SEBELUMNYA
+  // DATA GOLD HARI SEBELUMNYA (DENGAN FALLBACK)
   // ============================================================
+  //
+  // Kalau H-1 tidak ada (Sabtu/Minggu/libur newsmaker), otomatis
+  // mundur ke data valid terakhir.
+  // Contoh: H-1 = tanggal 19 kosong -> pakai tanggal 18, dst.
 
-  /// Mengambil data Gold TEPAT satu hari kalender sebelum
-  /// tanggal perhitungan.
-  ///
-  /// Contoh:
-  ///
-  /// calculationDate = 15 September
-  /// previousDate   = 14 September
-  ///
-  /// Yang diambil:
-  /// High 14 September
-  /// Low 14 September
-  /// Close 14 September
-  ///
-  /// PENTING:
-  /// Tidak mencari "data terakhir sebelum tanggal".
-  ///
-  /// Jadi kalau:
-  ///
-  /// 15 = tidak ada
-  /// 14 = tidak ada
-  /// 13 = tidak ada
-  /// 12 = tidak ada
-  /// 11 = ada
-  ///
-  /// hasil tetap null.
   HistoricalDataModel? get previousGoldData {
-    final previousDate = calculationDate.subtract(const Duration(days: 1));
-
-    return historicalDataViewModel.getDataForMarket(
+    return historicalDataViewModel.getLatestAvailableData(
       'LGD Daily',
-      date: previousDate,
+      previousDate,
     );
   }
 
-  // ============================================================
-  // TANGGAL DATA H/L/C
-  // ============================================================
-
   DateTime? get previousDataDate {
     return previousGoldData?.date;
+  }
+
+  DateTime get previousDataDisplayDate {
+    return previousGoldData?.date ?? previousDate;
+  }
+
+  /// true kalau data yang dipakai BUKAN tepat H-1 (memakai fallback).
+  bool get isPreviousDataFallback {
+    final data = previousGoldData;
+
+    if (data == null) {
+      return false;
+    }
+
+    return !_isSameCalendarDate(data.date, previousDate);
   }
 
   // ============================================================
@@ -226,14 +243,9 @@ class PivotGoldViewModel extends ChangeNotifier {
     return true;
   }
 
-  /// Apakah data H/L/C dan Open lengkap.
   bool get isHistoricalDataComplete {
     return isOpenDataAvailable && isPreviousDataAvailable;
   }
-
-  // ============================================================
-  // DATA STATUS MESSAGE
-  // ============================================================
 
   String get dataStatusMessage {
     final openAvailable = isOpenDataAvailable;
@@ -245,15 +257,14 @@ class PivotGoldViewModel extends ChangeNotifier {
 
     if (!openAvailable && !previousAvailable) {
       return 'Data Open ${_formatDate(calculationDate)} dan '
-          'data High, Low, Close ${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
+          'data High, Low, Close belum tersedia.';
     }
 
     if (!openAvailable) {
-      return 'Data Open ${_formatDate(calculationDate)} '
-          'belum tersedia.';
+      return 'Data Open ${_formatDate(calculationDate)} belum tersedia.';
     }
 
-    return 'Data High, Low, Close ${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
+    return 'Data High, Low, Close belum tersedia.';
   }
 
   // ============================================================
@@ -263,7 +274,9 @@ class PivotGoldViewModel extends ChangeNotifier {
   Future<void> _initializeFromHistoricalData() async {
     await Future<void>.delayed(Duration.zero);
 
-    fillFromPreviousDay();
+    if (_autoMode) {
+      fillFromPreviousDay();
+    }
   }
 
   // ============================================================
@@ -273,10 +286,6 @@ class PivotGoldViewModel extends ChangeNotifier {
   bool fillFromPreviousDay() {
     final previousData = previousGoldData;
 
-    // ----------------------------------------------------------
-    // DATA H/L/C TIDAK TERSEDIA
-    // ----------------------------------------------------------
-
     if (previousData == null) {
       _high = '';
       _low = '';
@@ -285,8 +294,8 @@ class PivotGoldViewModel extends ChangeNotifier {
       _isAutoFilled = false;
 
       _errorMessage =
-          'Data High, Low, Close untuk '
-          '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
+          'Data High, Low, Close sebelum ${_formatDate(calculationDate)} '
+          'belum tersedia.';
 
       _clearCalculationResult(notify: false);
 
@@ -294,10 +303,6 @@ class PivotGoldViewModel extends ChangeNotifier {
 
       return false;
     }
-
-    // ----------------------------------------------------------
-    // DATA BANK HOLIDAY
-    // ----------------------------------------------------------
 
     if (previousData.isBankHoliday) {
       _high = '';
@@ -316,10 +321,6 @@ class PivotGoldViewModel extends ChangeNotifier {
 
       return false;
     }
-
-    // ----------------------------------------------------------
-    // VALIDASI NILAI
-    // ----------------------------------------------------------
 
     if (previousData.high <= 0 ||
         previousData.low <= 0 ||
@@ -341,17 +342,15 @@ class PivotGoldViewModel extends ChangeNotifier {
       return false;
     }
 
-    // ----------------------------------------------------------
-    // AUTO FILL
-    // ----------------------------------------------------------
-
     _high = _numberToInput(previousData.high);
     _low = _numberToInput(previousData.low);
     _close = _numberToInput(previousData.close);
 
     _isAutoFilled = true;
 
-    _errorMessage = null;
+    _errorMessage = referenceData == null
+        ? 'Data Open ${_formatDate(calculationDate)} belum tersedia.'
+        : null;
 
     _clearCalculationResult(notify: false);
 
@@ -361,10 +360,14 @@ class PivotGoldViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // REFRESH H/L/C
+  // REFRESH H/L/C (hanya saat mode Otomatis)
   // ============================================================
 
   bool refreshPreviousDayInput() {
+    if (!_autoMode) {
+      return false;
+    }
+
     return fillFromPreviousDay();
   }
 
@@ -375,9 +378,7 @@ class PivotGoldViewModel extends ChangeNotifier {
   void setHigh(String value) {
     _high = value;
 
-    // User sudah mengedit secara manual.
     _isAutoFilled = false;
-
     _errorMessage = null;
 
     _clearCalculationResult(notify: false);
@@ -389,7 +390,6 @@ class PivotGoldViewModel extends ChangeNotifier {
     _low = value;
 
     _isAutoFilled = false;
-
     _errorMessage = null;
 
     _clearCalculationResult(notify: false);
@@ -401,7 +401,6 @@ class PivotGoldViewModel extends ChangeNotifier {
     _close = value;
 
     _isAutoFilled = false;
-
     _errorMessage = null;
 
     _clearCalculationResult(notify: false);
@@ -420,19 +419,19 @@ class PivotGoldViewModel extends ChangeNotifier {
   }
 
   bool get canCalculate {
-    final highValue = _parseNumber(_high);
-    final lowValue = _parseNumber(_low);
-    final closeValue = _parseNumber(_close);
+    final h = highValue;
+    final l = lowValue;
+    final c = closeValue;
 
-    if (highValue == null || lowValue == null || closeValue == null) {
+    if (h == null || l == null || c == null) {
       return false;
     }
 
-    if (highValue <= 0 || lowValue <= 0 || closeValue <= 0) {
+    if (h <= 0 || l <= 0 || c <= 0) {
       return false;
     }
 
-    if (lowValue > highValue) {
+    if (l > h) {
       return false;
     }
 
@@ -444,15 +443,11 @@ class PivotGoldViewModel extends ChangeNotifier {
   // ============================================================
 
   bool calculatePivot() {
-    final highValue = _parseNumber(_high);
-    final lowValue = _parseNumber(_low);
-    final closeValue = _parseNumber(_close);
+    final h = highValue;
+    final l = lowValue;
+    final c = closeValue;
 
-    // ----------------------------------------------------------
-    // VALIDASI FORMAT
-    // ----------------------------------------------------------
-
-    if (highValue == null || lowValue == null || closeValue == null) {
+    if (h == null || l == null || c == null) {
       _errorMessage =
           'Harap masukkan High, Low, dan Close '
           'dengan format angka yang valid.';
@@ -462,11 +457,7 @@ class PivotGoldViewModel extends ChangeNotifier {
       return false;
     }
 
-    // ----------------------------------------------------------
-    // VALIDASI NILAI
-    // ----------------------------------------------------------
-
-    if (highValue <= 0 || lowValue <= 0 || closeValue <= 0) {
+    if (h <= 0 || l <= 0 || c <= 0) {
       _errorMessage = 'Nilai High, Low, dan Close harus lebih dari 0.';
 
       notifyListeners();
@@ -474,11 +465,7 @@ class PivotGoldViewModel extends ChangeNotifier {
       return false;
     }
 
-    // ----------------------------------------------------------
-    // VALIDASI HIGH / LOW
-    // ----------------------------------------------------------
-
-    if (lowValue > highValue) {
+    if (l > h) {
       _errorMessage = 'Nilai Low tidak boleh lebih besar dari High.';
 
       notifyListeners();
@@ -486,47 +473,27 @@ class PivotGoldViewModel extends ChangeNotifier {
       return false;
     }
 
-    // ----------------------------------------------------------
-    // PIVOT POINT
-    // ----------------------------------------------------------
-
-    final ppValue = (highValue + lowValue + closeValue) / 3;
-
-    final diff = highValue - lowValue;
+    final ppValue = (h + l + c) / 3;
+    final diff = h - l;
 
     _pp = ppValue;
 
-    // ----------------------------------------------------------
-    // RESISTANCE
-    // ----------------------------------------------------------
-
-    _r1 = (2 * ppValue) - lowValue;
-
+    _r1 = (2 * ppValue) - l;
     _r2 = ppValue + diff;
-
     _r3 = ppValue + (diff * 2);
-
     _r4 = ppValue + (diff * 3);
 
-    // ----------------------------------------------------------
-    // SUPPORT
-    // ----------------------------------------------------------
-
-    _s1 = (2 * ppValue) - highValue;
-
+    _s1 = (2 * ppValue) - h;
     _s2 = ppValue - diff;
-
     _s3 = ppValue - (diff * 2);
-
     _s4 = ppValue - (diff * 3);
-
-    // ----------------------------------------------------------
-    // STATUS
-    // ----------------------------------------------------------
 
     _isCalculated = true;
 
-    _errorMessage = null;
+    _errorMessage = referenceData == null
+        ? 'Data Open ${_formatDate(calculationDate)} belum tersedia, '
+            'sinyal belum bisa ditentukan.'
+        : null;
 
     notifyListeners();
 
@@ -538,44 +505,26 @@ class PivotGoldViewModel extends ChangeNotifier {
   // ============================================================
 
   PivotSignal get signal {
-    // Belum hitung Pivot
     if (!_isCalculated || _pp == null) {
       return PivotSignal.unavailable;
     }
 
-    // Open tanggal perhitungan belum tersedia
     final open = referenceOpen;
 
     if (open == null) {
       return PivotSignal.unavailable;
     }
 
-    // ----------------------------------------------------------
-    // BUY
-    // ----------------------------------------------------------
-
     if (_pp! > open) {
       return PivotSignal.buy;
     }
-
-    // ----------------------------------------------------------
-    // SELL
-    // ----------------------------------------------------------
 
     if (_pp! < open) {
       return PivotSignal.sell;
     }
 
-    // ----------------------------------------------------------
-    // NEUTRAL
-    // ----------------------------------------------------------
-
     return PivotSignal.neutral;
   }
-
-  // ============================================================
-  // SIGNAL LABEL
-  // ============================================================
 
   String get signalLabel {
     switch (signal) {
@@ -593,10 +542,6 @@ class PivotGoldViewModel extends ChangeNotifier {
     }
   }
 
-  // ============================================================
-  // SIGNAL DESCRIPTION
-  // ============================================================
-
   String get signalDescription {
     final open = referenceOpen;
 
@@ -605,28 +550,19 @@ class PivotGoldViewModel extends ChangeNotifier {
     }
 
     if (open == null) {
-      return 'Data Open ${_formatDate(calculationDate)} '
-          'belum tersedia.';
+      return 'Data Open ${_formatDate(calculationDate)} belum tersedia.';
     }
 
-    switch (signal) {
-      case PivotSignal.buy:
-        return 'PP lebih tinggi dari harga Open.';
-
-      case PivotSignal.sell:
-        return 'PP lebih rendah dari harga Open.';
-
-      case PivotSignal.neutral:
-        return 'PP sama dengan harga Open.';
-
-      case PivotSignal.unavailable:
-        return 'Data Open belum tersedia.';
+    if (_pp! > open) {
+      return 'PP lebih tinggi dari harga Open.';
     }
+
+    if (_pp! < open) {
+      return 'PP lebih rendah dari harga Open.';
+    }
+
+    return 'PP sama dengan harga Open.';
   }
-
-  // ============================================================
-  // SIGNAL COMPARISON
-  // ============================================================
 
   String get signalComparison {
     if (!_isCalculated || _pp == null) {
@@ -654,6 +590,86 @@ class PivotGoldViewModel extends ChangeNotifier {
   }
 
   // ============================================================
+  // REKOMENDASI / SARAN AKSI
+  // ============================================================
+
+  String get recommendationTitle {
+    switch (signal) {
+      case PivotSignal.buy:
+        return 'Pertimbangkan BUY';
+
+      case PivotSignal.sell:
+        return 'Pertimbangkan SELL';
+
+      case PivotSignal.neutral:
+        return 'Tunggu Konfirmasi';
+
+      case PivotSignal.unavailable:
+        return 'Lengkapi Data Terlebih Dahulu';
+    }
+  }
+
+  List<String> get recommendationSteps {
+    switch (signal) {
+      case PivotSignal.buy:
+        return [
+          'Sinyal BUY muncul karena $signalComparison. '
+              'Artinya harga Gold berpeluang bergerak naik.',
+          'Target profit bertahap: R1 (${formatValue(_r1)}) lebih dulu, '
+              'lanjut ke R2 (${formatValue(_r2)}) bila tenaga naik masih kuat.',
+          'Batas risiko (stop loss): letakkan di bawah S1 '
+              '(${formatValue(_s1)}). Jika harga menembus S1, anggap sinyal '
+              'gagal dan keluar.',
+          'Cari konfirmasi tambahan (pergerakan harga, berita ekonomi) '
+              'sebelum membuka posisi.',
+          'Gunakan porsi modal yang wajar, jangan memakai seluruh modal '
+              'untuk satu posisi.',
+        ];
+
+      case PivotSignal.sell:
+        return [
+          'Sinyal SELL muncul karena $signalComparison. '
+              'Artinya harga Gold berpeluang bergerak turun.',
+          'Target profit bertahap: S1 (${formatValue(_s1)}) lebih dulu, '
+              'lanjut ke S2 (${formatValue(_s2)}) bila tekanan turun masih kuat.',
+          'Batas risiko (stop loss): letakkan di atas R1 '
+              '(${formatValue(_r1)}). Jika harga menembus R1, anggap sinyal '
+              'gagal dan keluar.',
+          'Cari konfirmasi tambahan (pergerakan harga, berita ekonomi) '
+              'sebelum membuka posisi.',
+          'Gunakan porsi modal yang wajar, jangan memakai seluruh modal '
+              'untuk satu posisi.',
+        ];
+
+      case PivotSignal.neutral:
+        return [
+          'PP sama dengan Open, arah harga belum jelas.',
+          'Sebaiknya tunggu sampai harga bergerak menjauh dari PP '
+              '(${formatValue(_pp)}) sebelum mengambil posisi.',
+          'Perhatikan R1 (${formatValue(_r1)}) dan S1 (${formatValue(_s1)}) '
+              'sebagai batas atas dan bawah untuk menentukan arah.',
+          'Hindari memaksakan entry ketika sinyal belum jelas.',
+        ];
+
+      case PivotSignal.unavailable:
+        return [
+          _isCalculated
+              ? 'Data Open ${_formatDate(calculationDate)} belum tersedia, '
+                  'sehingga sinyal belum bisa ditentukan.'
+              : 'Tekan HITUNG terlebih dahulu untuk melihat sinyal.',
+          'Sambil menunggu, level PP, Resistance, dan Support tetap bisa '
+              'dipakai sebagai acuan area harga.',
+          'Buka kembali halaman ini setelah data Open tersedia.',
+        ];
+    }
+  }
+
+  String get recommendationDisclaimer =>
+      'Catatan: Ini adalah alat bantu analisis teknikal sederhana, bukan '
+      'jaminan hasil dan bukan nasihat keuangan. Selalu lakukan riset '
+      'tambahan sebelum mengambil keputusan.';
+
+  // ============================================================
   // RESET
   // ============================================================
 
@@ -675,17 +691,11 @@ class PivotGoldViewModel extends ChangeNotifier {
     _s4 = null;
 
     _isCalculated = false;
-
     _isAutoFilled = false;
-
     _errorMessage = null;
 
     notifyListeners();
   }
-
-  // ============================================================
-  // CLEAR CALCULATION RESULT
-  // ============================================================
 
   void _clearCalculationResult({bool notify = true}) {
     _pp = null;
@@ -712,100 +722,28 @@ class PivotGoldViewModel extends ChangeNotifier {
   // ============================================================
 
   void _onHistoricalDataChanged() {
-    final previousData = previousGoldData;
-
-    // ==========================================================
-    // DATA HISTORICAL BELUM ADA
-    // ==========================================================
-
-    if (previousData == null) {
-      // Jangan menghapus input manual user.
-      if (_isAutoFilled) {
-        _high = '';
-        _low = '';
-        _close = '';
-
-        _isAutoFilled = false;
-
-        _clearCalculationResult(notify: false);
-      }
-
-      if (referenceData == null) {
-        _errorMessage =
-            'Data Open ${_formatDate(calculationDate)} dan '
-            'data High, Low, Close '
-            '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
-      } else {
-        _errorMessage =
-            'Data High, Low, Close '
-            '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} belum tersedia.';
-      }
-
+    // Mode manual: jangan sentuh input user.
+    if (!_autoMode) {
       notifyListeners();
 
       return;
     }
 
-    // ==========================================================
-    // DATA BANK HOLIDAY
-    // ==========================================================
+    final p = previousGoldData;
 
-    if (previousData.isBankHoliday) {
-      if (_isAutoFilled) {
-        _high = '';
-        _low = '';
-        _close = '';
-
-        _isAutoFilled = false;
-
-        _clearCalculationResult(notify: false);
-      }
-
-      _errorMessage =
-          'Data Gold ${_formatDate(previousData.date)} '
-          'tidak tersedia karena hari libur.';
-
+    // Kalau isi input sudah sama dengan data terbaru, jangan
+    // hapus hasil hitungan yang sudah ada.
+    if (p != null &&
+        _isAutoFilled &&
+        _high == _numberToInput(p.high) &&
+        _low == _numberToInput(p.low) &&
+        _close == _numberToInput(p.close)) {
       notifyListeners();
 
       return;
     }
 
-    // ==========================================================
-    // DATA VALID
-    // ==========================================================
-
-    if (previousData.high > 0 &&
-        previousData.low > 0 &&
-        previousData.close > 0) {
-      // Hanya update otomatis kalau input masih
-      // merupakan hasil auto-fill sebelumnya.
-      //
-      // Kalau user sudah mengedit manual,
-      // jangan timpa input user.
-      if (_isAutoFilled || (_high.isEmpty && _low.isEmpty && _close.isEmpty)) {
-        _high = _numberToInput(previousData.high);
-        _low = _numberToInput(previousData.low);
-        _close = _numberToInput(previousData.close);
-
-        _isAutoFilled = true;
-
-        _clearCalculationResult(notify: false);
-      }
-    }
-
-    // ==========================================================
-    // ERROR OPEN
-    // ==========================================================
-
-    if (referenceData == null) {
-      _errorMessage =
-          'Data Open ${_formatDate(calculationDate)} '
-          'belum tersedia.';
-    } else {
-      _errorMessage = null;
-    }
-
-    notifyListeners();
+    fillFromPreviousDay();
   }
 
   // ============================================================
@@ -819,12 +757,7 @@ class PivotGoldViewModel extends ChangeNotifier {
       return null;
     }
 
-    // Contoh:
-    // 3500
-    // 3500.50
-    // 3500,50
-    // 3.500,50
-
+    // 3500 | 3500.50 | 3500,50 | 3.500,50
     if (cleaned.contains('.') && cleaned.contains(',')) {
       cleaned = cleaned.replaceAll('.', '');
       cleaned = cleaned.replaceAll(',', '.');
@@ -835,10 +768,6 @@ class PivotGoldViewModel extends ChangeNotifier {
     return double.tryParse(cleaned);
   }
 
-  // ============================================================
-  // NUMBER TO INPUT
-  // ============================================================
-
   String _numberToInput(double value) {
     if (value == value.roundToDouble()) {
       return value.toInt().toString();
@@ -846,10 +775,6 @@ class PivotGoldViewModel extends ChangeNotifier {
 
     return value.toString();
   }
-
-  // ============================================================
-  // FORMAT VALUE
-  // ============================================================
 
   String formatValue(double? value) {
     if (value == null) {
@@ -859,10 +784,6 @@ class PivotGoldViewModel extends ChangeNotifier {
     return value.toStringAsFixed(2).replaceAll('.', ',');
   }
 
-  // ============================================================
-  // FORMAT INPUT VALUE
-  // ============================================================
-
   String formatInputValue(double? value) {
     if (value == null) {
       return '-';
@@ -871,24 +792,19 @@ class PivotGoldViewModel extends ChangeNotifier {
     return _numberToInput(value);
   }
 
-  // ============================================================
-  // MIDPOINT
-  // ============================================================
-
   double midpoint(double a, double b) {
     return (a + b) / 2;
   }
 
-  // ============================================================
-  // FORMAT DATE
-  // ============================================================
-
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
-
     final month = date.month.toString().padLeft(2, '0');
 
     return '$day/$month/${date.year}';
+  }
+
+  bool _isSameCalendarDate(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   // ============================================================
@@ -925,117 +841,60 @@ class PivotGoldViewModel extends ChangeNotifier {
 
                 pw.SizedBox(height: 12),
 
-                // ==================================================
-                // TANGGAL DATA H/L/C
-                // ==================================================
                 if (previous != null)
-                  pw.Text(
-                    'Tanggal H/L/C : '
-                    '${previous.dateFormatted}',
-                  ),
+                  pw.Text('Tanggal H/L/C : ${previous.dateFormatted}'),
 
-                pw.Text(
-                  'High : '
-                  '${formatValue(_parseNumber(_high))}',
-                ),
-
-                pw.Text(
-                  'Low : '
-                  '${formatValue(_parseNumber(_low))}',
-                ),
-
-                pw.Text(
-                  'Close : '
-                  '${formatValue(_parseNumber(_close))}',
-                ),
+                pw.Text('High : ${formatValue(highValue)}'),
+                pw.Text('Low : ${formatValue(lowValue)}'),
+                pw.Text('Close : ${formatValue(closeValue)}'),
 
                 pw.SizedBox(height: 10),
 
-                // ==================================================
-                // DATA OPEN
-                // ==================================================
                 if (reference != null) ...[
-                  pw.Text(
-                    'Tanggal Signal : '
-                    '${reference.dateFormatted}',
-                  ),
-
-                  pw.Text(
-                    'Open Newsmaker : '
-                    '${reference.openFormatted}',
-                  ),
-
+                  pw.Text('Tanggal Signal : ${reference.dateFormatted}'),
+                  pw.Text('Open Newsmaker : ${reference.openFormatted}'),
                   pw.Text(
                     'Signal : $signalLabel',
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                   ),
-
                   pw.SizedBox(height: 12),
                 ] else ...[
-                  pw.Text(
-                    'Tanggal Signal : '
-                    '${_formatDate(calculationDate)}',
-                  ),
-
-                  pw.Text(
-                    'Open Newsmaker : '
-                    'Data belum tersedia',
-                  ),
-
+                  pw.Text('Tanggal Signal : ${_formatDate(calculationDate)}'),
+                  pw.Text('Open Newsmaker : Data belum tersedia'),
                   pw.Text(
                     'Signal : BELUM TERSEDIA',
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                   ),
-
                   pw.SizedBox(height: 12),
                 ],
 
-                // ==================================================
-                // PIVOT TABLE
-                // ==================================================
                 pw.Table.fromTextArray(
                   headers: ['Tingkat', 'Nilai'],
                   data: [
                     ['Resistance 4 (R4)', formatValue(_r4)],
-
                     if (_r4 != null && _r3 != null)
                       ['Midpoint R4-R3', formatValue(midpoint(_r4!, _r3!))],
-
                     ['Resistance 3 (R3)', formatValue(_r3)],
-
                     if (_r3 != null && _r2 != null)
                       ['Midpoint R3-R2', formatValue(midpoint(_r3!, _r2!))],
-
                     ['Resistance 2 (R2)', formatValue(_r2)],
-
                     if (_r2 != null && _r1 != null)
                       ['Midpoint R2-R1', formatValue(midpoint(_r2!, _r1!))],
-
                     ['Resistance 1 (R1)', formatValue(_r1)],
-
                     if (_r1 != null && _pp != null)
                       ['Midpoint R1-PP', formatValue(midpoint(_r1!, _pp!))],
-
                     ['Pivot Point (PP)', formatValue(_pp)],
-
                     if (_pp != null && _s1 != null)
                       ['Midpoint PP-S1', formatValue(midpoint(_pp!, _s1!))],
-
                     ['Support 1 (S1)', formatValue(_s1)],
-
                     if (_s1 != null && _s2 != null)
                       ['Midpoint S1-S2', formatValue(midpoint(_s1!, _s2!))],
-
                     ['Support 2 (S2)', formatValue(_s2)],
-
                     if (_s2 != null && _s3 != null)
                       ['Midpoint S2-S3', formatValue(midpoint(_s2!, _s3!))],
-
                     ['Support 3 (S3)', formatValue(_s3)],
-
                     if (_s3 != null && _s4 != null)
                       ['Midpoint S3-S4', formatValue(midpoint(_s3!, _s4!))],
-
                     ['Support 4 (S4)', formatValue(_s4)],
                   ],
                 ),
@@ -1048,10 +907,6 @@ class PivotGoldViewModel extends ChangeNotifier {
 
     return pdf.save();
   }
-
-  // ============================================================
-  // DISPOSE
-  // ============================================================
 
   @override
   void dispose() {

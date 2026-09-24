@@ -105,6 +105,60 @@ class HistoricalDataViewModel extends ChangeNotifier {
   }
 
   // ============================================================
+  // DATA TERAKHIR YANG TERSEDIA (FALLBACK LIBUR / WEEKEND)
+  // ============================================================
+  //
+  // Mencari data `category` TEPAT pada `onOrBeforeDate`. Kalau tidak ada
+  // (misalnya karena weekend/hari libur newsmaker), otomatis mundur
+  // hari demi hari sampai maksimal `maxLookbackDays` untuk menemukan
+  // data valid terakhir yang tersedia.
+  //
+  // Contoh:
+  // onOrBeforeDate = tanggal 19 (Minggu, tidak ada data)
+  // -> mundur ke 18 (Sabtu, tidak ada data juga)
+  // -> mundur ke 17 (Jumat, ADA data) -> dikembalikan
+  //
+  // Data yang bank holiday atau close-nya 0 dianggap tidak valid
+  // dan akan dilewati.
+  HistoricalDataModel? getLatestAvailableData(
+    String category,
+    DateTime onOrBeforeDate, {
+    int maxLookbackDays = 10,
+  }) {
+    final targetCategory = category.trim().toUpperCase();
+
+    final marketData = _allData.where((item) {
+      return item.category.trim().toUpperCase() == targetCategory;
+    }).toList();
+
+    if (marketData.isEmpty) {
+      return null;
+    }
+
+    for (var i = 0; i <= maxLookbackDays; i++) {
+      final checkDate = onOrBeforeDate.subtract(Duration(days: i));
+
+      for (final item in marketData) {
+        if (!_isSameDate(item.date, checkDate)) {
+          continue;
+        }
+
+        if (item.isBankHoliday) {
+          continue;
+        }
+
+        if (item.close <= 0) {
+          continue;
+        }
+
+        return item;
+      }
+    }
+
+    return null;
+  }
+
+  // ============================================================
   // CATEGORY
   // ============================================================
 

@@ -5,16 +5,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:gal/gal.dart';
 
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/gold_digital_viewmodel.dart';
+import 'package:equate/viewmodel/history_viewmodel.dart';
+import 'package:equate/model/digital_gold_model.dart';
+import 'package:equate/model/calculation_history_model.dart';
+
+// ============================================================
+// CUSTOM DECIMAL INPUT FORMATTER
+// ============================================================
+class DecimalTextInputFormatter extends TextInputFormatter {
+  final RegExp _regExp = RegExp(r'^\d*[\,\.]?\d{0,2}$');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty || _regExp.hasMatch(newValue.text)) {
+      return newValue;
+    }
+    return oldValue;
+  }
+}
 
 class GoldDigitalCalculatorContent extends StatefulWidget {
-  const GoldDigitalCalculatorContent({super.key});
+  final Function(dynamic)? onCalculate;
+
+  const GoldDigitalCalculatorContent({
+    super.key,
+    this.onCalculate,
+  });
 
   @override
   State<GoldDigitalCalculatorContent> createState() =>
@@ -31,7 +58,6 @@ class _GoldDigitalCalculatorContentState
 
   // ============================================================
   // REPAINT BOUNDARY
-  // Digunakan untuk export hasil sebagai gambar.
   // ============================================================
 
   final GlobalKey _globalKey = GlobalKey();
@@ -89,6 +115,19 @@ class _GoldDigitalCalculatorContentState
   }
 
   // ============================================================
+  // HELPER PARSING NUMBER
+  // ============================================================
+
+  double _parseFormattedDouble(String text) {
+    if (text.isEmpty) return 0;
+    if (text.contains(',')) {
+      final clean = text.replaceAll('.', '').replaceAll(',', '.');
+      return double.tryParse(clean) ?? 0;
+    }
+    return double.tryParse(text) ?? 0;
+  }
+
+  // ============================================================
   // VIEW <-> VIEWMODEL
   // ============================================================
 
@@ -118,9 +157,7 @@ class _GoldDigitalCalculatorContentState
     _viewModel.resetGoldDigital();
 
     _setControllerValue(_lotController, '0');
-
     _setControllerValue(_hargaOpenController, '0,00');
-
     _setControllerValue(_hargaCloseController, '0,00');
   }
 
@@ -140,19 +177,57 @@ class _GoldDigitalCalculatorContentState
     }
 
     controller.removeListener(listener);
-
     controller.text = value;
-
+    controller.selection = TextSelection.collapsed(offset: value.length);
     controller.addListener(listener);
   }
 
   // ============================================================
-  // CALCULATE
+  // CALCULATE & SAVE TO FIRESTORE
   // ============================================================
 
-  Future<void> _calculateGoldDigital() async {
-    await _viewModel.calculateGoldDigital();
+Future<void> _calculateGoldDigital() async {
+  await _viewModel.calculateGoldDigital();
+
+  if (_viewModel.digitalHasilNetto != null) {
+    try {
+      final historyModel = DigitalGoldModel(
+        result: _viewModel.digitalHasilNetto!,
+        weightInGram: _parseFormattedDouble(_lotController.text), // lot / gram
+        buyPrice: _parseFormattedDouble(_hargaOpenController.text), // harga open/beli
+        currentPrice: _parseFormattedDouble(_hargaCloseController.text), // harga close/sekarang
+        profitLoss: _viewModel.digitalHasilNetto!,
+        createdAt: DateTime.now(),
+      );
+
+      if (mounted) {
+        await Provider.of<HistoryViewModel>(context, listen: false)
+            .addHistory(historyModel);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kalkulasi Emas Digital berhasil disimpan ke Riwayat!'),
+            backgroundColor: Color(0xFF18B85A),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Gagal menyimpan riwayat ke Firestore: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
+
+  if (widget.onCalculate != null) {
+    widget.onCalculate!(_viewModel.digitalHasilNetto);
+  }
+}
 
   // ============================================================
   // EXPORT - IMAGE
@@ -180,12 +255,7 @@ class _GoldDigitalCalculatorContentState
         return;
       }
 
-      // ==========================================================
-      // CAPTURE WIDGET
-      // ==========================================================
-
       final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
       if (byteData == null) {
@@ -194,24 +264,7 @@ class _GoldDigitalCalculatorContentState
 
       final pngBytes = byteData.buffer.asUint8List();
 
-      // ==========================================================
-      // SIMPAN FILE SEMENTARA
-      // ==========================================================
-
-      final output = await getTemporaryDirectory();
-
-      final filePath =
-          '${output.path}/gold_digital_${DateTime.now().millisecondsSinceEpoch}.png';
-
-      final file = File(filePath);
-
-      await file.writeAsBytes(pngBytes);
-
-      // ==========================================================
-      // SIMPAN KE GALERI
-      // ==========================================================
-
-      await Gal.putImage(filePath);
+      await Gal.putImageBytes(pngBytes);
 
       if (!mounted) return;
 
@@ -351,9 +404,6 @@ class _GoldDigitalCalculatorContentState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ==================================================
-                // TITLE
-                // ==================================================
                 Row(
                   children: [
                     Container(
@@ -384,9 +434,7 @@ class _GoldDigitalCalculatorContentState
 
                 const SizedBox(height: 26),
 
-                // ==================================================
                 // JUMLAH LOT
-                // ==================================================
                 _buildLabel('Jumlah Lot', labelTextColor),
 
                 const SizedBox(height: 8),
@@ -403,9 +451,7 @@ class _GoldDigitalCalculatorContentState
 
                 const SizedBox(height: 22),
 
-                // ==================================================
                 // OPEN POSITION
-                // ==================================================
                 _buildLabel('Open Position', labelTextColor),
 
                 const SizedBox(height: 8),
@@ -432,9 +478,7 @@ class _GoldDigitalCalculatorContentState
 
                 const SizedBox(height: 22),
 
-                // ==================================================
                 // CLOSE POSITION
-                // ==================================================
                 _buildLabel('Close Position', labelTextColor),
 
                 const SizedBox(height: 8),
@@ -451,14 +495,9 @@ class _GoldDigitalCalculatorContentState
 
                 const SizedBox(height: 24),
 
-                // ==================================================
-                // BUTTONS
-                // ==================================================
+                // BUTTONS (HAPUS & HITUNG)
                 Row(
                   children: [
-                    // ==============================================
-                    // HAPUS
-                    // ==============================================
                     Expanded(
                       child: SizedBox(
                         height: 52,
@@ -493,9 +532,6 @@ class _GoldDigitalCalculatorContentState
 
                     const SizedBox(width: 12),
 
-                    // ==============================================
-                    // HITUNG
-                    // ==============================================
                     Expanded(
                       child: SizedBox(
                         height: 52,
@@ -566,9 +602,6 @@ class _GoldDigitalCalculatorContentState
               ),
               child: Column(
                 children: [
-                  // ==================================================
-                  // HASIL TITLE
-                  // ==================================================
                   Row(
                     children: [
                       const Icon(
@@ -576,9 +609,7 @@ class _GoldDigitalCalculatorContentState
                         color: Color(0xFF22C55E),
                         size: 20,
                       ),
-
                       const SizedBox(width: 8),
-
                       Text(
                         'Hasil',
                         style: GoogleFonts.plusJakartaSans(
@@ -592,16 +623,10 @@ class _GoldDigitalCalculatorContentState
 
                   const SizedBox(height: 18),
 
-                  // ==================================================
-                  // DIVIDER
-                  // ==================================================
                   Divider(height: 1, color: borderColor),
 
                   const SizedBox(height: 20),
 
-                  // ==================================================
-                  // HASIL NOMINAL
-                  // ==================================================
                   SizedBox(
                     width: double.infinity,
                     child: FittedBox(
@@ -624,9 +649,6 @@ class _GoldDigitalCalculatorContentState
                     ),
                   ),
 
-                  // ==================================================
-                  // UNTUNG / RUGI
-                  // ==================================================
                   if (_viewModel.digitalIsCalculated &&
                       _viewModel.digitalHasilNetto != null) ...[
                     const SizedBox(height: 10),
@@ -687,9 +709,7 @@ class _GoldDigitalCalculatorContentState
             ),
           ),
 
-          // ======================================================
           // EXPORT BUTTON
-          // ======================================================
           const SizedBox(height: 14),
 
           SizedBox(
@@ -736,7 +756,7 @@ class _GoldDigitalCalculatorContentState
   }
 
   // ============================================================
-  // POSITION SELECTOR
+  // POSITION SELECTOR & BUTTON
   // ============================================================
 
   Widget _buildPositionSelector({
@@ -789,10 +809,6 @@ class _GoldDigitalCalculatorContentState
     );
   }
 
-  // ============================================================
-  // POSITION BUTTON
-  // ============================================================
-
   Widget _buildPositionButton({
     required String label,
     required bool selected,
@@ -834,7 +850,7 @@ class _GoldDigitalCalculatorContentState
   }
 
   // ============================================================
-  // LABEL
+  // LABEL & TEXTFIELD
   // ============================================================
 
   Widget _buildLabel(String text, Color textColor) {
@@ -847,10 +863,6 @@ class _GoldDigitalCalculatorContentState
       ),
     );
   }
-
-  // ============================================================
-  // TEXT FIELD
-  // ============================================================
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -865,7 +877,7 @@ class _GoldDigitalCalculatorContentState
       controller: controller,
       keyboardType: TextInputType.numberWithOptions(decimal: decimal),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*[\,\.]?\d{0,2}$')),
+        DecimalTextInputFormatter(),
       ],
       style: GoogleFonts.plusJakartaSans(
         fontSize: 14,

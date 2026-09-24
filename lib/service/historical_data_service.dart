@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:equate/model/historical_data_model.dart';
@@ -14,11 +15,13 @@ class HistoricalDataService {
         headers: {'Accept': 'application/json'},
       );
 
-      print('========== HISTORICAL API ==========');
-      print('STATUS CODE: ${response.statusCode}');
-      print('BODY LENGTH: ${response.body.length}');
-      print('BODY: ${response.body}');
-      print('====================================');
+      if (kDebugMode) {
+        debugPrint('========== HISTORICAL API ==========');
+        debugPrint('STATUS CODE: ${response.statusCode}');
+        debugPrint('BODY LENGTH: ${response.body.length}');
+        debugPrint('BODY: ${response.body}');
+        debugPrint('====================================');
+      }
 
       if (response.statusCode != 200) {
         throw Exception('Server mengembalikan status ${response.statusCode}');
@@ -30,11 +33,15 @@ class HistoricalDataService {
         throw Exception('Format response API tidak valid.');
       }
 
-      print('API KEYS: ${decoded.keys.toList()}');
+      if (kDebugMode) {
+        debugPrint('API KEYS: ${decoded.keys.toList()}');
+      }
 
       final dynamic status = decoded['status'];
 
-      print('API STATUS: $status');
+      if (kDebugMode) {
+        debugPrint('API STATUS: $status');
+      }
 
       if (status != null &&
           status.toString() != '200' &&
@@ -46,7 +53,9 @@ class HistoricalDataService {
 
       final dynamic rawData = decoded['data'];
 
-      print('TIPE DATA: ${rawData.runtimeType}');
+      if (kDebugMode) {
+        debugPrint('TIPE DATA: ${rawData.runtimeType}');
+      }
 
       if (rawData is! List) {
         throw Exception(
@@ -55,7 +64,9 @@ class HistoricalDataService {
         );
       }
 
-      print('JUMLAH RAW DATA: ${rawData.length}');
+      if (kDebugMode) {
+        debugPrint('JUMLAH RAW DATA: ${rawData.length}');
+      }
 
       final List<HistoricalDataModel> result = [];
 
@@ -70,8 +81,8 @@ class HistoricalDataService {
 
         result.add(model);
 
-        if (model.category.toUpperCase().contains('LGD')) {
-          print(
+        if (kDebugMode && model.category.toUpperCase().contains('LGD')) {
+          debugPrint(
             'GOLD: '
             '${model.dateFormatted} | '
             'Open=${model.open} | '
@@ -83,12 +94,16 @@ class HistoricalDataService {
         }
       }
 
-      print('HASIL MODEL: ${result.length}');
-      print('====================================');
+      if (kDebugMode) {
+        debugPrint('HASIL MODEL: ${result.length}');
+        debugPrint('====================================');
+      }
 
       return result;
     } catch (e) {
-      print('HISTORICAL SERVICE ERROR: $e');
+      if (kDebugMode) {
+        debugPrint('HISTORICAL SERVICE ERROR: $e');
+      }
 
       throw Exception('Gagal mengambil data historical: $e');
     }

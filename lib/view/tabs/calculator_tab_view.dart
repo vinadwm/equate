@@ -1,11 +1,29 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
+import 'package:equate/viewmodel/history_viewmodel.dart';
+import 'package:equate/model/base_calculation_history.dart';
+
+// ==========================================================
+// IMPORT VIEW HISTORY
+// ==========================================================
+import 'package:equate/view/history/history_view.dart';
+
+// ==========================================================
+// IMPORT MODELS
+// ==========================================================
+import 'package:equate/model/nest_gold_model.dart';
+import 'package:equate/model/digital_gold_model.dart';
+import 'package:equate/model/physical_gold_model.dart';
+import 'package:equate/model/pivot_gold_model.dart';
+import 'package:equate/model/pivot_hangseng_model.dart';
+import 'package:equate/model/nest_hangseng_model.dart';
 
 // ==========================================================
 // CALCULATOR CONTENT
@@ -14,6 +32,8 @@ import 'calculator/gold_digital_calculator_content.dart';
 import 'calculator/gold_physical_calculator_content.dart';
 import 'calculator/pivot_gold_calculator_content.dart';
 import 'calculator/pivot_hangseng_calculator_content.dart';
+import 'calculator/nest_gold_calculator_content.dart';
+import 'calculator/nest_hangseng_calculator_content.dart';
 
 // ==========================================================
 // CUSTOM MENU
@@ -21,30 +41,9 @@ import 'calculator/pivot_hangseng_calculator_content.dart';
 import 'custom_calculator_menu.dart';
 
 // ==========================================================
-// MODEL RIWAYAT
-// ==========================================================
-class CalculationHistory {
-  final String title;
-  final String details;
-  final double result;
-  final DateTime timestamp;
-
-  CalculationHistory({
-    required this.title,
-    required this.details,
-    required this.result,
-    required this.timestamp,
-  });
-}
-
-// ==========================================================
 // CALCULATOR TAB VIEW
 // ==========================================================
 class CalculatorTabView extends StatefulWidget {
-  // ========================================================
-  // SHARED HISTORICAL VIEWMODEL
-  // Dipakai juga oleh HomeTabView
-  // ========================================================
   final HistoricalDataViewModel historicalDataViewModel;
 
   const CalculatorTabView({super.key, required this.historicalDataViewModel});
@@ -54,9 +53,6 @@ class CalculatorTabView extends StatefulWidget {
 }
 
 class _CalculatorTabViewState extends State<CalculatorTabView> {
-  // ==========================================================
-  // CALCULATOR YANG SEDANG DIPILIH
-  // ==========================================================
   String? _selectedCalculatorType;
 
   bool _isGoldDropdownOpen = false;
@@ -81,6 +77,11 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       'description': 'Analisis level Support & Resistance harian.',
       'icon': Icons.analytics_rounded,
     },
+    {
+      'title': 'Nest Emas',
+      'description': 'Kalkulator strategi Nest untuk transaksi Emas.',
+      'icon': Icons.nest_cam_wired_stand_rounded,
+    },
   ];
 
   // ==========================================================
@@ -92,24 +93,13 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       'description': 'Analisis Support & Resistance transaksi indeks Hangseng.',
       'icon': Icons.candlestick_chart_rounded,
     },
+    {
+      'title': 'Nest Hangseng',
+      'description': 'Kalkulator strategi Nest untuk transaksi Hangseng.',
+      'icon': Icons.nest_cam_wired_stand_rounded,
+    },
   ];
 
-  // ==========================================================
-  // HISTORY
-  // ==========================================================
-  final List<CalculationHistory> _historyList = [];
-
-  void _addHistory(dynamic item) {
-    if (item is CalculationHistory) {
-      setState(() {
-        _historyList.insert(0, item);
-      });
-    }
-  }
-
-  // ==========================================================
-  // FORMAT CURRENCY
-  // ==========================================================
   String _formatCurrency(double amount) {
     final formatter = NumberFormat.currency(
       locale: 'id_ID',
@@ -121,8 +111,89 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
   }
 
   // ==========================================================
-  // BUILD
+  // FIRESTORE DOC PARSER HELPER
   // ==========================================================
+  dynamic _parseFirestoreDoc(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final category = (data['category'] ?? '').toString();
+
+    switch (category) {
+      case 'NEST Gold':
+        return NestGoldModel.fromFirestore(doc);
+      case 'Emas Digital':
+      case 'Digital Gold':
+        return DigitalGoldModel.fromFirestore(doc);
+      case 'Emas Fisik':
+      case 'Physical Gold':
+        return PhysicalGoldModel.fromFirestore(doc);
+      case 'Pivot Gold':
+        return PivotGoldModel.fromFirestore(doc);
+      case 'Pivot Hangseng':
+        return PivotHangsengModel.fromFirestore(doc);
+      case 'NEST Hangseng':
+        return NestHangsengModel.fromFirestore(doc);
+      default:
+        return NestGoldModel.fromFirestore(doc);
+    }
+  }
+
+  Map<String, dynamic> _parseItemInfo(dynamic item) {
+    String title = 'Riwayat';
+    String details = 'Detail Perhitungan';
+    double result = 0.0;
+    DateTime timestamp = DateTime.now();
+    bool isCurrency = true;
+
+    if (item is DigitalGoldModel) {
+      title = 'Emas Digital';
+      details = '${item.weightInGram} Lot | Beli: ${_formatCurrency(item.buyPrice)}';
+      result = item.profitLoss;
+      timestamp = item.createdAt;
+    } else if (item is PhysicalGoldModel) {
+      title = 'Emas Fisik';
+      details = '${item.weightInGram} gram | Rp ${_formatCurrency(item.buyPrice)}/g';
+      result = item.profitLoss;
+      timestamp = item.createdAt;
+    } else if (item is PivotGoldModel) {
+      title = 'Pivot Gold (${item.type})';
+      details = 'PP: ${item.pp} | R1: ${item.r1} | S1: ${item.s1}';
+      result = item.pp;
+      isCurrency = false;
+      timestamp = item.createdAt;
+    } else if (item is NestGoldModel) {
+      title = 'NEST Gold';
+      details = 'Signal: ${item.signalLabel} | Open: ${item.open ?? '-'}';
+      result = item.close ?? 0.0;
+      isCurrency = false;
+      timestamp = item.createdAt;
+    } else if (item is PivotHangsengModel) {
+      title = 'Pivot Hangseng';
+      details = 'PP: ${item.pp ?? '-'} | H: ${item.high ?? '-'} | L: ${item.low ?? '-'}';
+      result = item.pp ?? 0.0;
+      isCurrency = false;
+      timestamp = item.createdAt;
+    } else if (item is NestHangsengModel) {
+      title = 'NEST Hangseng';
+      details = 'Signal: ${item.signalLabel} | Open: ${item.open ?? '-'}';
+      result = item.close ?? 0.0;
+      isCurrency = false;
+      timestamp = item.createdAt;
+    } else {
+      title = item.title?.toString() ?? 'Riwayat';
+      details = item.details?.toString() ?? 'Detail perhitungan';
+      result = (item.result is num) ? (item.result as num).toDouble() : 0.0;
+      if (item.createdAt is DateTime) timestamp = item.createdAt;
+    }
+
+    return {
+      'title': title,
+      'details': details,
+      'result': result,
+      'timestamp': timestamp,
+      'isCurrency': isCurrency,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
@@ -130,27 +201,20 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       builder: (context, currentThemeMode, child) {
         final isDarkMode = ThemeViewModel.isDarkMode;
 
-        final primaryTextColor = isDarkMode
-            ? Colors.white
-            : const Color(0xFF2C2D30);
+        final primaryTextColor =
+            isDarkMode ? Colors.white : const Color(0xFF2C2D30);
 
-        final bgGradientStart = isDarkMode
-            ? const Color(0xFF16181F)
-            : Colors.white;
+        final bgGradientStart =
+            isDarkMode ? const Color(0xFF16181F) : Colors.white;
 
-        final bgGradientEnd = isDarkMode
-            ? const Color(0xFF0D0E12)
-            : Colors.white;
+        final bgGradientEnd =
+            isDarkMode ? const Color(0xFF0D0E12) : Colors.white;
 
         return Scaffold(
           backgroundColor: isDarkMode ? const Color(0xFF0D0E12) : Colors.white,
-
           body: Stack(
             alignment: Alignment.center,
             children: [
-              // ======================================================
-              // LAYER 1 - BACKGROUND
-              // ======================================================
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -160,10 +224,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                   ),
                 ),
               ),
-
-              // ======================================================
-              // LAYER 2 - DARK MODE GLOW
-              // ======================================================
               if (isDarkMode)
                 Positioned.fill(
                   child: Container(
@@ -179,10 +239,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                     ),
                   ),
                 ),
-
-              // ======================================================
-              // LAYER 3 - LOGO WATERMARK
-              // ======================================================
               Opacity(
                 opacity: isDarkMode ? 0.22 : 0.15,
                 child: Image.asset(
@@ -194,16 +250,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                   },
                 ),
               ),
-
-              // ======================================================
-              // LAYER 4 - CONTENT
-              // ======================================================
               SafeArea(
                 child: Column(
                   children: [
-                    // ==================================================
-                    // HEADER
-                    // ==================================================
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -229,7 +278,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                               }
                             },
                           ),
-
                           Expanded(
                             child: Text(
                               _selectedCalculatorType == null
@@ -243,15 +291,10 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                               ),
                             ),
                           ),
-
                           const SizedBox(width: 20),
                         ],
                       ),
                     ),
-
-                    // ==================================================
-                    // CONTENT
-                    // ==================================================
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
@@ -274,9 +317,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     );
   }
 
-  // ==========================================================
-  // LOBBY VIEW
-  // ==========================================================
   Widget _buildLobbyView(
     BuildContext context,
     bool isDarkMode,
@@ -286,10 +326,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
-
-        // ======================================================
-        // TITLE
-        // ======================================================
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -304,9 +340,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                   letterSpacing: -0.3,
                 ),
               ),
-
               const SizedBox(height: 4),
-
               Text(
                 'Hitung estimasi profit, margin, dan pivot point transaksi.',
                 style: GoogleFonts.plusJakartaSans(
@@ -319,39 +353,26 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             ],
           ),
         ),
-
         const SizedBox(height: 24),
-
-        // ======================================================
-        // MARKET BUTTONS
-        // ======================================================
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              // ==================================================
-              // EMAS
-              // ==================================================
               _buildSoftClayButton(
                 context,
                 title: 'Emas (XUL)',
-                subtitle: 'Kalkulator Emas Digital, Fisik & Pivot',
+                subtitle: 'Kalkulator Emas Digital, Fisik, Pivot & Nest',
                 icon: Icons.monetization_on_rounded,
                 isExpanded: _isGoldDropdownOpen,
                 onPressed: () {
                   setState(() {
                     _isGoldDropdownOpen = !_isGoldDropdownOpen;
-
                     if (_isGoldDropdownOpen) {
                       _isHangsengDropdownOpen = false;
                     }
                   });
                 },
               ),
-
-              // ==================================================
-              // GOLD MENU
-              // ==================================================
               AnimatedSize(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.fastOutSlowIn,
@@ -370,6 +391,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                                 _selectedCalculatorType = 'digital';
                               } else if (selectedName == 'Pivot Point Emas') {
                                 _selectedCalculatorType = 'pivot';
+                              } else if (selectedName == 'Nest Emas') {
+                                _selectedCalculatorType = 'nest_gold';
                               }
                             });
                           },
@@ -377,32 +400,22 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                       )
                     : const SizedBox.shrink(),
               ),
-
               const SizedBox(height: 16),
-
-              // ==================================================
-              // HANGSENG
-              // ==================================================
               _buildSoftClayButton(
                 context,
                 title: 'Hangseng (HKK)',
-                subtitle: 'Kalkulator Pivot Point Indeks',
+                subtitle: 'Kalkulator Pivot Point & Nest Indeks',
                 icon: Icons.trending_up_rounded,
                 isExpanded: _isHangsengDropdownOpen,
                 onPressed: () {
                   setState(() {
                     _isHangsengDropdownOpen = !_isHangsengDropdownOpen;
-
                     if (_isHangsengDropdownOpen) {
                       _isGoldDropdownOpen = false;
                     }
                   });
                 },
               ),
-
-              // ==================================================
-              // HANGSENG MENU
-              // ==================================================
               AnimatedSize(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.fastOutSlowIn,
@@ -417,6 +430,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
 
                               if (selectedName == 'Pivot Point Hangseng') {
                                 _selectedCalculatorType = 'hangseng_pivot';
+                              } else if (selectedName == 'Nest Hangseng') {
+                                _selectedCalculatorType = 'nest_hangseng';
                               }
                             });
                           },
@@ -427,62 +442,70 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             ],
           ),
         ),
-
         const SizedBox(height: 32),
-
-        // ======================================================
-        // HISTORY
-        // ======================================================
         _buildHistorySection(
           isDarkMode: isDarkMode,
           primaryTextColor: primaryTextColor,
         ),
-
         const SizedBox(height: 28),
       ],
     );
   }
 
-  // ==========================================================
-  // ACTIVE CALCULATOR
-  // ==========================================================
   Widget _buildActiveCalculatorView() {
-    switch (_selectedCalculatorType) {
-      // ======================================================
-      // EMAS DIGITAL
-      // ======================================================
-      case 'digital':
-        return GoldDigitalCalculatorContent();
+    final historyViewModel = Provider.of<HistoryViewModel>(
+      context,
+      listen: false,
+    );
 
-      // ======================================================
-      // EMAS FISIK
-      // ======================================================
+    switch (_selectedCalculatorType) {
+      case 'digital':
+        return GoldDigitalCalculatorContent(
+          onCalculate: (_) {},
+        );
+
       case 'physical':
         return GoldPhysicalCalculatorContent(
-          onCalculate: (data) {
-            _addHistory(data);
+          onCalculate: (result) {
+            if (result is CalculationHistory) {
+              historyViewModel.addHistory(result);
+            }
           },
         );
 
-      // ======================================================
-      // PIVOT EMAS
-      // ======================================================
       case 'pivot':
         return PivotGoldCalculatorContent(
           historicalDataViewModel: widget.historicalDataViewModel,
-          onCalculate: (data) {
-            _addHistory(data);
+          onCalculate: (result) {
+            if (result is CalculationHistory) {
+              historyViewModel.addHistory(result);
+            }
           },
         );
 
-      // ======================================================
-      // PIVOT HANGSENG
-      // ======================================================
       case 'hangseng_pivot':
         return PivotHangsengCalculatorContent(
           historicalDataViewModel: widget.historicalDataViewModel,
-          onCalculate: (data) {
-            _addHistory(data);
+          onCalculate: (result) {
+            if (result is CalculationHistory) {
+              historyViewModel.addHistory(result);
+            }
+          },
+        );
+
+      case 'nest_gold':
+        return NestGoldCalculatorContent(
+          historicalDataViewModel: widget.historicalDataViewModel,
+          onCalculate: (result) {
+            historyViewModel.addHistory(result);
+          },
+        );
+
+      case 'nest_hangseng':
+        return NestHangsengCalculatorContent(
+          historicalDataViewModel: widget.historicalDataViewModel,
+          onCalculate: (result) {
+            historyViewModel.addHistory(result);
           },
         );
 
@@ -491,31 +514,25 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     }
   }
 
-  // ==========================================================
-  // TITLE
-  // ==========================================================
   String _getCalculatorTitle() {
     switch (_selectedCalculatorType) {
       case 'digital':
         return 'Emas Digital';
-
       case 'physical':
         return 'Emas Fisik';
-
       case 'pivot':
         return 'Pivot Point Emas';
-
+      case 'nest_gold':
+        return 'Nest Emas';
       case 'hangseng_pivot':
         return 'Pivot Hangseng';
-
+      case 'nest_hangseng':
+        return 'Nest Hangseng';
       default:
         return 'Kalkulator';
     }
   }
 
-  // ==========================================================
-  // SOFT CLAY BUTTON
-  // ==========================================================
   Widget _buildSoftClayButton(
     BuildContext context, {
     required String title,
@@ -525,7 +542,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
     required VoidCallback onPressed,
   }) {
     final isDarkMode = ThemeViewModel.isDarkMode;
-
     const primaryOrange = Color(0xFFFF9500);
 
     return Container(
@@ -538,8 +554,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           color: isExpanded
               ? primaryOrange.withOpacity(0.5)
               : isDarkMode
-              ? Colors.white.withOpacity(0.08)
-              : Colors.white.withOpacity(0.9),
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.white.withOpacity(0.9),
           width: isExpanded ? 0.8 : 0.5,
         ),
         boxShadow: [
@@ -563,9 +579,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             child: Row(
               children: [
-                // ==================================================
-                // ICON
-                // ==================================================
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -585,12 +598,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                   ),
                   child: Icon(icon, color: Colors.white, size: 22),
                 ),
-
                 const SizedBox(width: 16),
-
-                // ==================================================
-                // TEXT
-                // ==================================================
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -605,9 +613,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                               : const Color(0xFF2C2D30),
                         ),
                       ),
-
                       const SizedBox(height: 2),
-
                       Text(
                         subtitle,
                         style: GoogleFonts.plusJakartaSans(
@@ -620,10 +626,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                     ],
                   ),
                 ),
-
-                // ==================================================
-                // ARROW
-                // ==================================================
                 Icon(
                   isExpanded
                       ? Icons.keyboard_arrow_up_rounded
@@ -631,8 +633,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                   color: isExpanded
                       ? primaryOrange
                       : isDarkMode
-                      ? Colors.white54
-                      : const Color(0xFF8A8E9B),
+                          ? Colors.white54
+                          : const Color(0xFF8A8E9B),
                   size: 24,
                 ),
               ],
@@ -644,12 +646,14 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
   }
 
   // ==========================================================
-  // HISTORY SECTION
+  // FIRESTORE REAL-TIME HISTORY SECTION
   // ==========================================================
   Widget _buildHistorySection({
     required bool isDarkMode,
     required Color primaryTextColor,
   }) {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -673,167 +677,214 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ======================================================
-          // HEADER
-          // ======================================================
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('histories')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: CircularProgressIndicator(color: Color(0xFFFF9500)),
+              ),
+            );
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+          final allHistoryList =
+              docs.map((doc) => _parseFirestoreDoc(doc)).toList();
+
+          // FILTER HARI INI SAJA
+          final now = DateTime.now();
+          final filteredToday = allHistoryList.where((item) {
+            final parsed = _parseItemInfo(item);
+            final timestamp = parsed['timestamp'] as DateTime;
+            return timestamp.year == now.year &&
+                timestamp.month == now.month &&
+                timestamp.day == now.day;
+          }).toList();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // HEADER RIWAYAT + TOMBOL LIHAT SEMUANYA DI KANAN
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF9500).withOpacity(0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.history_rounded,
-                      color: Color(0xFFFF9500),
-                      size: 18,
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF9500).withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.history_rounded,
+                          color: Color(0xFFFF9500),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Riwayat Hari Ini',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: primaryTextColor,
+                        ),
+                      ),
+                    ],
                   ),
-
-                  const SizedBox(width: 10),
-
-                  Text(
-                    'Riwayat Perhitungan',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: primaryTextColor,
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HistoryView(
+                            historyList: allHistoryList,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
+                      child: Text(
+                        'Lihat semuanya',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFFF9500),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
 
-              if (_historyList.isNotEmpty)
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _historyList.clear();
-                    });
-                  },
-                  child: Text(
-                    'Hapus',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+              const SizedBox(height: 16),
 
-          const SizedBox(height: 14),
-
-          // ======================================================
-          // EMPTY
-          // ======================================================
-          if (_historyList.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Text(
-                  'Belum ada riwayat perhitungan',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
-                  ),
-                ),
-              ),
-            )
-          // ======================================================
-          // LIST
-          // ======================================================
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _historyList.length,
-
-              separatorBuilder: (context, index) {
-                return Divider(
-                  color: isDarkMode
-                      ? Colors.white.withOpacity(0.06)
-                      : Colors.black.withOpacity(0.04),
-                  height: 16,
-                );
-              },
-
-              itemBuilder: (context, index) {
-                final item = _historyList[index];
-
-                final isPositive = item.result >= 0;
-
-                final timeFormatted = DateFormat(
-                  'HH:mm - dd MMM',
-                ).format(item.timestamp);
-
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // =================================================
-                    // DETAIL
-                    // =================================================
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: primaryTextColor,
-                            ),
-                          ),
-
-                          const SizedBox(height: 2),
-
-                          Text(
-                            item.details,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-
-                          Text(
-                            timeFormatted,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10,
-                              color: Colors.grey[400],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    // =================================================
-                    // RESULT
-                    // =================================================
-                    Text(
-                      '${isPositive ? '+Rp ' : '-Rp '}${_formatCurrency(item.result)}',
+              // DAFTAR RIWAYAT
+              if (filteredToday.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      'Belum ada riwayat perhitungan hari ini',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: isPositive
-                            ? const Color(0xFF34C759)
-                            : const Color(0xFFFF3B30),
+                        fontSize: 12,
+                        color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
                       ),
                     ),
-                  ],
-                );
-              },
-            ),
-        ],
+                  ),
+                )
+              else ...[
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount:
+                      filteredToday.length > 5 ? 5 : filteredToday.length,
+                  separatorBuilder: (context, index) {
+                    return Divider(
+                      color: isDarkMode
+                          ? Colors.white.withOpacity(0.06)
+                          : Colors.black.withOpacity(0.04),
+                      height: 16,
+                    );
+                  },
+                  itemBuilder: (context, index) {
+                    final rawItem = filteredToday[index];
+                    final parsed = _parseItemInfo(rawItem);
+
+                    final title = parsed['title'] as String;
+                    final details = parsed['details'] as String;
+                    final result = parsed['result'] as double;
+                    final timestamp = parsed['timestamp'] as DateTime;
+                    final isCurrency = parsed['isCurrency'] as bool;
+                    final isPositive = result >= 0;
+
+                    final timeFormatted =
+                        DateFormat('HH:mm').format(timestamp);
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: primaryTextColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                details,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                              Text(
+                                timeFormatted,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          isCurrency
+                              ? '${isPositive ? '+Rp ' : '-Rp '}${_formatCurrency(result)}'
+                              : result.toStringAsFixed(2),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: !isCurrency
+                                ? primaryTextColor
+                                : (isPositive
+                                    ? const Color(0xFF34C759)
+                                    : const Color(0xFFFF3B30)),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
+                // NOTES KECIL DI BAGIAN BAWAH LIST
+                Center(
+                  child: Text(
+                    'klik lihat semuanya untuk melihat riwayat perhitungan lebih lengkap',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                      color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }

@@ -16,7 +16,8 @@ import 'package:equate/view/splash/splash_view.dart';
 // ============================================================
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
-import 'package:equate/viewmodel/auth_viewmodel.dart';
+import 'package:equate/viewmodel/auth_viewmodel.dart'; // <-- Sudah diperbaiki (tanpa angka 0)
+import 'package:equate/viewmodel/history_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +47,11 @@ Future<void> main() async {
         // HISTORICAL DATA VIEWMODEL
         // ======================================================
         ChangeNotifierProvider(create: (_) => HistoricalDataViewModel()),
+
+        // ======================================================
+        // HISTORY VIEWMODEL
+        // ======================================================
+        ChangeNotifierProvider(create: (_) => HistoryViewModel()),
       ],
       child: const EquateApp(),
     ),

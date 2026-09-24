@@ -12,6 +12,9 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:gal/gal.dart';
 
+// FIX: import model PhysicalGoldModel agar bisa dibangun & dikirim lewat onCalculate
+import 'package:equate/model/physical_gold_model.dart';
+
 class GoldPhysicalCalculatorContent extends StatefulWidget {
   // 1. Tambahkan parameter callback onCalculate di constructor
   final Function(dynamic)? onCalculate;
@@ -38,8 +41,6 @@ class _GoldPhysicalCalculatorContentState
   bool _hasInput = false;
   double? _hasilAkhir;
   bool _isCalculated = false;
-
-  bool _isAutoFill = false;
 
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
@@ -78,55 +79,6 @@ class _GoldPhysicalCalculatorContentState
     return double.tryParse(cleanText);
   }
 
-  Future<void> _autoFill() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFFFF9E0F)),
-      ),
-    );
-
-    try {
-      final response = await http.get(
-        Uri.parse('https://api.example.com/gold-data'),
-      );
-
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
-        setState(() {
-          _modalController.text = data['modal']?.toString() ?? '';
-          _kursController.text = data['kurs']?.toString() ?? '';
-          _hargaBeliController.text = data['harga_beli']?.toString() ?? '';
-          _hargaJualController.text = data['harga_jual']?.toString() ?? '';
-        });
-
-        _triggerGlowPulse();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Data berhasil dimuat dari API')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengambil data: ${response.statusCode}'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
-    }
-  }
-
   void _triggerGlowPulse() {
     _glowController.forward(from: 0.0).then((_) {
       if (mounted) _glowController.reverse();
@@ -153,7 +105,6 @@ class _GoldPhysicalCalculatorContentState
       _hargaJualController.clear();
       _hasilAkhir = null;
       _isCalculated = false;
-      _isAutoFill = false;
     });
   }
 
@@ -171,22 +122,45 @@ class _GoldPhysicalCalculatorContentState
         kurs != null &&
         hargaBeli > 0 &&
         kurs > 0) {
-      final double step1 = (hargaBeli * kurs) / toz;
-      final double step2 = (hargaJual * kurs) / toz;
-      final double step3 = step2 - step1;
+      final double step1 = (hargaBeli * kurs) / toz; // harga beli per gram
+      final double step2 = (hargaJual * kurs) / toz; // harga jual per gram
+      final double step3 = step2 - step1; // selisih per gram
 
       if (step1 > 0) {
-        final double step4 = modal / step1;
-        final double step5 = step3 * step4;
+        final double step4 = modal / step1; // berat emas (gram)
+        final double step5 = step3 * step4; // hasil akhir (profit/loss)
 
         setState(() {
           _hasilAkhir = step5;
           _isCalculated = true;
         });
 
-        // Callback dipanggil jika diset dari parent widget
+        // ==========================================================
+        // FIX: bangun PhysicalGoldModel yang LENGKAP dan kirim lewat
+        // onCalculate, bukan cuma angka `step5` mentah.
+        //
+        // Catatan mapping (silakan sesuaikan jika arti fieldnya beda
+        // di project kamu):
+        //   - weightInGram      -> berat emas hasil hitung (step4)
+        //   - karat             -> tidak ada input karat di form ini,
+        //                          default 24 (emas murni)
+        //   - buyPrice          -> harga beli per gram (step1)
+        //   - currentPricePerGram -> harga jual per gram (step2)
+        //   - certificateFee    -> tidak ada input di form ini, default 0
+        // ==========================================================
         if (widget.onCalculate != null) {
-          widget.onCalculate!(step5);
+          widget.onCalculate!(
+            PhysicalGoldModel(
+              title: 'Kalkulasi Emas Fisik',
+              result: step5,
+              weightInGram: step4,
+              karat: 24,
+              buyPrice: step1,
+              currentPricePerGram: step2,
+              certificateFee: 0.0,
+              createdAt: DateTime.now(),
+            ),
+          );
         }
       }
     }
@@ -264,7 +238,6 @@ class _GoldPhysicalCalculatorContentState
           return pw.Padding(
             padding: const pw.EdgeInsets.all(20),
             child: pw.Column(
-              // 2. Perbaikan: Ubah 'cross:' menjadi 'crossAxisAlignment:'
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
@@ -359,7 +332,6 @@ class _GoldPhysicalCalculatorContentState
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
-        // 3. Perbaikan: Ubah 'cross:' menjadi 'crossAxisAlignment:'
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(

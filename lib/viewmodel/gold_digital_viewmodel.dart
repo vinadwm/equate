@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/foundation.dart';
@@ -6,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../model/pivot_gold_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../model/digital_gold_history_model.dart';
+import '../model/digital_gold_model.dart';
 
 enum PositionType { buy, sell }
 
@@ -168,6 +167,7 @@ class GoldDigitalViewModel extends ChangeNotifier {
       0,
       PivotGoldModel(
         type: 'Pivot Point',
+        result: _pp ?? 0,
         createdAt: DateTime.now(),
         high: high,
         low: low,
@@ -499,25 +499,22 @@ class GoldDigitalViewModel extends ChangeNotifier {
     // BUAT MODEL HISTORY
     // ==========================================================
 
-    final DigitalGoldHistoryModel history = DigitalGoldHistoryModel(
+    final DigitalGoldModel history = DigitalGoldModel(
       id: historyRef.id,
-      uid: user.uid,
-      lot: lot,
-      position: _digitalOpenPosition == PositionType.buy ? 'buy' : 'sell',
-      hargaOpen: hargaOpen,
-      hargaClose: hargaClose,
-      selisihPoint: _digitalSelisihPoint!,
-      hasilKotor: _digitalGross!,
-      fee: _digitalTotalFee!,
-      hasilNetto: _digitalHasilNetto!,
+      title: 'Kalkulasi Emas Digital',
+      result: _digitalHasilNetto ?? 0,
       createdAt: DateTime.now(),
+      weightInGram: lot * 31.1, // 1 lot = 31.1 gram
+      buyPrice: hargaOpen,
+      currentPrice: hargaClose,
+      profitLoss: _digitalHasilNetto ?? 0,
     );
 
     // ==========================================================
     // SIMPAN KE FIRESTORE
     // ==========================================================
 
-    await historyRef.set(history.toFirestore());
+    await historyRef.set(history.toMap(user.uid));
 
     debugPrint(
       'History emas digital berhasil disimpan: '
@@ -531,7 +528,7 @@ class GoldDigitalViewModel extends ChangeNotifier {
   // EMAS DIGITAL - GET HISTORY
   // ============================================================
 
-  Future<List<DigitalGoldHistoryModel>> getDigitalGoldHistory() async {
+  Future<List<DigitalGoldModel>> getDigitalGoldHistory() async {
     final User? user = _auth.currentUser;
 
     if (user == null) {
@@ -547,7 +544,7 @@ class GoldDigitalViewModel extends ChangeNotifier {
           .get();
 
       return snapshot.docs.map((doc) {
-        return DigitalGoldHistoryModel.fromFirestore(doc.id, doc.data());
+        return DigitalGoldModel.fromFirestore(doc);
       }).toList();
     } catch (e) {
       debugPrint('Gagal mengambil history emas digital: $e');
