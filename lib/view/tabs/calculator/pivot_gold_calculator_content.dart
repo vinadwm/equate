@@ -458,6 +458,61 @@ class _PivotGoldCalculatorContentState
       child: Column(
         children: [
           // ======================================================
+          // PENJELASAN PIVOT POINT
+          // ======================================================
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? const Color(0xFF252525)
+                  : const Color(0xFFFFF8EA),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: primaryOrange.withOpacity(0.55)),
+            ),
+            child: RichText(
+              text: TextSpan(
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  height: 1.55,
+                  color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                ),
+                children: const [
+                  TextSpan(
+                    text: 'Pivot Point ',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(
+                    text:
+                        'adalah harga wajar atau harga pasaran, '
+                        'untuk menentukan aksi beli dan jual yang '
+                        'mengacu pada harga pembukaan (Open).\n',
+                  ),
+                  TextSpan(
+                    text: 'Pivot Point > Open ',
+                    style: TextStyle(
+                      color: primaryOrange,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(text: '(Buy)\n'),
+                  TextSpan(
+                    text: 'Pivot Point < Open ',
+                    style: TextStyle(
+                      color: primaryOrange,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(text: '(Sell)'),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // ======================================================
           // INPUT CARD
           // ======================================================
           Container(
