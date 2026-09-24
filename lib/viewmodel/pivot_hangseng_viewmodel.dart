@@ -1,13 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../model/historical_data_model.dart';
+import '../model/pivot_hangseng_model.dart';
 import 'historical_data_viewmodel.dart';
-import '../model/pivot_signal.dart';
-
-// Enum PivotSignal hanya satu sumber di model/pivot_signal.dart.
-export '../model/pivot_signal.dart';
 
 class PivotHangsengViewModel extends ChangeNotifier {
   final HistoricalDataViewModel historicalDataViewModel;
@@ -19,66 +18,18 @@ class PivotHangsengViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // INPUT H / L / C
+  // INPUT H / L / C / OPEN
   // ============================================================
 
   String _high = '';
   String _low = '';
   String _close = '';
+  String _open = '';
 
   String get high => _high;
   String get low => _low;
   String get close => _close;
-
-  // Nilai numerik (sudah di-parse, mendukung format 3.500,50)
-  double? get highValue => _parseNumber(_high);
-  double? get lowValue => _parseNumber(_low);
-  double? get closeValue => _parseNumber(_close);
-
-  // ============================================================
-  // JENIS PERHITUNGAN PIVOT
-  // ============================================================
-
-  String _type = 'Standard';
-
-  String get type => _type;
-
-  void setType(String value) {
-    if (_type == value) return;
-    _type = value;
-    notifyListeners();
-  }
-
-  // ============================================================
-  // MODE OTOMATIS / MANUAL
-  // ============================================================
-  //
-  // true  -> H/L/C diisi otomatis dari data historical
-  //          (dengan fallback ke data terakhir yang tersedia).
-  // false -> User mengisi H/L/C sendiri.
-
-  bool _autoMode = true;
-
-  bool get autoMode => _autoMode;
-
-  void setAutoMode(bool value) {
-    if (_autoMode == value) {
-      return;
-    }
-
-    _autoMode = value;
-
-    if (_autoMode) {
-      fillFromPreviousDay();
-    } else {
-      _isAutoFilled = false;
-      _errorMessage = null;
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-    }
-  }
+  String get open => _open;
 
   // ============================================================
   // HASIL PIVOT
@@ -113,12 +64,45 @@ class PivotHangsengViewModel extends ChangeNotifier {
   bool get isCalculated => _isCalculated;
 
   // ============================================================
+  // MODE OTOMATIS / MANUAL
+  // ============================================================
+
+  bool _autoMode = true;
+
+  bool get autoMode => _autoMode;
+
+  void setAutoMode(bool value) {
+    if (_autoMode == value) {
+      return;
+    }
+
+    _autoMode = value;
+
+    if (_autoMode) {
+      // Kembali ke mode otomatis.
+      // Isi ulang H/L/C + Open.
+      fillFromHistoricalData();
+    } else {
+      // Mode manual.
+      _isAutoFilled = false;
+      _isOpenAutoFilled = false;
+      _errorMessage = null;
+
+      _clearCalculationResult(notify: false);
+
+      notifyListeners();
+    }
+  }
+
+  // ============================================================
   // AUTO FILL
   // ============================================================
 
   bool _isAutoFilled = false;
+  bool _isOpenAutoFilled = false;
 
   bool get isAutoFilled => _isAutoFilled;
+  bool get isOpenAutoFilled => _isOpenAutoFilled;
 
   // ============================================================
   // ERROR / INFO
@@ -132,32 +116,34 @@ class PivotHangsengViewModel extends ChangeNotifier {
   // TANGGAL PERHITUNGAN
   // ============================================================
 
-  /// Tanggal hari ini (tidak memakai selectedDate dari historical).
   DateTime get calculationDate {
     final now = DateTime.now();
 
     return DateTime(now.year, now.month, now.day);
   }
 
-  /// H-1 (kalender). Kalau data H-1 tidak ada, data diambil mundur
-  /// otomatis lewat getLatestAvailableData().
   DateTime get previousDate {
-    final d = calculationDate;
+    final date = calculationDate;
 
-    return DateTime(d.year, d.month, d.day - 1);
+    return DateTime(date.year, date.month, date.day - 1);
   }
 
   // ============================================================
-  // DATA HANGSENG HARI INI (UNTUK OPEN / SIGNAL)
+  // DATA HANGSENG HARI INI
   // ============================================================
-  //
-  // TANPA fallback: Open harus tepat pada tanggal hari ini, karena
-  // dipakai sebagai pembanding sinyal.
 
+  /// Mengambil data Hangseng TEPAT pada tanggal perhitungan.
+  ///
+  /// Digunakan untuk mengambil:
+  /// Open
+  ///
+  /// Tidak menggunakan fallback.
   HistoricalDataModel? get referenceData {
+    final date = calculationDate;
+
     final data = historicalDataViewModel.getDataForMarket(
       'HSI Daily',
-      date: calculationDate,
+      date: date,
     );
 
     if (data == null) {
@@ -175,22 +161,39 @@ class PivotHangsengViewModel extends ChangeNotifier {
     return data;
   }
 
+  // ============================================================
+  // OPEN HARI INI
+  // ============================================================
+
+  /// Open yang sedang digunakan oleh kalkulator.
+  ///
+  /// Nilainya bisa berasal dari auto-fill Newsmaker
+  /// atau hasil edit manual user.
+  double? get openValue {
+    return _parseNumber(_open);
+  }
+
+  /// Open asli dari Newsmaker.
+  ///
+  /// Ini hanya digunakan sebagai sumber auto-fill.
   double? get referenceOpen {
     return referenceData?.open;
   }
+
+  // ============================================================
+  // TANGGAL OPEN / SIGNAL
+  // ============================================================
 
   DateTime? get referenceDate {
     return referenceData?.date;
   }
 
   // ============================================================
-  // DATA HANGSENG HARI SEBELUMNYA (DENGAN FALLBACK)
+  // DATA HANGSENG HARI SEBELUMNYA
   // ============================================================
-  //
-  // Kalau H-1 tidak ada (Sabtu/Minggu/libur newsmaker), otomatis
-  // mundur ke data valid terakhir.
-  // Contoh: H-1 = tanggal 19 kosong -> pakai tanggal 18, dst.
 
+  /// Mengambil data Hangseng TEPAT satu hari kalender sebelum
+  /// tanggal perhitungan.
   HistoricalDataModel? get previousHangsengData {
     return historicalDataViewModel.getLatestAvailableData(
       'HSI Daily',
@@ -198,23 +201,12 @@ class PivotHangsengViewModel extends ChangeNotifier {
     );
   }
 
+  // ============================================================
+  // TANGGAL DATA H/L/C
+  // ============================================================
+
   DateTime? get previousDataDate {
     return previousHangsengData?.date;
-  }
-
-  DateTime get previousDataDisplayDate {
-    return previousHangsengData?.date ?? previousDate;
-  }
-
-  /// true kalau data yang dipakai BUKAN tepat H-1 (memakai fallback).
-  bool get isPreviousDataFallback {
-    final data = previousHangsengData;
-
-    if (data == null) {
-      return false;
-    }
-
-    return !_isSameCalendarDate(data.date, previousDate);
   }
 
   // ============================================================
@@ -222,7 +214,9 @@ class PivotHangsengViewModel extends ChangeNotifier {
   // ============================================================
 
   bool get isOpenDataAvailable {
-    return referenceData != null;
+    final open = openValue;
+
+    return open != null && open > 0;
   }
 
   bool get isPreviousDataAvailable {
@@ -243,9 +237,14 @@ class PivotHangsengViewModel extends ChangeNotifier {
     return true;
   }
 
+  /// Apakah data H/L/C dan Open lengkap.
   bool get isHistoricalDataComplete {
     return isOpenDataAvailable && isPreviousDataAvailable;
   }
+
+  // ============================================================
+  // DATA STATUS MESSAGE
+  // ============================================================
 
   String get dataStatusMessage {
     final openAvailable = isOpenDataAvailable;
@@ -256,15 +255,19 @@ class PivotHangsengViewModel extends ChangeNotifier {
     }
 
     if (!openAvailable && !previousAvailable) {
-      return 'Data Open ${_formatDate(calculationDate)} dan '
-          'data High, Low, Close belum tersedia.';
+      return 'Data High, Low, Close '
+          '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} '
+          'belum tersedia.';
     }
 
     if (!openAvailable) {
-      return 'Data Open ${_formatDate(calculationDate)} belum tersedia.';
+      return 'Data Open ${_formatDate(calculationDate)} '
+          'belum tersedia.';
     }
 
-    return 'Data High, Low, Close belum tersedia.';
+    return 'Data High, Low, Close '
+        '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} '
+        'belum tersedia.';
   }
 
   // ============================================================
@@ -275,16 +278,22 @@ class PivotHangsengViewModel extends ChangeNotifier {
     await Future<void>.delayed(Duration.zero);
 
     if (_autoMode) {
-      fillFromPreviousDay();
+      fillFromHistoricalData();
     }
   }
 
   // ============================================================
-  // AUTO FILL H/L/C
+  // AUTO FILL H / L / C / OPEN
   // ============================================================
 
-  bool fillFromPreviousDay() {
+  bool fillFromHistoricalData() {
     final previousData = previousHangsengData;
+
+    bool hlcSuccess = false;
+
+    // ==========================================================
+    // HIGH / LOW / CLOSE
+    // ==========================================================
 
     if (previousData == null) {
       _high = '';
@@ -294,17 +303,9 @@ class PivotHangsengViewModel extends ChangeNotifier {
       _isAutoFilled = false;
 
       _errorMessage =
-          'Data High, Low, Close sebelum ${_formatDate(calculationDate)} '
-          'belum tersedia.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
-    }
-
-    if (previousData.isBankHoliday) {
+          'Data High, Low, Close Hangseng sebelum '
+          '${_formatDate(calculationDate)} belum tersedia.';
+    } else if (previousData.isBankHoliday) {
       _high = '';
       _low = '';
       _close = '';
@@ -314,15 +315,7 @@ class PivotHangsengViewModel extends ChangeNotifier {
       _errorMessage =
           'Data Hangseng ${_formatDate(previousData.date)} '
           'tidak tersedia karena hari libur.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
-    }
-
-    if (previousData.high <= 0 ||
+    } else if (previousData.high <= 0 ||
         previousData.low <= 0 ||
         previousData.close <= 0) {
       _high = '';
@@ -332,35 +325,98 @@ class PivotHangsengViewModel extends ChangeNotifier {
       _isAutoFilled = false;
 
       _errorMessage =
-          'Data High, Low, Close ${_formatDate(previousData.date)} '
-          'belum tersedia.';
+          'Data High, Low, Close Hangseng '
+          '${_formatDate(previousData.date)} belum tersedia.';
+    } else {
+      _high = _numberToInput(previousData.high);
+      _low = _numberToInput(previousData.low);
+      _close = _numberToInput(previousData.close);
 
-      _clearCalculationResult(notify: false);
+      _isAutoFilled = true;
 
-      notifyListeners();
-
-      return false;
+      hlcSuccess = true;
     }
 
-    _high = _numberToInput(previousData.high);
-    _low = _numberToInput(previousData.low);
-    _close = _numberToInput(previousData.close);
+    // ==========================================================
+    // OPEN HARI INI
+    // ==========================================================
 
-    _isAutoFilled = true;
+    final openSuccess = _fillOpenFromToday(notify: false);
 
-    _errorMessage = referenceData == null
-        ? 'Data Open ${_formatDate(calculationDate)} belum tersedia.'
-        : null;
+    // ==========================================================
+    // ERROR MESSAGE
+    // ==========================================================
+
+    if (hlcSuccess && !openSuccess) {
+      _errorMessage =
+          'Data Open ${_formatDate(calculationDate)} '
+          'belum tersedia.';
+    } else if (hlcSuccess && openSuccess) {
+      _errorMessage = null;
+    }
+
+    // ==========================================================
+    // RESET HASIL
+    // ==========================================================
 
     _clearCalculationResult(notify: false);
 
     notifyListeners();
 
-    return true;
+    return hlcSuccess;
   }
 
   // ============================================================
-  // REFRESH H/L/C (hanya saat mode Otomatis)
+  // AUTO FILL OPEN HARI INI
+  // ============================================================
+
+  bool _fillOpenFromToday({bool notify = true}) {
+    final data = referenceData;
+
+    if (data == null) {
+      _open = '';
+      _isOpenAutoFilled = false;
+
+      if (notify) {
+        notifyListeners();
+      }
+
+      return false;
+    }
+
+    _open = _numberToInput(data.open);
+    _isOpenAutoFilled = true;
+
+    if (notify) {
+      notifyListeners();
+    }
+
+    return true;
+  }
+
+  /// Refresh Open dari data Newsmaker hari ini.
+  bool refreshOpenFromToday() {
+    if (!_autoMode) {
+      return false;
+    }
+
+    final success = _fillOpenFromToday(notify: false);
+
+    if (success) {
+      _errorMessage = null;
+    } else {
+      _errorMessage =
+          'Data Open ${_formatDate(calculationDate)} '
+          'belum tersedia.';
+    }
+
+    notifyListeners();
+
+    return success;
+  }
+
+  // ============================================================
+  // REFRESH H/L/C + OPEN
   // ============================================================
 
   bool refreshPreviousDayInput() {
@@ -368,7 +424,7 @@ class PivotHangsengViewModel extends ChangeNotifier {
       return false;
     }
 
-    return fillFromPreviousDay();
+    return fillFromHistoricalData();
   }
 
   // ============================================================
@@ -379,6 +435,7 @@ class PivotHangsengViewModel extends ChangeNotifier {
     _high = value;
 
     _isAutoFilled = false;
+
     _errorMessage = null;
 
     _clearCalculationResult(notify: false);
@@ -390,6 +447,7 @@ class PivotHangsengViewModel extends ChangeNotifier {
     _low = value;
 
     _isAutoFilled = false;
+
     _errorMessage = null;
 
     _clearCalculationResult(notify: false);
@@ -401,6 +459,26 @@ class PivotHangsengViewModel extends ChangeNotifier {
     _close = value;
 
     _isAutoFilled = false;
+
+    _errorMessage = null;
+
+    _clearCalculationResult(notify: false);
+
+    notifyListeners();
+  }
+
+  /// Open juga bisa diedit manual oleh user.
+  ///
+  /// Setelah user mengubah Open:
+  /// - nilai Open akan menggunakan input manual tersebut
+  /// - signal akan membandingkan PP dengan Open manual
+  /// - hasil kalkulasi sebelumnya dihapus
+  void setOpen(String value) {
+    _open = value;
+
+    // User sudah mengubah Open secara manual.
+    _isOpenAutoFilled = false;
+
     _errorMessage = null;
 
     _clearCalculationResult(notify: false);
@@ -415,23 +493,24 @@ class PivotHangsengViewModel extends ChangeNotifier {
   bool get hasInput {
     return _high.trim().isNotEmpty ||
         _low.trim().isNotEmpty ||
-        _close.trim().isNotEmpty;
+        _close.trim().isNotEmpty ||
+        _open.trim().isNotEmpty;
   }
 
   bool get canCalculate {
-    final h = highValue;
-    final l = lowValue;
-    final c = closeValue;
+    final highValue = _parseNumber(_high);
+    final lowValue = _parseNumber(_low);
+    final closeValue = _parseNumber(_close);
 
-    if (h == null || l == null || c == null) {
+    if (highValue == null || lowValue == null || closeValue == null) {
       return false;
     }
 
-    if (h <= 0 || l <= 0 || c <= 0) {
+    if (highValue <= 0 || lowValue <= 0 || closeValue <= 0) {
       return false;
     }
 
-    if (l > h) {
+    if (lowValue > highValue) {
       return false;
     }
 
@@ -443,11 +522,15 @@ class PivotHangsengViewModel extends ChangeNotifier {
   // ============================================================
 
   bool calculatePivot() {
-    final h = highValue;
-    final l = lowValue;
-    final c = closeValue;
+    final highValue = _parseNumber(_high);
+    final lowValue = _parseNumber(_low);
+    final closeValue = _parseNumber(_close);
 
-    if (h == null || l == null || c == null) {
+    // ----------------------------------------------------------
+    // VALIDASI FORMAT
+    // ----------------------------------------------------------
+
+    if (highValue == null || lowValue == null || closeValue == null) {
       _errorMessage =
           'Harap masukkan High, Low, dan Close '
           'dengan format angka yang valid.';
@@ -457,7 +540,11 @@ class PivotHangsengViewModel extends ChangeNotifier {
       return false;
     }
 
-    if (h <= 0 || l <= 0 || c <= 0) {
+    // ----------------------------------------------------------
+    // VALIDASI NILAI
+    // ----------------------------------------------------------
+
+    if (highValue <= 0 || lowValue <= 0 || closeValue <= 0) {
       _errorMessage = 'Nilai High, Low, dan Close harus lebih dari 0.';
 
       notifyListeners();
@@ -465,7 +552,11 @@ class PivotHangsengViewModel extends ChangeNotifier {
       return false;
     }
 
-    if (l > h) {
+    // ----------------------------------------------------------
+    // VALIDASI HIGH / LOW
+    // ----------------------------------------------------------
+
+    if (lowValue > highValue) {
       _errorMessage = 'Nilai Low tidak boleh lebih besar dari High.';
 
       notifyListeners();
@@ -473,27 +564,41 @@ class PivotHangsengViewModel extends ChangeNotifier {
       return false;
     }
 
-    final ppValue = (h + l + c) / 3;
-    final diff = h - l;
+    // ----------------------------------------------------------
+    // PIVOT POINT
+    // ----------------------------------------------------------
+
+    final ppValue = (highValue + lowValue + closeValue) / 3;
+
+    final diff = highValue - lowValue;
 
     _pp = ppValue;
 
-    _r1 = (2 * ppValue) - l;
+    // ----------------------------------------------------------
+    // RESISTANCE
+    // ----------------------------------------------------------
+
+    _r1 = (2 * ppValue) - lowValue;
     _r2 = ppValue + diff;
     _r3 = ppValue + (diff * 2);
     _r4 = ppValue + (diff * 3);
 
-    _s1 = (2 * ppValue) - h;
+    // ----------------------------------------------------------
+    // SUPPORT
+    // ----------------------------------------------------------
+
+    _s1 = (2 * ppValue) - highValue;
     _s2 = ppValue - diff;
     _s3 = ppValue - (diff * 2);
     _s4 = ppValue - (diff * 3);
 
+    // ----------------------------------------------------------
+    // STATUS
+    // ----------------------------------------------------------
+
     _isCalculated = true;
 
-    _errorMessage = referenceData == null
-        ? 'Data Open ${_formatDate(calculationDate)} belum tersedia, '
-            'sinyal belum bisa ditentukan.'
-        : null;
+    _errorMessage = null;
 
     notifyListeners();
 
@@ -505,26 +610,44 @@ class PivotHangsengViewModel extends ChangeNotifier {
   // ============================================================
 
   PivotSignal get signal {
+    debugPrint('========== SIGNAL DEBUG ==========');
+    debugPrint('PP: $_pp');
+    debugPrint('Open String: "$_open"');
+    debugPrint('Open Value: $openValue');
+    debugPrint('Reference Open: $referenceOpen');
+    debugPrint('Reference Date: $referenceDate');
+    debugPrint('Calculation Date: $calculationDate');
+    debugPrint('==================================');
+    // Belum hitung Pivot
     if (!_isCalculated || _pp == null) {
       return PivotSignal.unavailable;
     }
 
-    final open = referenceOpen;
+    // Ambil Open yang sedang ada di input
+    // Bisa berasal dari auto-fill maupun input manual.
+    final open = _parseNumber(_open);
 
-    if (open == null) {
+    // Open kosong / tidak valid
+    if (open == null || open <= 0) {
       return PivotSignal.unavailable;
     }
 
-    if (_pp! > open) {
-      return PivotSignal.sell;
-    }
-
+    // PP > Open = SELL
     if (_pp! < open) {
       return PivotSignal.buy;
     }
 
+    // PP < Open = BUY
+    if (_pp! > open) {
+      return PivotSignal.sell;
+    }
+
+    // PP = Open = NEUTRAL
     return PivotSignal.neutral;
   }
+  // ============================================================
+  // SIGNAL LABEL
+  // ============================================================
 
   String get signalLabel {
     switch (signal) {
@@ -542,36 +665,49 @@ class PivotHangsengViewModel extends ChangeNotifier {
     }
   }
 
+  // ============================================================
+  // SIGNAL DESCRIPTION
+  // ============================================================
+
   String get signalDescription {
-    final open = referenceOpen;
+    final open = _parseNumber(_open);
 
     if (_pp == null) {
       return 'Hitung Pivot Point terlebih dahulu.';
     }
 
-    if (open == null) {
-      return 'Data Open ${_formatDate(calculationDate)} belum tersedia.';
+    if (open == null || open <= 0) {
+      return 'Data Open ${_formatDate(calculationDate)} '
+          'belum tersedia.';
     }
 
-    if (_pp! > open) {
-      return 'PP lebih tinggi dari harga Open.';
-    }
+    switch (signal) {
+      case PivotSignal.buy:
+        return 'PP lebih tinggi dari harga Open.';
 
-    if (_pp! < open) {
-      return 'PP lebih rendah dari harga Open.';
-    }
+      case PivotSignal.sell:
+        return 'PP lebih rendah dari harga Open.';
 
-    return 'PP sama dengan harga Open.';
+      case PivotSignal.neutral:
+        return 'PP sama dengan harga Open.';
+
+      case PivotSignal.unavailable:
+        return 'Data Open belum tersedia.';
+    }
   }
+
+  // ============================================================
+  // SIGNAL COMPARISON
+  // ============================================================
 
   String get signalComparison {
     if (!_isCalculated || _pp == null) {
       return '-';
     }
 
-    final open = referenceOpen;
+    final open = _parseNumber(_open);
 
-    if (open == null) {
+    if (open == null || open <= 0) {
       return 'Open belum tersedia';
     }
 
@@ -588,87 +724,6 @@ class PivotHangsengViewModel extends ChangeNotifier {
 
     return 'PP $ppText = Open $openText';
   }
-
-  // ============================================================
-  // REKOMENDASI / SARAN AKSI
-  // ============================================================
-
-  String get recommendationTitle {
-    switch (signal) {
-      case PivotSignal.buy:
-        return 'Pertimbangkan BUY';
-
-      case PivotSignal.sell:
-        return 'Pertimbangkan SELL';
-
-      case PivotSignal.neutral:
-        return 'Tunggu Konfirmasi';
-
-      case PivotSignal.unavailable:
-        return 'Lengkapi Data Terlebih Dahulu';
-    }
-  }
-
-  List<String> get recommendationSteps {
-    switch (signal) {
-      case PivotSignal.buy:
-        return [
-          'Sinyal BUY muncul karena $signalComparison. '
-              'Artinya harga Hangseng berpeluang bergerak naik.',
-          'Target profit bertahap: R1 (${formatValue(_r1)}) lebih dulu, '
-              'lanjut ke R2 (${formatValue(_r2)}) bila tenaga naik masih kuat.',
-          'Batas risiko (stop loss): letakkan di bawah S1 '
-              '(${formatValue(_s1)}). Jika harga menembus S1, anggap sinyal '
-              'gagal dan keluar.',
-          'Cari konfirmasi tambahan (pergerakan harga, berita ekonomi) '
-              'sebelum membuka posisi.',
-          'Gunakan porsi modal yang wajar, jangan memakai seluruh modal '
-              'untuk satu posisi.',
-        ];
-
-      case PivotSignal.sell:
-        return [
-          'Sinyal SELL muncul karena $signalComparison. '
-              'Artinya harga Hangseng berpeluang bergerak turun.',
-          'Target profit bertahap: S1 (${formatValue(_s1)}) lebih dulu, '
-              'lanjut ke S2 (${formatValue(_s2)}) bila tekanan turun masih kuat.',
-          'Batas risiko (stop loss): letakkan di atas R1 '
-              '(${formatValue(_r1)}). Jika harga menembus R1, anggap sinyal '
-              'gagal dan keluar.',
-          'Cari konfirmasi tambahan (pergerakan harga, berita ekonomi) '
-              'sebelum membuka posisi.',
-          'Gunakan porsi modal yang wajar, jangan memakai seluruh modal '
-              'untuk satu posisi.',
-        ];
-
-      case PivotSignal.neutral:
-        return [
-          'PP sama dengan Open, arah harga belum jelas.',
-          'Sebaiknya tunggu sampai harga bergerak menjauh dari PP '
-              '(${formatValue(_pp)}) sebelum mengambil posisi.',
-          'Perhatikan R1 (${formatValue(_r1)}) dan S1 (${formatValue(_s1)}) '
-              'sebagai batas atas dan bawah untuk menentukan arah.',
-          'Hindari memaksakan entry ketika sinyal belum jelas.',
-        ];
-
-      case PivotSignal.unavailable:
-        return [
-          _isCalculated
-              ? 'Data Open ${_formatDate(calculationDate)} belum tersedia, '
-                  'sehingga sinyal belum bisa ditentukan.'
-              : 'Tekan HITUNG terlebih dahulu untuk melihat sinyal.',
-          'Sambil menunggu, level PP, Resistance, dan Support tetap bisa '
-              'dipakai sebagai acuan area harga.',
-          'Buka kembali halaman ini setelah data Open tersedia.',
-        ];
-    }
-  }
-
-  String get recommendationDisclaimer =>
-      'Catatan: Ini adalah alat bantu analisis teknikal sederhana, bukan '
-      'jaminan hasil dan bukan nasihat keuangan. Selalu lakukan riset '
-      'tambahan sebelum mengambil keputusan.';
-
   // ============================================================
   // RESET
   // ============================================================
@@ -677,6 +732,7 @@ class PivotHangsengViewModel extends ChangeNotifier {
     _high = '';
     _low = '';
     _close = '';
+    _open = '';
 
     _pp = null;
 
@@ -691,11 +747,18 @@ class PivotHangsengViewModel extends ChangeNotifier {
     _s4 = null;
 
     _isCalculated = false;
+
     _isAutoFilled = false;
+    _isOpenAutoFilled = false;
+
     _errorMessage = null;
 
     notifyListeners();
   }
+
+  // ============================================================
+  // CLEAR CALCULATION RESULT
+  // ============================================================
 
   void _clearCalculationResult({bool notify = true}) {
     _pp = null;
@@ -722,28 +785,132 @@ class PivotHangsengViewModel extends ChangeNotifier {
   // ============================================================
 
   void _onHistoricalDataChanged() {
-    // Mode manual: jangan sentuh input user.
-    if (!_autoMode) {
+    final previousData = previousHangsengData;
+    final reference = referenceData;
+
+    // ==========================================================
+    // DATA HISTORICAL BELUM ADA
+    // ==========================================================
+
+    if (previousData == null) {
+      // Hanya hapus H/L/C kalau memang masih auto-fill.
+      if (_isAutoFilled) {
+        _high = '';
+        _low = '';
+        _close = '';
+
+        _isAutoFilled = false;
+
+        _clearCalculationResult(notify: false);
+      }
+
+      // Open tetap mengikuti kondisi:
+      // - Kalau masih auto-fill → update dari Newsmaker
+      // - Kalau sudah manual → jangan ditimpa
+      if (_isOpenAutoFilled) {
+        if (reference != null && reference.open > 0) {
+          final latestOpen = _numberToInput(reference.open);
+
+          if (_open != latestOpen) {
+            _open = latestOpen;
+          }
+        } else {
+          _open = '';
+          _isOpenAutoFilled = false;
+        }
+      }
+
+      if (reference == null) {
+        _errorMessage =
+            'Data Open ${_formatDate(calculationDate)} dan '
+            'data High, Low, Close '
+            '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} '
+            'belum tersedia.';
+      } else {
+        _errorMessage =
+            'Data High, Low, Close '
+            '${_formatDate(calculationDate.subtract(const Duration(days: 1)))} '
+            'belum tersedia.';
+      }
+
       notifyListeners();
 
       return;
     }
 
-    final p = previousHangsengData;
+    // ==========================================================
+    // DATA BANK HOLIDAY
+    // ==========================================================
 
-    // Kalau isi input sudah sama dengan data terbaru, jangan
-    // hapus hasil hitungan yang sudah ada.
-    if (p != null &&
-        _isAutoFilled &&
-        _high == _numberToInput(p.high) &&
-        _low == _numberToInput(p.low) &&
-        _close == _numberToInput(p.close)) {
+    if (previousData.isBankHoliday) {
+      if (_isAutoFilled) {
+        _high = '';
+        _low = '';
+        _close = '';
+
+        _isAutoFilled = false;
+
+        _clearCalculationResult(notify: false);
+      }
+
+      _errorMessage =
+          'Data Hangseng ${_formatDate(previousData.date)} '
+          'tidak tersedia karena hari libur.';
+
       notifyListeners();
 
       return;
     }
 
-    fillFromPreviousDay();
+    // ==========================================================
+    // DATA VALID
+    // ==========================================================
+
+    if (previousData.high > 0 &&
+        previousData.low > 0 &&
+        previousData.close > 0) {
+      // Hanya update H/L/C kalau masih auto-fill.
+      if (_isAutoFilled || (_high.isEmpty && _low.isEmpty && _close.isEmpty)) {
+        _high = _numberToInput(previousData.high);
+        _low = _numberToInput(previousData.low);
+        _close = _numberToInput(previousData.close);
+
+        _isAutoFilled = true;
+
+        _clearCalculationResult(notify: false);
+      }
+    }
+
+    // ==========================================================
+    // UPDATE OPEN OTOMATIS
+    // ==========================================================
+
+    // Kalau Open masih auto-filled,
+    // boleh diperbarui dari Newsmaker.
+    //
+    // Kalau user sudah mengedit Open manual,
+    // _isAutoFilled akan false sehingga tidak ditimpa.
+    if (_isAutoFilled) {
+      if (reference != null && reference.open > 0) {
+        _open = _numberToInput(reference.open);
+      } else {
+        _open = '';
+      }
+    }
+
+    // ==========================================================
+    // ERROR OPEN
+    // ==========================================================
+
+    if (reference == null) {
+      _errorMessage =
+          'Data Open ${_formatDate(calculationDate)} '
+          'belum tersedia.';
+    } else {
+      _errorMessage = null;
+    }
+
+    notifyListeners();
   }
 
   // ============================================================
@@ -757,7 +924,12 @@ class PivotHangsengViewModel extends ChangeNotifier {
       return null;
     }
 
-    // 3500 | 3500.50 | 3500,50 | 3.500,50
+    // Contoh:
+    // 3500
+    // 3500.50
+    // 3500,50
+    // 3.500,50
+
     if (cleaned.contains('.') && cleaned.contains(',')) {
       cleaned = cleaned.replaceAll('.', '');
       cleaned = cleaned.replaceAll(',', '.');
@@ -768,6 +940,10 @@ class PivotHangsengViewModel extends ChangeNotifier {
     return double.tryParse(cleaned);
   }
 
+  // ============================================================
+  // NUMBER TO INPUT
+  // ============================================================
+
   String _numberToInput(double value) {
     if (value == value.roundToDouble()) {
       return value.toInt().toString();
@@ -775,6 +951,10 @@ class PivotHangsengViewModel extends ChangeNotifier {
 
     return value.toString();
   }
+
+  // ============================================================
+  // FORMAT VALUE
+  // ============================================================
 
   String formatValue(double? value) {
     if (value == null) {
@@ -784,6 +964,10 @@ class PivotHangsengViewModel extends ChangeNotifier {
     return value.toStringAsFixed(2).replaceAll('.', ',');
   }
 
+  // ============================================================
+  // FORMAT INPUT VALUE
+  // ============================================================
+
   String formatInputValue(double? value) {
     if (value == null) {
       return '-';
@@ -792,19 +976,24 @@ class PivotHangsengViewModel extends ChangeNotifier {
     return _numberToInput(value);
   }
 
+  // ============================================================
+  // MIDPOINT
+  // ============================================================
+
   double midpoint(double a, double b) {
     return (a + b) / 2;
   }
 
+  // ============================================================
+  // FORMAT DATE
+  // ============================================================
+
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
+
     final month = date.month.toString().padLeft(2, '0');
 
     return '$day/$month/${date.year}';
-  }
-
-  bool _isSameCalendarDate(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   // ============================================================
@@ -819,7 +1008,6 @@ class PivotHangsengViewModel extends ChangeNotifier {
     final pdf = pw.Document();
 
     final reference = referenceData;
-
     final previous = previousHangsengData;
 
     pdf.addPage(
@@ -841,60 +1029,104 @@ class PivotHangsengViewModel extends ChangeNotifier {
 
                 pw.SizedBox(height: 12),
 
+                // ==================================================
+                // TANGGAL DATA H/L/C
+                // ==================================================
                 if (previous != null)
-                  pw.Text('Tanggal H/L/C : ${previous.dateFormatted}'),
+                  pw.Text(
+                    'Tanggal H/L/C : '
+                    '${previous.dateFormatted}',
+                  ),
 
-                pw.Text('High : ${formatValue(highValue)}'),
-                pw.Text('Low : ${formatValue(lowValue)}'),
-                pw.Text('Close : ${formatValue(closeValue)}'),
+                pw.Text(
+                  'High : '
+                  '${formatValue(_parseNumber(_high))}',
+                ),
+
+                pw.Text(
+                  'Low : '
+                  '${formatValue(_parseNumber(_low))}',
+                ),
+
+                pw.Text(
+                  'Close : '
+                  '${formatValue(_parseNumber(_close))}',
+                ),
 
                 pw.SizedBox(height: 10),
 
-                if (reference != null) ...[
-                  pw.Text('Tanggal Signal : ${reference.dateFormatted}'),
-                  pw.Text('Open Newsmaker : ${reference.openFormatted}'),
-                  pw.Text(
-                    'Signal : $signalLabel',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.SizedBox(height: 12),
-                ] else ...[
-                  pw.Text('Tanggal Signal : ${_formatDate(calculationDate)}'),
-                  pw.Text('Open Newsmaker : Data belum tersedia'),
-                  pw.Text(
-                    'Signal : BELUM TERSEDIA',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.SizedBox(height: 12),
-                ],
+                // ==================================================
+                // DATA OPEN
+                // ==================================================
+                pw.Text(
+                  'Tanggal Signal : '
+                  '${reference != null ? reference.dateFormatted : _formatDate(calculationDate)}',
+                ),
 
+                pw.Text(
+                  'Open : '
+                  '${formatValue(openValue)}',
+                ),
+
+                if (reference != null)
+                  pw.Text(
+                    'Open Newsmaker : '
+                    '${reference.openFormatted}',
+                  ),
+
+                pw.Text(
+                  'Signal : $signalLabel',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+
+                pw.SizedBox(height: 12),
+
+                // ==================================================
+                // PIVOT TABLE
+                // ==================================================
                 pw.Table.fromTextArray(
                   headers: ['Tingkat', 'Nilai'],
                   data: [
                     ['Resistance 4 (R4)', formatValue(_r4)],
+
                     if (_r4 != null && _r3 != null)
                       ['Midpoint R4-R3', formatValue(midpoint(_r4!, _r3!))],
+
                     ['Resistance 3 (R3)', formatValue(_r3)],
+
                     if (_r3 != null && _r2 != null)
                       ['Midpoint R3-R2', formatValue(midpoint(_r3!, _r2!))],
+
                     ['Resistance 2 (R2)', formatValue(_r2)],
+
                     if (_r2 != null && _r1 != null)
                       ['Midpoint R2-R1', formatValue(midpoint(_r2!, _r1!))],
+
                     ['Resistance 1 (R1)', formatValue(_r1)],
+
                     if (_r1 != null && _pp != null)
                       ['Midpoint R1-PP', formatValue(midpoint(_r1!, _pp!))],
+
                     ['Pivot Point (PP)', formatValue(_pp)],
+
                     if (_pp != null && _s1 != null)
                       ['Midpoint PP-S1', formatValue(midpoint(_pp!, _s1!))],
+
                     ['Support 1 (S1)', formatValue(_s1)],
+
                     if (_s1 != null && _s2 != null)
                       ['Midpoint S1-S2', formatValue(midpoint(_s1!, _s2!))],
+
                     ['Support 2 (S2)', formatValue(_s2)],
+
                     if (_s2 != null && _s3 != null)
                       ['Midpoint S2-S3', formatValue(midpoint(_s2!, _s3!))],
+
                     ['Support 3 (S3)', formatValue(_s3)],
+
                     if (_s3 != null && _s4 != null)
                       ['Midpoint S3-S4', formatValue(midpoint(_s3!, _s4!))],
+
                     ['Support 4 (S4)', formatValue(_s4)],
                   ],
                 ),
@@ -907,6 +1139,10 @@ class PivotHangsengViewModel extends ChangeNotifier {
 
     return pdf.save();
   }
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
 
   @override
   void dispose() {

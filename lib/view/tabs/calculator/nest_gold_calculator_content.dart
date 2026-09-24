@@ -17,7 +17,8 @@ class NestGoldCalculatorContent extends StatefulWidget {
   });
 
   @override
-  State<NestGoldCalculatorContent> createState() => _NestGoldCalculatorContentState();
+  State<NestGoldCalculatorContent> createState() =>
+      _NestGoldCalculatorContentState();
 }
 
 class _NestGoldCalculatorContentState extends State<NestGoldCalculatorContent> {
@@ -270,7 +271,9 @@ class _NestGoldCalculatorContentState extends State<NestGoldCalculatorContent> {
               border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.035),
+                  color: Colors.black.withValues(
+                    alpha: isDarkMode ? 0.25 : 0.035,
+                  ),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -379,10 +382,10 @@ class _NestGoldCalculatorContentState extends State<NestGoldCalculatorContent> {
                         child: Text(
                           autoMode
                               ? 'Open diambil dari data Gold hari ini dan Close '
-                                  'dari data hari sebelumnya. Matikan mode Otomatis '
-                                  'jika ingin mengisi sendiri.'
+                                    'dari data hari sebelumnya. Matikan mode Otomatis '
+                                    'jika ingin mengisi sendiri.'
                               : 'Mode Manual aktif. Isi Open dan Close sesuai kebutuhan, '
-                                  'lalu tekan HITUNG.',
+                                    'lalu tekan HITUNG.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             height: 1.4,
@@ -526,7 +529,9 @@ class _NestGoldCalculatorContentState extends State<NestGoldCalculatorContent> {
               border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.035),
+                  color: Colors.black.withValues(
+                    alpha: isDarkMode ? 0.25 : 0.035,
+                  ),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -818,10 +823,8 @@ class _NestGoldCalculatorContentState extends State<NestGoldCalculatorContent> {
           const SizedBox(height: 12),
 
           Text(
-            'Nest adalah cara sederhana untuk membaca arah harga dengan '
-            'membandingkan harga penutupan (Close) dengan harga pembukaan '
-            '(Open). Prinsipnya mengikuti tren: kita ikut ke arah yang '
-            'ditunjukkan oleh harga Close.',
+            'Nest adalah konsep Follow The Trend yang mengacu pada harga '
+            'penutupan (Close). ',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               height: 1.55,
@@ -866,7 +869,8 @@ class _NestGoldCalculatorContentState extends State<NestGoldCalculatorContent> {
             color: buyColor,
             label: 'BUY',
             condition: 'Close lebih tinggi dari Open',
-            example: 'Contoh: Close 4.550 dan Open 4.500 → BUY (harga cenderung naik).',
+            example:
+                'Contoh: Close 4.550 dan Open 4.500 → BUY (harga cenderung naik).',
           ),
 
           rule(
@@ -874,7 +878,8 @@ class _NestGoldCalculatorContentState extends State<NestGoldCalculatorContent> {
             color: sellColor,
             label: 'SELL',
             condition: 'Close lebih rendah dari Open',
-            example: 'Contoh: Close 4.450 dan Open 4.500 → SELL (harga cenderung turun).',
+            example:
+                'Contoh: Close 4.450 dan Open 4.500 → SELL (harga cenderung turun).',
           ),
 
           rule(
@@ -1001,7 +1006,9 @@ class _NestGoldCalculatorContentState extends State<NestGoldCalculatorContent> {
       width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFA800).withValues(alpha: isDarkMode ? 0.12 : 0.1),
+        color: const Color(
+          0xFFFFA800,
+        ).withValues(alpha: isDarkMode ? 0.12 : 0.1),
         borderRadius: BorderRadius.circular(9),
         border: Border.all(
           color: const Color(0xFFFFA800).withValues(alpha: 0.35),

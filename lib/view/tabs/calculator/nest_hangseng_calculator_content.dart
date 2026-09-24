@@ -17,10 +17,12 @@ class NestHangsengCalculatorContent extends StatefulWidget {
   });
 
   @override
-  State<NestHangsengCalculatorContent> createState() => _NestHangsengCalculatorContentState();
+  State<NestHangsengCalculatorContent> createState() =>
+      _NestHangsengCalculatorContentState();
 }
 
-class _NestHangsengCalculatorContentState extends State<NestHangsengCalculatorContent> {
+class _NestHangsengCalculatorContentState
+    extends State<NestHangsengCalculatorContent> {
   final TextEditingController _closeController = TextEditingController();
 
   final TextEditingController _openController = TextEditingController();
@@ -270,7 +272,9 @@ class _NestHangsengCalculatorContentState extends State<NestHangsengCalculatorCo
               border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.035),
+                  color: Colors.black.withValues(
+                    alpha: isDarkMode ? 0.25 : 0.035,
+                  ),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -379,10 +383,10 @@ class _NestHangsengCalculatorContentState extends State<NestHangsengCalculatorCo
                         child: Text(
                           autoMode
                               ? 'Open diambil dari data Hangseng hari ini dan Close '
-                                  'dari data hari sebelumnya. Matikan mode Otomatis '
-                                  'jika ingin mengisi sendiri.'
+                                    'dari data hari sebelumnya. Matikan mode Otomatis '
+                                    'jika ingin mengisi sendiri.'
                               : 'Mode Manual aktif. Isi Open dan Close sesuai kebutuhan, '
-                                  'lalu tekan HITUNG.',
+                                    'lalu tekan HITUNG.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             height: 1.4,
@@ -395,20 +399,6 @@ class _NestHangsengCalculatorContentState extends State<NestHangsengCalculatorCo
                     ],
                   ),
                 ),
-
-                // CATATAN FALLBACK
-                if (autoMode &&
-                    (_viewModel.isPreviousDataFallback ||
-                        _viewModel.isTodayDataFallback)) ...[
-                  const SizedBox(height: 8),
-                  _buildNote(
-                    'Data tanggal yang dicari belum ada (weekend/libur newsmaker), '
-                    'jadi dipakai data terakhir yang tersedia: '
-                    'Close ${_fmt(_viewModel.previousDataDisplayDate)}, '
-                    'Open ${_fmt(_viewModel.todayDataDisplayDate)}.',
-                    isDarkMode,
-                  ),
-                ],
 
                 const SizedBox(height: 10),
 
@@ -526,7 +516,9 @@ class _NestHangsengCalculatorContentState extends State<NestHangsengCalculatorCo
               border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDarkMode ? 0.25 : 0.035),
+                  color: Colors.black.withValues(
+                    alpha: isDarkMode ? 0.25 : 0.035,
+                  ),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -818,10 +810,8 @@ class _NestHangsengCalculatorContentState extends State<NestHangsengCalculatorCo
           const SizedBox(height: 12),
 
           Text(
-            'Nest adalah cara sederhana untuk membaca arah harga dengan '
-            'membandingkan harga penutupan (Close) dengan harga pembukaan '
-            '(Open). Prinsipnya mengikuti tren: kita ikut ke arah yang '
-            'ditunjukkan oleh harga Close.',
+            'Nest adalah konsep Follow The Trend yang mengacu pada harga '
+            'penutupan (Close). ',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               height: 1.55,
@@ -866,7 +856,8 @@ class _NestHangsengCalculatorContentState extends State<NestHangsengCalculatorCo
             color: buyColor,
             label: 'BUY',
             condition: 'Close lebih tinggi dari Open',
-            example: 'Contoh: Close 18.500 dan Open 18.400 → BUY (harga cenderung naik).',
+            example:
+                'Contoh: Close 18.500 dan Open 18.400 → BUY (harga cenderung naik).',
           ),
 
           rule(
@@ -874,7 +865,8 @@ class _NestHangsengCalculatorContentState extends State<NestHangsengCalculatorCo
             color: sellColor,
             label: 'SELL',
             condition: 'Close lebih rendah dari Open',
-            example: 'Contoh: Close 18.300 dan Open 18.400 → SELL (harga cenderung turun).',
+            example:
+                'Contoh: Close 18.300 dan Open 18.400 → SELL (harga cenderung turun).',
           ),
 
           rule(
@@ -1001,7 +993,9 @@ class _NestHangsengCalculatorContentState extends State<NestHangsengCalculatorCo
       width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFA800).withValues(alpha: isDarkMode ? 0.12 : 0.1),
+        color: const Color(
+          0xFFFFA800,
+        ).withValues(alpha: isDarkMode ? 0.12 : 0.1),
         borderRadius: BorderRadius.circular(9),
         border: Border.all(
           color: const Color(0xFFFFA800).withValues(alpha: 0.35),

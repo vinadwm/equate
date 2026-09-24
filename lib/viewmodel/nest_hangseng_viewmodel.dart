@@ -87,9 +87,11 @@ class NestHangsengViewModel extends ChangeNotifier {
   // ============================================================
 
   HistoricalDataModel? get todayHangsengData {
-    final data = historicalDataViewModel.getLatestAvailableData(
+    // OPEN HANYA BOLEH MENGAMBIL DATA HARI INI.
+    // Tidak ada fallback ke hari sebelumnya.
+    final data = historicalDataViewModel.getDataForMarket(
       'HSI Daily',
-      calculationDate,
+      date: calculationDate,
     );
 
     if (data == null) {
@@ -107,18 +109,10 @@ class NestHangsengViewModel extends ChangeNotifier {
     return todayHangsengData?.open;
   }
 
-  bool get isTodayDataFallback {
-    final data = todayHangsengData;
+  bool get isTodayDataFallback => false;
 
-    if (data == null) {
-      return false;
-    }
-
-    return !_isSameCalendarDate(data.date, calculationDate);
-  }
-
-  DateTime get todayDataDisplayDate {
-    return todayHangsengData?.date ?? calculationDate;
+  DateTime? get todayDataDisplayDate {
+    return todayHangsengData?.date;
   }
 
   // ============================================================
@@ -210,99 +204,64 @@ class NestHangsengViewModel extends ChangeNotifier {
     final currentData = todayHangsengData;
     final previousData = yesterdayHangsengData;
 
+    bool openFilled = false;
+    bool closeFilled = false;
+
     // ==========================================================
-    // OPEN TIDAK TERSEDIA
+    // OPEN
+    // HANYA DATA HARI INI
     // ==========================================================
 
-    if (currentData == null) {
+    if (currentData != null && currentData.open > 0) {
+      _open = _numberToInput(currentData.open);
+      openFilled = true;
+    } else {
+      // Kalau data hari ini belum tersedia,
+      // Open harus tetap kosong.
       _open = '';
-
-      _isAutoFilled = false;
-
-      _errorMessage =
-          'Data Open Hangseng ${_formatDate(calculationDate)} belum tersedia.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
     }
 
     // ==========================================================
-    // CLOSE TIDAK TERSEDIA
+    // CLOSE
+    // DATA TERAKHIR YANG TERSEDIA
     // ==========================================================
 
-    if (previousData == null) {
+    if (previousData != null && previousData.close > 0) {
+      _close = _numberToInput(previousData.close);
+      closeFilled = true;
+    } else {
       _close = '';
-
-      _isAutoFilled = false;
-
-      _errorMessage =
-          'Data Close Hangseng ${_formatDate(previousDate)} belum tersedia.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
     }
 
     // ==========================================================
-    // VALIDASI OPEN
+    // STATUS AUTO FILL
     // ==========================================================
 
-    if (currentData.open <= 0) {
-      _open = '';
+    _isAutoFilled = openFilled || closeFilled;
 
-      _isAutoFilled = false;
+    // ==========================================================
+    // ERROR / STATUS
+    // ==========================================================
 
+    if (!openFilled && !closeFilled) {
       _errorMessage =
-          'Data Open Hangseng ${_formatDate(currentData.date)} belum tersedia.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
-    }
-
-    // ==========================================================
-    // VALIDASI CLOSE
-    // ==========================================================
-
-    if (previousData.close <= 0) {
-      _close = '';
-
-      _isAutoFilled = false;
-
+          'Data Open ${_formatDate(calculationDate)} dan '
+          'Close ${_formatDate(previousDate)} belum tersedia.';
+    } else if (!openFilled) {
       _errorMessage =
-          'Data Close Hangseng ${_formatDate(previousData.date)} belum tersedia.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
+          'Data Open Hangseng ${_formatDate(calculationDate)} '
+          'belum tersedia.';
+    } else if (!closeFilled) {
+      _errorMessage = 'Data Close Hangseng belum tersedia.';
+    } else {
+      _errorMessage = null;
     }
-
-    // ==========================================================
-    // AUTO FILL
-    // Open  -> data hari ini (atau fallback terakhir)
-    // Close -> data hari kemarin (atau fallback terakhir)
-    // ==========================================================
-
-    _open = _numberToInput(currentData.open);
-    _close = _numberToInput(previousData.close);
-
-    _isAutoFilled = true;
-    _errorMessage = null;
 
     _clearCalculationResult(notify: false);
 
     notifyListeners();
 
-    return true;
+    return openFilled && closeFilled;
   }
 
   // ============================================================
