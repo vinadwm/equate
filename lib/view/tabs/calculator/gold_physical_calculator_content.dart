@@ -308,6 +308,42 @@ class _GoldPhysicalCalculatorContentState
     );
   }
 
+  // ============================================================
+  // SARAN / REKOMENDASI (BERDASARKAN HASIL, TIDAK MENGUBAH LOGIKA HITUNG)
+  // ============================================================
+
+  bool get _physicalIsProfit => (_hasilAkhir ?? 0) >= 0;
+
+  String get _physicalRecommendationTitle =>
+      _physicalIsProfit ? 'Posisi Sedang Untung' : 'Posisi Sedang Rugi';
+
+  List<String> get _physicalRecommendationSteps {
+    if (_physicalIsProfit) {
+      return [
+        'Pertimbangkan untuk menjual sebagian emas untuk mengunci keuntungan '
+            'yang sudah terbentuk.',
+        'Jika tujuannya investasi jangka panjang, kamu bisa tetap menyimpan '
+            'emas dan memantau kurs serta harga emas secara berkala.',
+        'Jual emas fisik di tempat resmi dan terpercaya agar harga jual '
+            'sesuai standar pasar.',
+      ];
+    }
+
+    return [
+      'Evaluasi kembali harga beli dan kurs saat ini dibanding saat kamu '
+          'membeli emas.',
+      'Jika masih untuk investasi jangka panjang, kerugian sementara wajar '
+          'terjadi karena fluktuasi harga emas dan kurs.',
+      'Hindari menjual tergesa-gesa saat harga sedang turun kalau tidak '
+          'benar-benar butuh dana mendesak.',
+    ];
+  }
+
+  String get _physicalRecommendationDisclaimer =>
+      'Saran ini bersifat edukasi umum, bukan nasihat atau rekomendasi '
+      'finansial. Keputusan jual-beli emas sepenuhnya menjadi tanggung jawab '
+      'kamu.';
+
   @override
   Widget build(BuildContext context) {
     const primaryOrange = Color(0xFFFF9E0F);
@@ -328,6 +364,12 @@ class _GoldPhysicalCalculatorContentState
     final dividerColor = isDarkMode
         ? Colors.white.withOpacity(0.08)
         : const Color(0xFFEEEEEE);
+
+    final signalColor = _isCalculated
+        ? (_physicalIsProfit
+              ? const Color(0xFF18B85A)
+              : const Color(0xFFFF3B30))
+        : primaryOrange;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -370,6 +412,17 @@ class _GoldPhysicalCalculatorContentState
               ],
             ),
           ),
+
+          // ======================================================
+          // PENJELASAN EMAS FISIK
+          // ======================================================
+          _buildExplanationCard(
+            isDarkMode: isDarkMode,
+            primaryTextColor: primaryTextColor,
+          ),
+
+          const SizedBox(height: 14),
+
           AnimatedBuilder(
             animation: _glowAnimation,
             builder: (context, child) {
@@ -678,6 +731,21 @@ class _GoldPhysicalCalculatorContentState
               ),
             ),
           ),
+
+          // ======================================================
+          // SARAN SETELAH HASIL
+          // ======================================================
+          if (_isCalculated) ...[
+            const SizedBox(height: 14),
+            _buildRecommendationCard(
+              signalColor: signalColor,
+              cardBgColor: cardBgColor,
+              borderColor: dividerColor,
+              primaryTextColor: primaryTextColor,
+              isDarkMode: isDarkMode,
+            ),
+          ],
+
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
@@ -706,6 +774,440 @@ class _GoldPhysicalCalculatorContentState
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // KARTU PENJELASAN EMAS FISIK (RAMAH PEMULA)
+  // ============================================================
+
+  Widget _buildExplanationCard({
+    required bool isDarkMode,
+    required Color primaryTextColor,
+  }) {
+    const primaryOrange = Color(0xFFFF9E0F);
+    const profitColor = Color(0xFF18B85A);
+    const lossColor = Color(0xFFFF3B30);
+
+    final subText = isDarkMode ? Colors.grey[300] : Colors.grey[700];
+
+    Widget term(String title, String desc, IconData icon) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: isDarkMode
+                ? Colors.white.withOpacity(0.05)
+                : Colors.white.withOpacity(0.75),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 14, color: primaryOrange),
+                  const SizedBox(width: 5),
+                  Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: primaryTextColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                desc,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 9.5,
+                  height: 1.4,
+                  color: subText,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget rule({
+      required IconData icon,
+      required Color color,
+      required String label,
+      required String condition,
+      required String example,
+    }) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(isDarkMode ? 0.12 : 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.18),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        label,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: color,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          condition,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: primaryTextColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    example,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9.5,
+                      height: 1.35,
+                      color: subText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 0),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDarkMode
+              ? const [Color(0xFF2E2718), Color(0xFF1E1E1E)]
+              : const [Color(0xFFFFF1D0), Color(0xFFFFFBF3)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: primaryOrange.withOpacity(0.55)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: primaryOrange.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: const Icon(
+                  Icons.lightbulb_rounded,
+                  size: 20,
+                  color: primaryOrange,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Apa itu Emas Fisik?',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: primaryTextColor,
+                      ),
+                    ),
+                    Text(
+                      'Investasi emas batangan',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: primaryOrange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          Text(
+            'Emas Fisik adalah investasi emas dalam bentuk batangan nyata. '
+            'Keuntungan atau kerugiannya dihitung dari selisih harga jual dan '
+            'harga beli per gram, setelah dikonversi dari harga emas '
+            'internasional (USD/troy ounce) ke Rupiah menggunakan kurs.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              height: 1.55,
+              color: subText,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              term(
+                'Modal & Kurs',
+                'Modal adalah dana yang diinvestasikan. Kurs adalah nilai '
+                    'tukar USD ke Rupiah saat itu.',
+                Icons.account_balance_wallet_rounded,
+              ),
+              const SizedBox(width: 8),
+              term(
+                'Harga Beli/Jual',
+                'Harga emas internasional (per troy ounce) saat beli dan '
+                    'saat dijual kembali.',
+                Icons.swap_vert_rounded,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(
+            'Cara membaca hasil',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: primaryTextColor,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          rule(
+            icon: Icons.trending_up_rounded,
+            color: profitColor,
+            label: 'UNTUNG',
+            condition: 'Harga Jual lebih tinggi dari Harga Beli',
+            example:
+                'Selisih harga per gram dikalikan berat emas menghasilkan '
+                'keuntungan.',
+          ),
+
+          rule(
+            icon: Icons.trending_down_rounded,
+            color: lossColor,
+            label: 'RUGI',
+            condition: 'Harga Jual lebih rendah dari Harga Beli',
+            example:
+                'Selisih harga per gram bernilai negatif, sehingga hasil '
+                'akhir menjadi kerugian.',
+          ),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.white.withOpacity(0.75),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.tips_and_updates_rounded,
+                  size: 15,
+                  color: primaryOrange,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    'Tips: harga emas fisik biasanya lebih stabil dan cocok '
+                    'untuk investasi jangka menengah-panjang dibanding trading '
+                    'harian.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9.5,
+                      height: 1.45,
+                      color: subText,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // KARTU SARAN / REKOMENDASI
+  // ============================================================
+
+  Widget _buildRecommendationCard({
+    required Color signalColor,
+    required Color cardBgColor,
+    required Color borderColor,
+    required Color primaryTextColor,
+    required bool isDarkMode,
+  }) {
+    final steps = _physicalRecommendationSteps;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: signalColor.withOpacity(0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.035),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: signalColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(
+                  Icons.tips_and_updates_rounded,
+                  size: 18,
+                  color: signalColor,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Apa yang sebaiknya dilakukan?',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: primaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _physicalRecommendationTitle,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: signalColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (var i = 0; i < steps.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: signalColor.withOpacity(0.14),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${i + 1}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: signalColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      steps[i],
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        height: 1.5,
+                        color: primaryTextColor.withOpacity(0.85),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 2),
+          Divider(height: 1, color: borderColor),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 14,
+                color: Colors.grey[500],
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _physicalRecommendationDisclaimer,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 9,
+                    height: 1.45,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

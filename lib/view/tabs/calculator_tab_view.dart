@@ -146,14 +146,12 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
 
     if (item is DigitalGoldModel) {
       title = 'Emas Digital';
-      details =
-          '${item.weightInGram} Lot | Beli: ${_formatCurrency(item.buyPrice)}';
+      details = '${item.weightInGram} Lot | Beli: ${_formatCurrency(item.buyPrice)}';
       result = item.profitLoss;
       timestamp = item.createdAt;
     } else if (item is PhysicalGoldModel) {
       title = 'Emas Fisik';
-      details =
-          '${item.weightInGram} gram | Rp ${_formatCurrency(item.buyPrice)}/g';
+      details = '${item.weightInGram} gram | Rp ${_formatCurrency(item.buyPrice)}/g';
       result = item.profitLoss;
       timestamp = item.createdAt;
     } else if (item is PivotGoldModel) {
@@ -170,8 +168,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       timestamp = item.createdAt;
     } else if (item is PivotHangsengModel) {
       title = 'Pivot Hangseng';
-      details =
-          'PP: ${item.pp ?? '-'} | H: ${item.high ?? '-'} | L: ${item.low ?? '-'}';
+      details = 'PP: ${item.pp ?? '-'} | H: ${item.high ?? '-'} | L: ${item.low ?? '-'}';
       result = item.pp ?? 0.0;
       isCurrency = false;
       timestamp = item.createdAt;
@@ -204,17 +201,14 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       builder: (context, currentThemeMode, child) {
         final isDarkMode = ThemeViewModel.isDarkMode;
 
-        final primaryTextColor = isDarkMode
-            ? Colors.white
-            : const Color(0xFF2C2D30);
+        final primaryTextColor =
+            isDarkMode ? Colors.white : const Color(0xFF2C2D30);
 
-        final bgGradientStart = isDarkMode
-            ? const Color(0xFF16181F)
-            : Colors.white;
+        final bgGradientStart =
+            isDarkMode ? const Color(0xFF16181F) : Colors.white;
 
-        final bgGradientEnd = isDarkMode
-            ? const Color(0xFF0D0E12)
-            : Colors.white;
+        final bgGradientEnd =
+            isDarkMode ? const Color(0xFF0D0E12) : Colors.white;
 
         return Scaffold(
           backgroundColor: isDarkMode ? const Color(0xFF0D0E12) : Colors.white,
@@ -466,7 +460,19 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
 
     switch (_selectedCalculatorType) {
       case 'digital':
-        return GoldDigitalCalculatorContent(onCalculate: (_) {});
+        // ====================================================
+        // REVISI: sebelumnya `onCalculate: (_) {}` — kosong,
+        // sehingga hasil kalkulasi Emas Digital TIDAK PERNAH
+        // disimpan ke Firestore. Sekarang disamakan dengan
+        // kalkulator lain: hasil dikirim ke HistoryViewModel.
+        // ====================================================
+        return GoldDigitalCalculatorContent(
+          onCalculate: (result) {
+            if (result is CalculationHistory) {
+              historyViewModel.addHistory(result);
+            }
+          },
+        );
 
       case 'physical':
         return GoldPhysicalCalculatorContent(
@@ -558,8 +564,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           color: isExpanded
               ? primaryOrange.withOpacity(0.5)
               : isDarkMode
-              ? Colors.white.withOpacity(0.08)
-              : Colors.white.withOpacity(0.9),
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.white.withOpacity(0.9),
           width: isExpanded ? 0.8 : 0.5,
         ),
         boxShadow: [
@@ -637,8 +643,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                   color: isExpanded
                       ? primaryOrange
                       : isDarkMode
-                      ? Colors.white54
-                      : const Color(0xFF8A8E9B),
+                          ? Colors.white54
+                          : const Color(0xFF8A8E9B),
                   size: 24,
                 ),
               ],
@@ -703,9 +709,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           }
 
           final docs = snapshot.data?.docs ?? [];
-          final allHistoryList = docs
-              .map((doc) => _parseFirestoreDoc(doc))
-              .toList();
+          final allHistoryList =
+              docs.map((doc) => _parseFirestoreDoc(doc)).toList();
 
           // FILTER HARI INI SAJA
           final now = DateTime.now();
@@ -754,10 +759,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-<<<<<<< HEAD
-                          builder: (context) =>
-                              HistoryView(historyList: allHistoryList),
-=======
                           builder: (context) => HistoryView(
                             historyList: allHistoryList,
                             // 👇 Ini yang tadinya belum ada — supaya hapus
@@ -765,7 +766,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                             // cuma dari tampilan lokal.
                             historyCollection: historiesRef,
                           ),
->>>>>>> vina
                         ),
                       );
                     },
@@ -808,9 +808,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filteredToday.length > 5
-                      ? 5
-                      : filteredToday.length,
+                  itemCount:
+                      filteredToday.length > 5 ? 5 : filteredToday.length,
                   separatorBuilder: (context, index) {
                     return Divider(
                       color: isDarkMode
@@ -830,7 +829,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                     final isCurrency = parsed['isCurrency'] as bool;
                     final isPositive = result >= 0;
 
-                    final timeFormatted = DateFormat('HH:mm').format(timestamp);
+                    final timeFormatted =
+                        DateFormat('HH:mm').format(timestamp);
 
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -878,8 +878,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                             color: !isCurrency
                                 ? primaryTextColor
                                 : (isPositive
-                                      ? const Color(0xFF34C759)
-                                      : const Color(0xFFFF3B30)),
+                                    ? const Color(0xFF34C759)
+                                    : const Color(0xFFFF3B30)),
                           ),
                         ),
                       ],

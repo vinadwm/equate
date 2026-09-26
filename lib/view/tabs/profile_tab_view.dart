@@ -1,11 +1,57 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import 'package:equate/view/tabs/change_password_view.dart';
 import 'package:equate/view/tabs/edit_profile_view.dart';
 import 'package:equate/view/auth/login_view.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/profile_viewmodel.dart';
+
+// ==========================================================
+// IMPORT MODELS (untuk parsing dokumen Firestore riwayat)
+// ==========================================================
+import 'package:equate/model/base_calculation_history.dart';
+import 'package:equate/model/digital_gold_model.dart';
+import 'package:equate/model/physical_gold_model.dart';
+import 'package:equate/model/pivot_gold_model.dart';
+import 'package:equate/model/pivot_hangseng_model.dart';
+import 'package:equate/model/nest_gold_model.dart';
+import 'package:equate/model/nest_hangseng_model.dart';
+
+const _kAnimDuration = Duration(milliseconds: 300);
+const _kAnimCurve = Curves.easeInOut;
+
+// Icon bawaan Flutter tidak animasi sendiri kalau warnanya berubah (loncat
+// instan). Widget kecil ini membungkusnya dengan TweenAnimationBuilder biar
+// transisi warnanya ikut mulus, sinkron dengan Container/Text lain.
+class _AnimatedThemedIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+
+  const _AnimatedThemedIcon({
+    required this.icon,
+    required this.color,
+    this.size = 24,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<Color?>(
+      duration: _kAnimDuration,
+      curve: _kAnimCurve,
+      tween: ColorTween(begin: color, end: color),
+      builder: (context, animatedColor, child) {
+        return Icon(icon, color: animatedColor, size: size);
+      },
+    );
+  }
+}
 
 class ProfileTabView extends StatefulWidget {
   const ProfileTabView({super.key});
@@ -18,26 +64,13 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   final ProfileViewModel _profileViewModel = ProfileViewModel();
   String _selectedCategory = 'Semua';
 
-  final List<Map<String, String>> _calculationHistory = [
-    {
-      'title': 'Pivot Point',
-      'category': 'HangSeng',
-      'date': '24 Agustus 2026',
-      'result': 'Gold / XAUUSD',
-    },
-    {
-      'title': 'Keuntungan Emas',
-      'category': 'Emas',
-      'date': '22 Agustus 2026',
-      'result': 'Rp 1.250.000',
-    },
-    {
-      'title': 'Pivot Point',
-      'category': 'HangSeng',
-      'date': '20 Agustus 2026',
-      'result': 'Gold / XAUUSD',
-    },
-  ];
+  // ==========================================================
+  // RIWAYAT PERHITUNGAN (sekarang dari Firestore, bukan dummy)
+  // ==========================================================
+  List<Map<String, String>> _calculationHistory = [];
+  bool _isHistoryLoading = true;
+  StreamSubscription<User?>? _authSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _historySub;
 
   List<Map<String, String>> get _filteredHistory {
     if (_selectedCategory == 'Semua') {
@@ -53,6 +86,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     super.initState();
     _profileViewModel.addListener(_onProfileChanged);
     _profileViewModel.loadProfile();
+    _listenToHistory();
   }
 
   void _onProfileChanged() {
@@ -60,8 +94,179 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     setState(() {});
   }
 
+  // ==========================================================
+  // DENGARKAN STATUS LOGIN DULU (biar gak race condition kalau
+  // Firebase Auth belum selesai restore sesi saat widget ini dibuat),
+  // BARU subscribe ke Firestore: users/{uid}/histories
+  // ==========================================================
+  void _listenToHistory() {
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      // Setiap kali status login berubah, hentikan subscription lama dulu.
+      _historySub?.cancel();
+      _historySub = null;
+
+      if (user == null) {
+        if (!mounted) return;
+        setState(() {
+          _calculationHistory = [];
+          _isHistoryLoading = false;
+        });
+        return;
+      }
+
+      final ref = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('histories')
+          .orderBy('createdAt', descending: true);
+
+      _historySub = ref.snapshots().listen(
+        (snapshot) {
+          if (!mounted) return;
+
+          // ====================================================
+          // REVISI: parsing per-dokumen dibungkus try/catch.
+          // Sebelumnya, kalau SATU dokumen gagal di-parse (misal
+          // field tidak cocok dengan model tertentu), exception
+          // itu terjadi secara synchronous di dalam callback
+          // .listen() ini — bukan di dalam Future — sehingga TIDAK
+          // tertangkap oleh `onError` di bawah. Akibatnya
+          // setState() tidak pernah terpanggil untuk snapshot itu,
+          // dan _calculationHistory tetap berisi data lama
+          // (kelihatan seperti "nyangkut"/"dummy" walau sudah
+          // ganti data di Firestore).
+          //
+          // Sekarang: dokumen yang gagal di-parse cukup dilewati
+          // (dan dicetak ke console) tanpa menggagalkan seluruh
+          // list.
+          // ====================================================
+          final mapped = <Map<String, String>>[];
+          for (final doc in snapshot.docs) {
+            try {
+              final model = _parseFirestoreDoc(doc);
+              mapped.add(_mapToDisplayItem(model));
+            } catch (e) {
+              debugPrint('❌ Gagal parsing riwayat profil [${doc.id}]: $e');
+            }
+          }
+
+          setState(() {
+            _calculationHistory = mapped;
+            _isHistoryLoading = false;
+          });
+        },
+        onError: (e) {
+          debugPrint('❌ historySub (profile) stream error: $e');
+          if (!mounted) return;
+          setState(() => _isHistoryLoading = false);
+        },
+      );
+    });
+  }
+
+  // ==========================================================
+  // FIRESTORE DOC PARSER HELPER (samakan dengan calculator_tab_view)
+  // ==========================================================
+  dynamic _parseFirestoreDoc(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final category = (data['category'] ?? '').toString();
+
+    switch (category) {
+      case 'NEST Gold':
+        return NestGoldModel.fromFirestore(doc);
+      case 'Emas Digital':
+      case 'Digital Gold':
+        return DigitalGoldModel.fromFirestore(doc);
+      case 'Emas Fisik':
+      case 'Physical Gold':
+        return PhysicalGoldModel.fromFirestore(doc);
+      case 'Pivot Gold':
+        return PivotGoldModel.fromFirestore(doc);
+      case 'Pivot Hangseng':
+        return PivotHangsengModel.fromFirestore(doc);
+      case 'NEST Hangseng':
+        return NestHangsengModel.fromFirestore(doc);
+      default:
+        return NestGoldModel.fromFirestore(doc);
+    }
+  }
+
+  // ==========================================================
+  // UBAH MODEL RIWAYAT -> Map<String,String> UNTUK TAMPILAN
+  // ==========================================================
+  Map<String, String> _mapToDisplayItem(dynamic item) {
+    String title = 'Riwayat';
+    String category = 'Emas';
+    double result = 0.0;
+    DateTime timestamp = DateTime.now();
+    bool isCurrency = true;
+
+    if (item is CalculationHistory) {
+      timestamp = item.createdAt;
+    }
+
+    if (item is DigitalGoldModel) {
+      title = 'Emas Digital';
+      category = 'Emas';
+      result = item.profitLoss;
+    } else if (item is PhysicalGoldModel) {
+      title = 'Emas Fisik';
+      category = 'Emas';
+      result = item.profitLoss;
+    } else if (item is PivotGoldModel) {
+      title = 'Pivot Point Emas';
+      category = 'Emas';
+      result = item.pp;
+      isCurrency = false;
+    } else if (item is NestGoldModel) {
+      title = 'NEST Emas';
+      category = 'Emas';
+      result = item.close ?? 0.0;
+      isCurrency = false;
+    } else if (item is PivotHangsengModel) {
+      title = 'Pivot Point Hangseng';
+      category = 'HangSeng';
+      result = item.pp ?? 0.0;
+      isCurrency = false;
+    } else if (item is NestHangsengModel) {
+      title = 'NEST Hangseng';
+      category = 'HangSeng';
+      result = item.close ?? 0.0;
+      isCurrency = false;
+    } else {
+      title = (item.title ?? 'Riwayat').toString();
+      category = 'Emas';
+    }
+
+    final String resultLabel;
+    if (isCurrency) {
+      final isPositive = result >= 0;
+      resultLabel = '${isPositive ? '+Rp ' : '-Rp '}${_formatCurrency(result)}';
+    } else {
+      resultLabel = result.toStringAsFixed(2);
+    }
+
+    return {
+      'title': title,
+      'category': category,
+      'date': DateFormat('d MMMM yyyy', 'id_ID').format(timestamp),
+      'result': resultLabel,
+    };
+  }
+
+  String _formatCurrency(double amount) {
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: '',
+      decimalDigits: 0,
+    );
+    return formatter.format(amount.abs()).trim();
+  }
+
   @override
   void dispose() {
+    _historySub?.cancel();
+    _authSub?.cancel();
     _profileViewModel.removeListener(_onProfileChanged);
     _profileViewModel.dispose();
     super.dispose();
@@ -96,7 +301,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
         if (_profileViewModel.isLoading) {
           return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+            duration: _kAnimDuration,
+            curve: _kAnimCurve,
             color: bgColor,
             child: const Scaffold(
               backgroundColor: Colors.transparent,
@@ -114,8 +320,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         final displayHistory = _filteredHistory.take(2).toList();
 
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+          duration: _kAnimDuration,
+          curve: _kAnimCurve,
           color: bgColor,
           child: Scaffold(
             backgroundColor: Colors.transparent,
@@ -136,7 +342,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                         clipBehavior: Clip.none,
                         children: [
                           AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
+                            duration: _kAnimDuration,
+                            curve: _kAnimCurve,
                             width: 125,
                             height: 125,
                             decoration: BoxDecoration(
@@ -160,7 +367,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                             child: Padding(
                               padding: const EdgeInsets.all(3),
                               child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
+                                duration: _kAnimDuration,
+                                curve: _kAnimCurve,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: isDarkMode
@@ -175,15 +383,15 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                           width: 120,
                                           height: 120,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Icon(
-                                            Icons.person_rounded,
+                                          errorBuilder: (context, error, stackTrace) => _AnimatedThemedIcon(
+                                            icon: Icons.person_rounded,
                                             size: 60,
                                             color: secondaryTextColor,
                                           ),
                                         ),
                                       )
-                                    : Icon(
-                                        Icons.person_rounded,
+                                    : _AnimatedThemedIcon(
+                                        icon: Icons.person_rounded,
                                         size: 60,
                                         color: secondaryTextColor,
                                       ),
@@ -260,7 +468,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                     // 2. NAMA DAN EMAIL USER
                     // ==================================================
                     AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 300),
+                      duration: _kAnimDuration,
+                      curve: _kAnimCurve,
                       style: GoogleFonts.poppins(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -274,7 +483,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                     ),
                     const SizedBox(height: 4),
                     AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 300),
+                      duration: _kAnimDuration,
+                      curve: _kAnimCurve,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: secondaryTextColor,
@@ -404,7 +614,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           width: 46,
                           height: 46,
                           child: Material(
-                            color: cardBgColor,
+                            color: Colors.transparent,
                             borderRadius: BorderRadius.circular(14),
                             child: InkWell(
                               onTap: () {
@@ -414,8 +624,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                               hoverColor: primaryOrange.withOpacity(0.1),
                               splashColor: primaryOrange.withOpacity(0.15),
                               highlightColor: primaryOrange.withOpacity(0.08),
-                              child: Container(
+                              child: AnimatedContainer(
+                                duration: _kAnimDuration,
+                                curve: _kAnimCurve,
                                 decoration: BoxDecoration(
+                                  color: cardBgColor,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(color: borderColor),
                                 ),
@@ -442,7 +655,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 300),
+                          duration: _kAnimDuration,
+                          curve: _kAnimCurve,
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
@@ -477,14 +691,14 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 
                     const SizedBox(height: 12),
 
-                    // Filter Chips (Hover Presisi)
+                    // Filter Chips (warnanya sekarang ikut animasi, termasuk saat ganti tema)
                     Row(
                       children: ['Semua', 'Emas', 'HangSeng'].map((category) {
                         final isSelected = _selectedCategory == category;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Material(
-                            color: isSelected ? primaryOrange : cardBgColor,
+                            color: Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(20),
@@ -500,12 +714,14 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 });
                               },
                               child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
+                                duration: _kAnimDuration,
+                                curve: _kAnimCurve,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
+                                  color: isSelected ? primaryOrange : cardBgColor,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
                                     color: isSelected
@@ -513,8 +729,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                         : borderColor,
                                   ),
                                 ),
-                                child: Text(
-                                  category,
+                                child: AnimatedDefaultTextStyle(
+                                  duration: _kAnimDuration,
+                                  curve: _kAnimCurve,
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -522,6 +739,7 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                         ? Colors.white
                                         : secondaryTextColor,
                                   ),
+                                  child: Text(category),
                                 ),
                               ),
                             ),
@@ -536,7 +754,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                     // 5. LIST RINGKASAN RIWAYAT
                     // ==================================================
                     AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
+                      duration: _kAnimDuration,
+                      curve: _kAnimCurve,
                       width: double.infinity,
                       decoration: BoxDecoration(
                         color: cardBgColor,
@@ -545,97 +764,113 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(20),
-                        child: _filteredHistory.isEmpty
+                        child: _isHistoryLoading
                             ? Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 24),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.history_rounded,
-                                      size: 36,
-                                      color: secondaryTextColor,
+                                padding: const EdgeInsets.symmetric(vertical: 28),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.2,
+                                      color: primaryOrange,
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Belum ada riwayat untuk kategori ini.',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: secondaryTextColor,
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               )
-                            : Column(
-                                children: List.generate(displayHistory.length, (index) {
-                                  final history = displayHistory[index];
-                                  return Column(
-                                    children: [
-                                      ListTile(
-                                        contentPadding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 4,
-                                        ),
-                                        hoverColor: primaryOrange.withOpacity(0.06),
-                                        splashColor: primaryOrange.withOpacity(0.1),
-                                        leading: Container(
-                                          width: 42,
-                                          height: 42,
-                                          decoration: BoxDecoration(
-                                            color: primaryOrange.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Icon(
-                                            history['category'] == 'Emas'
-                                                ? Icons.monetization_on_outlined
-                                                : Icons.calculate_outlined,
-                                            color: primaryOrange,
-                                            size: 20,
-                                          ),
-                                        ),
-                                        title: Text(
-                                          history['title'] ?? '-',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: primaryTextColor,
-                                          ),
-                                        ),
-                                        subtitle: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              history['result'] ?? '-',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 11,
-                                                color: secondaryTextColor,
-                                              ),
-                                            ),
-                                            Text(
-                                              history['date'] ?? '-',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 10,
-                                                color: secondaryTextColor,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        trailing: Icon(
-                                          Icons.chevron_right_rounded,
+                            : _filteredHistory.isEmpty
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 24),
+                                    child: Column(
+                                      children: [
+                                        _AnimatedThemedIcon(
+                                          icon: Icons.history_rounded,
+                                          size: 36,
                                           color: secondaryTextColor,
                                         ),
-                                      ),
-                                      if (index != displayHistory.length - 1)
-                                        Divider(
-                                          height: 1,
-                                          color: borderColor,
-                                          indent: 72,
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Belum ada riwayat untuk kategori ini.',
+                                          textAlign: TextAlign.center,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            color: secondaryTextColor,
+                                          ),
                                         ),
-                                    ],
-                                  );
-                                }),
-                              ),
+                                      ],
+                                    ),
+                                  )
+                                : Column(
+                                    children: List.generate(displayHistory.length, (index) {
+                                      final history = displayHistory[index];
+                                      return Column(
+                                        children: [
+                                          ListTile(
+                                            contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 4,
+                                            ),
+                                            hoverColor: primaryOrange.withOpacity(0.06),
+                                            splashColor: primaryOrange.withOpacity(0.1),
+                                            leading: Container(
+                                              width: 42,
+                                              height: 42,
+                                              decoration: BoxDecoration(
+                                                color: primaryOrange.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Icon(
+                                                history['category'] == 'Emas'
+                                                    ? Icons.monetization_on_outlined
+                                                    : Icons.calculate_outlined,
+                                                color: primaryOrange,
+                                                size: 20,
+                                              ),
+                                            ),
+                                            title: Text(
+                                              history['title'] ?? '-',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: primaryTextColor,
+                                              ),
+                                            ),
+                                            subtitle: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  history['result'] ?? '-',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 11,
+                                                    color: secondaryTextColor,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  history['date'] ?? '-',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 10,
+                                                    color: secondaryTextColor,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            trailing: _AnimatedThemedIcon(
+                                              icon: Icons.chevron_right_rounded,
+                                              color: secondaryTextColor,
+                                            ),
+                                          ),
+                                          if (index != displayHistory.length - 1)
+                                            AnimatedContainer(
+                                              duration: _kAnimDuration,
+                                              curve: _kAnimCurve,
+                                              height: 1,
+                                              margin: const EdgeInsets.only(left: 72),
+                                              color: borderColor,
+                                            ),
+                                        ],
+                                      );
+                                    }),
+                                  ),
                       ),
                     ),
 
@@ -709,7 +944,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     required Color borderColor,
   }) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+      duration: _kAnimDuration,
+      curve: _kAnimCurve,
       padding: const EdgeInsets.all(7),
       decoration: BoxDecoration(
         color: cardBgColor,
@@ -862,72 +1098,82 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                 ),
                 const SizedBox(height: 15),
                 Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    itemCount: _filteredHistory.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final history = _filteredHistory[index];
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: cardBgColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: borderColor),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: primaryOrange.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                history['category'] == 'Emas'
-                                    ? Icons.monetization_on_outlined
-                                    : Icons.calculate_outlined,
-                                color: primaryOrange,
-                              ),
+                  child: _filteredHistory.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Belum ada riwayat untuk kategori ini.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: secondaryTextColor,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          itemCount: _filteredHistory.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final history = _filteredHistory[index];
+                            return Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: cardBgColor,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: borderColor),
+                              ),
+                              child: Row(
                                 children: [
-                                  Text(
-                                    history['title'] ?? '-',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: primaryTextColor,
+                                  Container(
+                                    width: 42,
+                                    height: 42,
+                                    decoration: BoxDecoration(
+                                      color: primaryOrange.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      history['category'] == 'Emas'
+                                          ? Icons.monetization_on_outlined
+                                          : Icons.calculate_outlined,
+                                      color: primaryOrange,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    history['result'] ?? '-',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      color: secondaryTextColor,
-                                    ),
-                                  ),
-                                  Text(
-                                    history['date'] ?? '-',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 10,
-                                      color: secondaryTextColor,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          history['title'] ?? '-',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: primaryTextColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          history['result'] ?? '-',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 11,
+                                            color: secondaryTextColor,
+                                          ),
+                                        ),
+                                        Text(
+                                          history['date'] ?? '-',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 10,
+                                            color: secondaryTextColor,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),

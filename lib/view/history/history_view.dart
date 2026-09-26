@@ -720,58 +720,79 @@ class _HistoryViewState extends State<HistoryView> {
           // ============================================================
           // TAB STYLE PASAR (UNDERLINE STYLE)
           // ============================================================
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: isDarkMode
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.black.withOpacity(0.06),
-                  width: 1,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final tabWidth = constraints.maxWidth / _markets.length;
+              final selectedIndex = _markets.indexOf(_selectedMarket);
+
+              return Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDarkMode
+                          ? Colors.white.withOpacity(0.08)
+                          : Colors.black.withOpacity(0.06),
+                      width: 1,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: _markets.map((market) {
-                final isSelected = _selectedMarket == market;
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedMarket = market;
-                      // Reset tipe kalkulator jika pasar berubah agar tidak konflik
-                      _selectedCalcType = 'Semua';
-                    });
-                  },
-                  splashColor: Colors.transparent,
-                  highlightColor: Colors.transparent,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: isSelected
-                              ? const Color(0xFFFF9500) // Warna Garis Bawah Oranye
-                              : Colors.transparent,
-                          width: 2.5,
+                child: Stack(
+                  children: [
+                    Row(
+                      children: _markets.map((market) {
+                        final isSelected = _selectedMarket == market;
+                        return Expanded(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _selectedMarket = market;
+                                // Reset tipe kalkulator jika pasar berubah agar tidak konflik
+                                _selectedCalcType = 'Semua';
+                              });
+                            },
+                            splashColor: Colors.transparent,
+                            highlightColor: Colors.transparent,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Center(
+                                child: Text(
+                                  market,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 14,
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                    color: isSelected
+                                        ? primaryTextColor
+                                        : (isDarkMode ? Colors.grey[500] : const Color(0xFF7D828A)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+
+                    // ================================================
+                    // GARIS INDIKATOR (bergeser smooth mengikuti tab aktif)
+                    // ================================================
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      left: tabWidth * selectedIndex,
+                      bottom: 0,
+                      width: tabWidth,
+                      child: Container(
+                        height: 2.5,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF9500), // Warna Garis Bawah Oranye
                         ),
                       ),
                     ),
-                    child: Text(
-                      market,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                        color: isSelected
-                            ? primaryTextColor
-                            : (isDarkMode ? Colors.grey[500] : const Color(0xFF7D828A)),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
+                  ],
+                ),
+              );
+            },
           ),
 
           // ACTIVE FILTER BADGES INFO

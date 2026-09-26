@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -71,110 +73,145 @@ class _MainNavigationViewState extends State<MainNavigationView> {
           IndexedStack(index: _currentIndex, children: _tabs),
 
           // ======================================================
-          // FLOATING NAVBAR
+          // FLOATING NAVBAR — GLASSMORPHISM iOS VIBES
           // ======================================================
           ValueListenableBuilder<ThemeMode>(
             valueListenable: ThemeViewModel.themeMode,
             builder: (context, currentThemeMode, child) {
               final isDarkMode = ThemeViewModel.isDarkMode;
 
-              final navBgColor = isDarkMode
-                  ? const Color(0xFF1E1E1E)
-                  : Colors.white;
+              const primaryOrange = Color(0xFFFF9500);
+              const secondaryOrange = Color(0xFFFFB700);
 
-              final navBorderColor = isDarkMode
-                  ? Colors.grey[800]!
-                  : Colors.transparent;
+              // Glass fill & border, senada dengan Home tab.
+              final navGlassFill = isDarkMode
+                  ? Colors.white.withOpacity(0.06)
+                  : Colors.white.withOpacity(0.55);
+
+              final navGlassBorder = isDarkMode
+                  ? Colors.white.withOpacity(0.12)
+                  : Colors.white.withOpacity(0.75);
 
               final defaultGreyColor = isDarkMode
                   ? const Color(0xFFA0A0A0)
                   : const Color(0xFF9E9E9E);
 
-              final activeColor = isDarkMode
-                  ? const Color(0xFFFF9800)
-                  : defaultGreyColor;
+              final activeColor = primaryOrange;
 
               return Positioned(
-                left: 70,
-                right: 70,
+                left: 60,
+                right: 60,
                 bottom: 20,
-                child: Container(
-                  height: 64,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: navBgColor,
-                    borderRadius: BorderRadius.circular(35),
-                    border: Border.all(color: navBorderColor),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(
-                          isDarkMode ? 0.3 : 0.08,
-                        ),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(35),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                    child: Container(
+                      height: 68,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: navGlassFill,
+                        borderRadius: BorderRadius.circular(35),
+                        border: Border.all(color: navGlassBorder, width: 1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryOrange.withOpacity(
+                              isDarkMode ? 0.12 : 0.10,
+                            ),
+                            blurRadius: 26,
+                            offset: const Offset(0, 10),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(
+                              isDarkMode ? 0.35 : 0.06,
+                            ),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // ==================================================
-                      // HOME
-                      // ==================================================
-                      _buildNavItem(
-                        index: 0,
-                        label: 'Beranda',
-                        activeIcon: Icons.home_rounded,
-                        inactiveIcon: Icons.home_outlined,
-                        activeColor: activeColor,
-                        inactiveColor: defaultGreyColor,
-                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          // ==================================================
+                          // HOME
+                          // ==================================================
+                          _buildNavItem(
+                            index: 0,
+                            label: 'Beranda',
+                            activeIcon: Icons.home_rounded,
+                            inactiveIcon: Icons.home_outlined,
+                            activeColor: activeColor,
+                            inactiveColor: defaultGreyColor,
+                            isDarkMode: isDarkMode,
+                          ),
 
-                      // ==================================================
-                      // CALCULATOR
-                      // ==================================================
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              // DIBERSIHKAN DARI 'const' UNTUK MENGATASI ERROR
-                              builder: (context) => CalculatorTabView(
-                                historicalDataViewModel:
-                                    _historicalDataViewModel,
+                          // ==================================================
+                          // CALCULATOR (FAB gradasi oranye)
+                          // ==================================================
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CalculatorTabView(
+                                    historicalDataViewModel:
+                                        _historicalDataViewModel,
+                                  ),
+                                ),
+                              );
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [secondaryOrange, primaryOrange],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(
+                                    isDarkMode ? 0.15 : 0.6,
+                                  ),
+                                  width: 1.5,
+                                ),
+                                // Glow dikurangi supaya tidak terlalu
+                                // mencolok dibanding navbar-nya sendiri.
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryOrange.withOpacity(0.22),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: CustomPaint(
+                                  size: const Size(18, 18),
+                                  painter: MathSymbolsPainter(),
+                                ),
                               ),
                             ),
-                          );
-                        },
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          width: 46,
-                          height: 46,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFF9800),
-                            shape: BoxShape.circle,
                           ),
-                          child: Center(
-                            child: CustomPaint(
-                              size: const Size(18, 18),
-                              painter: MathSymbolsPainter(),
-                            ),
-                          ),
-                        ),
-                      ),
 
-                      // ==================================================
-                      // PROFILE
-                      // ==================================================
-                      _buildNavItem(
-                        index: 1,
-                        label: 'Profil',
-                        activeIcon: Icons.person_rounded,
-                        inactiveIcon: Icons.person_outline_rounded,
-                        activeColor: activeColor,
-                        inactiveColor: defaultGreyColor,
+                          // ==================================================
+                          // PROFILE
+                          // ==================================================
+                          _buildNavItem(
+                            index: 1,
+                            label: 'Profil',
+                            activeIcon: Icons.person_rounded,
+                            inactiveIcon: Icons.person_outline_rounded,
+                            activeColor: activeColor,
+                            inactiveColor: defaultGreyColor,
+                            isDarkMode: isDarkMode,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               );
@@ -186,7 +223,7 @@ class _MainNavigationViewState extends State<MainNavigationView> {
   }
 
   // ============================================================
-  // NAV ITEM
+  // NAV ITEM (dengan pill highlight gradasi oranye tipis saat aktif)
   // ============================================================
 
   Widget _buildNavItem({
@@ -196,6 +233,7 @@ class _MainNavigationViewState extends State<MainNavigationView> {
     required IconData inactiveIcon,
     required Color activeColor,
     required Color inactiveColor,
+    required bool isDarkMode,
   }) {
     final isSelected = _currentIndex == index;
 
@@ -207,27 +245,31 @@ class _MainNavigationViewState extends State<MainNavigationView> {
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 55,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              isSelected ? activeIcon : inactiveIcon,
-              size: 22,
-              color: itemColor,
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: itemColor,
+        width: 58,
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 200),
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            color: itemColor,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  isSelected ? activeIcon : inactiveIcon,
+                  key: ValueKey(isSelected),
+                  size: 22,
+                  color: itemColor,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 3),
+              Text(label, textAlign: TextAlign.center),
+            ],
+          ),
         ),
       ),
     );
