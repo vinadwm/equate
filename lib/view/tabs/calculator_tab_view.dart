@@ -654,6 +654,13 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
   }) {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
+    // Referensi collection riwayat milik user ini: users/{uid}/histories
+    final CollectionReference<Map<String, dynamic>> historiesRef =
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('histories');
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -678,10 +685,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
         ],
       ),
       child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .collection('histories')
+        stream: historiesRef
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -747,6 +751,10 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                         MaterialPageRoute(
                           builder: (context) => HistoryView(
                             historyList: allHistoryList,
+                            // 👇 Ini yang tadinya belum ada — supaya hapus
+                            // beneran menghapus dokumen di Firestore, bukan
+                            // cuma dari tampilan lokal.
+                            historyCollection: historiesRef,
                           ),
                         ),
                       );
