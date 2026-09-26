@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -16,9 +17,21 @@ import 'history_detail_sheet.dart';
 class HistoryView extends StatefulWidget {
   final List<dynamic> historyList;
 
+  /// Referensi collection Firestore tempat riwayat ini disimpan, misal
+  /// `FirebaseFirestore.instance.collection('users').doc(uid).collection('history')`.
+  /// Kalau diisi, item yang dipilih akan benar-benar dihapus dari Firestore
+  /// (memakai `item.id`, yaitu doc.id) saat pengguna menekan tombol hapus.
+  final CollectionReference<Map<String, dynamic>>? historyCollection;
+
+  /// Optional callback dipanggil dengan item-item yang berhasil dihapus,
+  /// kalau kamu butuh melakukan hal lain (mis. update state di parent).
+  final void Function(List<dynamic> deletedItems)? onDeleteItems;
+
   const HistoryView({
     super.key,
     required this.historyList,
+    this.historyCollection,
+    this.onDeleteItems,
   });
 
   @override
@@ -26,15 +39,26 @@ class HistoryView extends StatefulWidget {
 }
 
 class _HistoryViewState extends State<HistoryView> {
+  late List<dynamic> _historyList;
+
   String _selectedMarket = 'Semua'; // 'Semua', 'Emas', 'Hangseng'
-  String _searchQuery = '';
-  
+
   // Filter State
   int? _selectedDaysFilter; // null, 1 (Hari ini), 2, 3, 4, 5, 6, 7
   DateTimeRange? _selectedDateRange;
   String _selectedCalcType = 'Semua'; // 'Semua', 'Emas Digital', 'Emas Fisik', 'Pivot Point', 'NEST'
 
   final List<String> _markets = ['Semua', 'Emas', 'Hangseng'];
+
+  // Selection mode (long-press to select & delete)
+  bool _isSelectionMode = false;
+  final Set<dynamic> _selectedItems = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _historyList = List<dynamic>.from(widget.historyList);
+  }
 
   String _formatCurrency(double amount) {
     final formatter = NumberFormat.currency(
@@ -138,12 +162,10 @@ class _HistoryViewState extends State<HistoryView> {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
 
-    return widget.historyList.where((item) {
+    return _historyList.where((item) {
       final parsed = _parseItemInfo(item);
       final marketType = parsed['marketType'] as String;
       final subType = parsed['subType'] as String;
-      final title = (parsed['title'] as String).toLowerCase();
-      final details = (parsed['details'] as String).toLowerCase();
       final timestamp = parsed['timestamp'] as DateTime;
 
       // 1. Filter Tab Pasar Utama
@@ -156,15 +178,7 @@ class _HistoryViewState extends State<HistoryView> {
         return false;
       }
 
-      // 3. Filter Search Query
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
-        if (!title.contains(query) && !details.contains(query)) {
-          return false;
-        }
-      }
-
-      // 4. Filter Berdasarkan Opsi Hari (1 - 7 Hari)
+      // 3. Filter Berdasarkan Opsi Hari (1 - 7 Hari)
       if (_selectedDaysFilter != null) {
         final limitDate = todayStart.subtract(Duration(days: _selectedDaysFilter! - 1));
         if (timestamp.isBefore(limitDate)) {
@@ -172,7 +186,7 @@ class _HistoryViewState extends State<HistoryView> {
         }
       }
 
-      // 5. Filter Rentang Tanggal Manual
+      // 4. Filter Rentang Tanggal Manual
       if (_selectedDateRange != null) {
         final start = DateTime(
           _selectedDateRange!.start.year,
@@ -237,6 +251,121 @@ class _HistoryViewState extends State<HistoryView> {
       _selectedDateRange = null;
       _selectedCalcType = 'Semua';
     });
+  }
+
+  // ============================================================
+  // SELECTION MODE (long-press untuk pilih & hapus)
+  // ============================================================
+  void _enterSelectionMode(dynamic item) {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedItems.add(item);
+    });
+  }
+
+  void _toggleItemSelection(dynamic item) {
+    setState(() {
+      if (_selectedItems.contains(item)) {
+        _selectedItems.remove(item);
+        if (_selectedItems.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedItems.add(item);
+      }
+    });
+  }
+
+  void _cancelSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedItems.clear();
+    });
+  }
+
+  Future<void> _confirmDeleteSelected(bool isDarkMode) async {
+    if (_selectedItems.isEmpty) return;
+
+    final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF2C2D30);
+    final secondaryTextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDarkMode ? const Color(0xFF1E1F24) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Hapus Riwayat?',
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w800,
+              color: primaryTextColor,
+            ),
+          ),
+          content: Text(
+            '${_selectedItems.length} riwayat yang dipilih akan dihapus permanen.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: secondaryTextColor,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'Batal',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  color: secondaryTextColor,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                'Hapus',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFFF3B30),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    final deleted = List<dynamic>.from(_selectedItems);
+
+    // Hapus dari Firestore dulu (kalau collection-nya disediakan).
+    if (widget.historyCollection != null) {
+      final batch = widget.historyCollection!.firestore.batch();
+      for (final item in deleted) {
+        if (item is CalculationHistory && item.id.isNotEmpty) {
+          batch.delete(widget.historyCollection!.doc(item.id));
+        }
+      }
+      try {
+        await batch.commit();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal menghapus riwayat: $e')),
+          );
+        }
+        return; // Jangan hapus dari list lokal kalau gagal di Firestore.
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _historyList.removeWhere((item) => _selectedItems.contains(item));
+      _isSelectionMode = false;
+      _selectedItems.clear();
+    });
+    widget.onDeleteItems?.call(deleted);
   }
 
   // ============================================================
@@ -523,100 +652,69 @@ class _HistoryViewState extends State<HistoryView> {
         centerTitle: true,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 20,
+            _isSelectionMode ? Icons.close_rounded : Icons.arrow_back_ios_new_rounded,
+            size: _isSelectionMode ? 24 : 20,
             color: primaryTextColor,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (_isSelectionMode) {
+              _cancelSelectionMode();
+            } else {
+              Navigator.pop(context);
+            }
+          },
         ),
         title: Text(
-          'Semua Riwayat',
+          _isSelectionMode ? '${_selectedItems.length} Dipilih' : 'Semua Riwayat',
           style: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w800,
             fontSize: 18,
             color: primaryTextColor,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  Icons.tune_rounded,
-                  color: _hasActiveFilters ? const Color(0xFFFF9500) : primaryTextColor,
+        actions: _isSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete_rounded, color: Color(0xFFFF3B30)),
+                  tooltip: 'Hapus',
+                  onPressed: _selectedItems.isEmpty
+                      ? null
+                      : () => _confirmDeleteSelected(isDarkMode),
                 ),
-                if (_hasActiveFilters)
-                  Positioned(
-                    top: -2,
-                    right: -2,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF9500),
-                        shape: BoxShape.circle,
+                const SizedBox(width: 8),
+              ]
+            : [
+                IconButton(
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        Icons.tune_rounded,
+                        color: _hasActiveFilters ? const Color(0xFFFF9500) : primaryTextColor,
                       ),
-                    ),
+                      if (_hasActiveFilters)
+                        Positioned(
+                          top: -2,
+                          right: -2,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF9500),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
+                  onPressed: () => _showFilterBottomSheet(context, isDarkMode),
+                  tooltip: 'Filter',
+                ),
+                const SizedBox(width: 8),
               ],
-            ),
-            onPressed: () => _showFilterBottomSheet(context, isDarkMode),
-            tooltip: 'Filter',
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: Column(
         children: [
-          const SizedBox(height: 4),
-
-          // ============================================================
-          // SEARCH BAR
-          // ============================================================
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: isDarkMode
-                    ? const Color(0xFF1E1F24).withOpacity(0.8)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isDarkMode
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.black.withOpacity(0.05),
-                ),
-              ),
-              child: TextField(
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                },
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  color: primaryTextColor,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Cari riwayat...',
-                  hintStyle: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: Colors.grey[500],
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    color: Colors.grey[500],
-                    size: 20,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-              ),
-            ),
-          ),
-
           const SizedBox(height: 12),
 
           // ============================================================
@@ -767,8 +865,8 @@ class _HistoryViewState extends State<HistoryView> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _searchQuery.isNotEmpty || _hasActiveFilters
-                              ? 'Coba sesuaikan kata kunci atau filter kamu'
+                          _hasActiveFilters
+                              ? 'Coba sesuaikan filter kamu'
                               : 'Hasil perhitungan kamu akan tampil di sini',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
@@ -814,6 +912,7 @@ class _HistoryViewState extends State<HistoryView> {
 
                             final isPositive = itemResult >= 0;
                             final timeFormatted = DateFormat('HH:mm').format(itemTimestamp);
+                            final isItemSelected = _selectedItems.contains(rawItem);
 
                             String formattedValue;
                             if (isCurrency) {
@@ -831,10 +930,12 @@ class _HistoryViewState extends State<HistoryView> {
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: isDarkMode
-                                      ? Colors.white.withOpacity(0.08)
-                                      : Colors.black.withOpacity(0.04),
-                                  width: 0.8,
+                                  color: isItemSelected
+                                      ? const Color(0xFFFF9500)
+                                      : (isDarkMode
+                                          ? Colors.white.withOpacity(0.08)
+                                          : Colors.black.withOpacity(0.04)),
+                                  width: isItemSelected ? 1.5 : 0.8,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
@@ -848,18 +949,27 @@ class _HistoryViewState extends State<HistoryView> {
                                 color: Colors.transparent,
                                 child: InkWell(
                                   onTap: () {
-                                    showModalBottomSheet(
-                                      context: context,
-                                      isScrollControlled: true,
-                                      backgroundColor: Colors.transparent,
-                                      builder: (context) => HistoryDetailSheet(
-                                        item: rawItem,
-                                        isDarkMode: isDarkMode,
-                                        primaryTextColor: primaryTextColor,
-                                        secondaryTextColor: secondaryTextColor,
-                                        primaryOrange: const Color(0xFFFF9500),
-                                      ),
-                                    );
+                                    if (_isSelectionMode) {
+                                      _toggleItemSelection(rawItem);
+                                    } else {
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: Colors.transparent,
+                                        builder: (context) => HistoryDetailSheet(
+                                          item: rawItem,
+                                          isDarkMode: isDarkMode,
+                                          primaryTextColor: primaryTextColor,
+                                          secondaryTextColor: secondaryTextColor,
+                                          primaryOrange: const Color(0xFFFF9500),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  onLongPress: () {
+                                    if (!_isSelectionMode) {
+                                      _enterSelectionMode(rawItem);
+                                    }
                                   },
                                   borderRadius: BorderRadius.circular(20),
                                   child: Padding(
@@ -867,6 +977,21 @@ class _HistoryViewState extends State<HistoryView> {
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
+                                        if (_isSelectionMode)
+                                          Padding(
+                                            padding: const EdgeInsets.only(right: 10),
+                                            child: Icon(
+                                              isItemSelected
+                                                  ? Icons.check_circle_rounded
+                                                  : Icons.radio_button_unchecked_rounded,
+                                              color: isItemSelected
+                                                  ? const Color(0xFFFF9500)
+                                                  : (isDarkMode
+                                                      ? Colors.grey[600]
+                                                      : Colors.grey[400]),
+                                              size: 22,
+                                            ),
+                                          ),
                                         Container(
                                           padding: const EdgeInsets.all(10),
                                           decoration: BoxDecoration(
