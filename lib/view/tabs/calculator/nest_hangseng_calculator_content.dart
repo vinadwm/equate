@@ -31,6 +31,7 @@ class _NestHangsengCalculatorContentState
 
   bool _syncingControllers = false;
   bool _hasInput = false;
+  bool _isNestExplanationExpanded = false;
 
   @override
   void initState() {
@@ -635,6 +636,10 @@ class _NestHangsengCalculatorContentState
 
     final subText = isDarkMode ? Colors.grey[300] : Colors.grey[700];
 
+    // ============================================================
+    // TERM CARD
+    // ============================================================
+
     Widget term(String title, String desc, IconData icon) {
       return Expanded(
         child: Container(
@@ -652,12 +657,16 @@ class _NestHangsengCalculatorContentState
                 children: [
                   Icon(icon, size: 14, color: primaryOrange),
                   const SizedBox(width: 5),
-                  Text(
-                    title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: primaryTextColor,
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: primaryTextColor,
+                      ),
                     ),
                   ),
                 ],
@@ -676,6 +685,10 @@ class _NestHangsengCalculatorContentState
         ),
       );
     }
+
+    // ============================================================
+    // SIGNAL RULE
+    // ============================================================
 
     Widget rule({
       required IconData icon,
@@ -748,7 +761,13 @@ class _NestHangsengCalculatorContentState
       );
     }
 
-    return Container(
+    // ============================================================
+    // MAIN CARD
+    // ============================================================
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -765,53 +784,85 @@ class _NestHangsengCalculatorContentState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: primaryOrange.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(11),
+          // ========================================================
+          // HEADER - BISA DIKLIK
+          // ========================================================
+
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isNestExplanationExpanded = !_isNestExplanationExpanded;
+              });
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: primaryOrange.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(
+                    Icons.lightbulb_rounded,
+                    size: 20,
+                    color: primaryOrange,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.lightbulb_rounded,
-                  size: 20,
-                  color: primaryOrange,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Apa itu Nest?',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: primaryTextColor,
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Apa itu NEST?',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: primaryTextColor,
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Konsep Follow The Trend',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: primaryOrange,
+                      const SizedBox(height: 2),
+                      Text(
+                        'Konsep Follow The Trend',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: primaryOrange,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // ==================================================
+                // PANAH EXPAND / COLLAPSE
+                // ==================================================
+                AnimatedRotation(
+                  turns: _isNestExplanationExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 250),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 25,
+                    color: primaryOrange,
+                  ),
+                ),
+              ],
+            ),
           ),
 
+          // ========================================================
+          // DESKRIPSI UTAMA - SELALU TAMPIL
+          // ========================================================
           const SizedBox(height: 12),
 
           Text(
-            'Nest adalah konsep Follow The Trend yang mengacu pada harga '
-            'penutupan (Close). ',
+            'NEST adalah konsep Follow The Trend yang mengacu '
+            'pada perbandingan harga Open dan Close untuk '
+            'membaca arah pergerakan harga.',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               height: 1.55,
@@ -819,91 +870,124 @@ class _NestHangsengCalculatorContentState
             ),
           ),
 
-          const SizedBox(height: 12),
+          // ========================================================
+          // DETAIL - HANYA MUNCUL SAAT EXPAND
+          // ========================================================
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 250),
+            crossFadeState: _isNestExplanationExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
 
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              term(
-                'Open',
-                'Harga pertama saat pasar dibuka hari ini.',
-                Icons.wb_sunny_rounded,
-              ),
-              const SizedBox(width: 8),
-              term(
-                'Close',
-                'Harga terakhir saat pasar ditutup pada hari sebelumnya.',
-                Icons.nightlight_round,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          Text(
-            'Cara membaca sinyal',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: primaryTextColor,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          rule(
-            icon: Icons.trending_up_rounded,
-            color: buyColor,
-            label: 'BUY',
-            condition: 'Close lebih tinggi dari Open',
-            example:
-                'Contoh: Close 18.500 dan Open 18.400 → BUY (harga cenderung naik).',
-          ),
-
-          rule(
-            icon: Icons.trending_down_rounded,
-            color: sellColor,
-            label: 'SELL',
-            condition: 'Close lebih rendah dari Open',
-            example:
-                'Contoh: Close 18.300 dan Open 18.400 → SELL (harga cenderung turun).',
-          ),
-
-          rule(
-            icon: Icons.remove_rounded,
-            color: primaryOrange,
-            label: 'BUY/SELL',
-            condition: 'Close sama dengan Open',
-            example: 'Arah belum jelas, sebaiknya tunggu konfirmasi dulu.',
-          ),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.white.withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+            secondChild: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.tips_and_updates_rounded,
-                  size: 15,
-                  color: primaryOrange,
-                ),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: Text(
-                    'Tips: saat weekend atau libur newsmaker tidak ada data baru, '
-                    'jadi aplikasi otomatis memakai data terakhir yang tersedia.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 9.5,
-                      height: 1.45,
-                      color: subText,
+                const SizedBox(height: 14),
+
+                // --------------------------------------------------
+                // OPEN / CLOSE
+                // --------------------------------------------------
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    term(
+                      'Open',
+                      'Harga pertama saat pasar dibuka hari ini.',
+                      Icons.wb_sunny_rounded,
                     ),
+                    const SizedBox(width: 8),
+                    term(
+                      'Close',
+                      'Harga terakhir saat pasar ditutup pada hari sebelumnya.',
+                      Icons.nightlight_round,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // --------------------------------------------------
+                // CARA MEMBACA SINYAL
+                // --------------------------------------------------
+                Text(
+                  'Cara membaca sinyal',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: primaryTextColor,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // BUY
+                rule(
+                  icon: Icons.trending_up_rounded,
+                  color: buyColor,
+                  label: 'BUY',
+                  condition: 'Close lebih tinggi dari Open',
+                  example:
+                      'Contoh: Close 18.500 dan Open 18.400 → BUY '
+                      '(harga cenderung naik).',
+                ),
+
+                // SELL
+                rule(
+                  icon: Icons.trending_down_rounded,
+                  color: sellColor,
+                  label: 'SELL',
+                  condition: 'Close lebih rendah dari Open',
+                  example:
+                      'Contoh: Close 18.300 dan Open 18.400 → SELL '
+                      '(harga cenderung turun).',
+                ),
+
+                // NEUTRAL
+                rule(
+                  icon: Icons.remove_rounded,
+                  color: primaryOrange,
+                  label: 'BUY/SELL',
+                  condition: 'Close sama dengan Open',
+                  example:
+                      'Arah belum jelas, sebaiknya tunggu konfirmasi dulu.',
+                ),
+
+                // --------------------------------------------------
+                // TIPS
+                // --------------------------------------------------
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.white.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.tips_and_updates_rounded,
+                        size: 15,
+                        color: primaryOrange,
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          'Tips: saat weekend atau libur Newsmaker '
+                          'tidak ada data baru, aplikasi otomatis '
+                          'menggunakan data terakhir yang tersedia '
+                          'untuk Close.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9.5,
+                            height: 1.45,
+                            color: subText,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

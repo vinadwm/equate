@@ -169,9 +169,13 @@ class PivotHangsengViewModel extends ChangeNotifier {
   ///
   /// Nilainya bisa berasal dari auto-fill Newsmaker
   /// atau hasil edit manual user.
-  double? get openValue {
-    return _parseNumber(_open);
-  }
+  double? get highValue => _parseNumber(_high);
+
+  double? get lowValue => _parseNumber(_low);
+
+  double? get closeValue => _parseNumber(_close);
+
+  double? get openValue => _parseNumber(_open);
 
   /// Open asli dari Newsmaker.
   ///

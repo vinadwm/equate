@@ -36,9 +36,6 @@ class NestGoldViewModel extends ChangeNotifier {
   // ============================================================
   // MODE OTOMATIS / MANUAL
   // ============================================================
-  //
-  // true  -> Open & Close diisi otomatis dari data historical.
-  // false -> User mengisi Open & Close sendiri (manual).
 
   bool _autoMode = true;
 
@@ -64,7 +61,7 @@ class NestGoldViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // ERROR / INFO
+  // ERROR
   // ============================================================
 
   String? _errorMessage;
@@ -72,7 +69,7 @@ class NestGoldViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   // ============================================================
-  // TANGGAL PERHITUNGAN
+  // TANGGAL
   // ============================================================
 
   DateTime get calculationDate {
@@ -88,15 +85,13 @@ class NestGoldViewModel extends ChangeNotifier {
   // ============================================================
   // DATA GOLD HARI INI (DENGAN FALLBACK)
   // ============================================================
-  //
-  // Kalau data tepat hari ini tidak ada (mis. weekend/libur
-  // newsmaker), otomatis mundur mengambil data valid terakhir
-  // yang tersedia.
 
   HistoricalDataModel? get todayGoldData {
-    final data = historicalDataViewModel.getLatestAvailableData(
+    // OPEN HANYA BOLEH MENGAMBIL DATA HARI INI.
+    // Tidak ada fallback ke hari sebelumnya.
+    final data = historicalDataViewModel.getDataForMarket(
       'LGD Daily',
-      calculationDate,
+      date: calculationDate,
     );
 
     if (data == null) {
@@ -114,30 +109,19 @@ class NestGoldViewModel extends ChangeNotifier {
     return todayGoldData?.open;
   }
 
-  bool get isTodayDataFallback {
-    final data = todayGoldData;
+  bool get isTodayDataFallback => false;
 
-    if (data == null) {
-      return false;
-    }
-
-    return !_isSameCalendarDate(data.date, calculationDate);
-  }
-
-  DateTime get todayDataDisplayDate {
-    return todayGoldData?.date ?? calculationDate;
+  DateTime? get todayDataDisplayDate {
+    return todayGoldData?.date;
   }
 
   // ============================================================
   // DATA GOLD HARI KEMARIN (DENGAN FALLBACK)
   // ============================================================
   //
-  // Kalau data H-1 tidak ada (mis. H-1 jatuh di Sabtu/Minggu atau
-  // libur newsmaker), otomatis mundur mengambil data valid terakhir
-  // yang tersedia sebelum tanggal itu.
-  //
-  // Contoh: kalau H-1 = tanggal 19 dan tidak ada data (libur),
-  // maka akan diambil data tanggal 18 (data terakhir yang tersedia).
+  // Kalau H-1 tidak ada (mis. Sabtu/Minggu atau libur newsmaker),
+  // otomatis mundur mengambil data valid terakhir yang tersedia.
+  // Contoh: H-1 = tanggal 19 tidak ada -> ambil tanggal 18.
 
   HistoricalDataModel? get yesterdayGoldData {
     return historicalDataViewModel.getLatestAvailableData(
@@ -220,99 +204,64 @@ class NestGoldViewModel extends ChangeNotifier {
     final currentData = todayGoldData;
     final previousData = yesterdayGoldData;
 
+    bool openFilled = false;
+    bool closeFilled = false;
+
     // ==========================================================
-    // OPEN HARI INI TIDAK TERSEDIA
+    // OPEN
+    // HANYA DATA HARI INI
     // ==========================================================
 
-    if (currentData == null) {
+    if (currentData != null && currentData.open > 0) {
+      _open = _numberToInput(currentData.open);
+      openFilled = true;
+    } else {
+      // Kalau data hari ini belum tersedia,
+      // Open harus tetap kosong.
       _open = '';
-
-      _isAutoFilled = false;
-
-      _errorMessage =
-          'Data Open Gold ${_formatDate(calculationDate)} belum tersedia.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
     }
 
     // ==========================================================
-    // CLOSE HARI KEMARIN TIDAK TERSEDIA
+    // CLOSE
+    // DATA TERAKHIR YANG TERSEDIA
     // ==========================================================
 
-    if (previousData == null) {
+    if (previousData != null && previousData.close > 0) {
+      _close = _numberToInput(previousData.close);
+      closeFilled = true;
+    } else {
       _close = '';
-
-      _isAutoFilled = false;
-
-      _errorMessage =
-          'Data Close Gold ${_formatDate(previousDate)} belum tersedia.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
     }
 
     // ==========================================================
-    // VALIDASI OPEN
+    // STATUS AUTO FILL
     // ==========================================================
 
-    if (currentData.open <= 0) {
-      _open = '';
+    _isAutoFilled = openFilled || closeFilled;
 
-      _isAutoFilled = false;
+    // ==========================================================
+    // ERROR / STATUS
+    // ==========================================================
 
+    if (!openFilled && !closeFilled) {
       _errorMessage =
-          'Data Open Gold ${_formatDate(currentData.date)} belum tersedia.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
-    }
-
-    // ==========================================================
-    // VALIDASI CLOSE
-    // ==========================================================
-
-    if (previousData.close <= 0) {
-      _close = '';
-
-      _isAutoFilled = false;
-
+          'Data Open ${_formatDate(calculationDate)} dan '
+          'Close ${_formatDate(previousDate)} belum tersedia.';
+    } else if (!openFilled) {
       _errorMessage =
-          'Data Close Gold ${_formatDate(previousData.date)} belum tersedia.';
-
-      _clearCalculationResult(notify: false);
-
-      notifyListeners();
-
-      return false;
+          'Data Open Gold ${_formatDate(calculationDate)} '
+          'belum tersedia.';
+    } else if (!closeFilled) {
+      _errorMessage = 'Data Close Gold belum tersedia.';
+    } else {
+      _errorMessage = null;
     }
-
-    // ==========================================================
-    // AUTO FILL
-    // Open  -> data hari ini (atau fallback terakhir)
-    // Close -> data hari kemarin (atau fallback terakhir)
-    // ==========================================================
-
-    _open = _numberToInput(currentData.open);
-    _close = _numberToInput(previousData.close);
-
-    _isAutoFilled = true;
-    _errorMessage = null;
 
     _clearCalculationResult(notify: false);
 
     notifyListeners();
 
-    return true;
+    return openFilled && closeFilled;
   }
 
   // ============================================================
@@ -384,10 +333,6 @@ class NestGoldViewModel extends ChangeNotifier {
     final openValue = _parseNumber(_open);
     final closeValue = _parseNumber(_close);
 
-    // ==========================================================
-    // VALIDASI FORMAT
-    // ==========================================================
-
     if (openValue == null || closeValue == null) {
       _errorMessage =
           'Harap masukkan Open dan Close dengan format angka yang valid.';
@@ -399,10 +344,6 @@ class NestGoldViewModel extends ChangeNotifier {
       return false;
     }
 
-    // ==========================================================
-    // VALIDASI NILAI
-    // ==========================================================
-
     if (openValue <= 0 || closeValue <= 0) {
       _errorMessage = 'Nilai Open dan Close harus lebih dari 0.';
 
@@ -412,10 +353,6 @@ class NestGoldViewModel extends ChangeNotifier {
 
       return false;
     }
-
-    // ==========================================================
-    // HITUNG
-    // ==========================================================
 
     _isCalculated = true;
     _errorMessage = null;
@@ -608,7 +545,7 @@ class NestGoldViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // HISTORICAL DATA LISTENER
+  // HISTORICAL LISTENER
   // ============================================================
 
   void _onHistoricalDataChanged() {
@@ -628,15 +565,12 @@ class NestGoldViewModel extends ChangeNotifier {
       return null;
     }
 
-    // Format Indonesia:
-    // 4.567,08 → 4567.08
     if (text.contains('.') && text.contains(',')) {
       final normalized = text.replaceAll('.', '').replaceAll(',', '.');
 
       return double.tryParse(normalized);
     }
 
-    // 4567,08 → 4567.08
     if (text.contains(',')) {
       return double.tryParse(text.replaceAll(',', '.'));
     }

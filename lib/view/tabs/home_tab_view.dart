@@ -293,13 +293,11 @@ class HomeTabViewState extends State<HomeTabView> {
                   mainAxisSize: MainAxisSize.min,
                   children: options.map((opt) {
                     final isSelected =
-                        _historicalViewModel.selectedCategory ==
-                        opt['value'];
+                        _historicalViewModel.selectedCategory == opt['value'];
                     final isLast = opt == options.last;
 
                     return InkWell(
-                      onTap: () =>
-                          Navigator.pop(anchorContext, opt['value']),
+                      onTap: () => Navigator.pop(anchorContext, opt['value']),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -823,11 +821,7 @@ class HomeTabViewState extends State<HomeTabView> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.tune_rounded,
-                        size: 18,
-                        color: primaryOrange,
-                      ),
+                      Icon(Icons.tune_rounded, size: 18, color: primaryOrange),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -871,10 +865,7 @@ class HomeTabViewState extends State<HomeTabView> {
               bottom: Radius.circular(20),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   Icon(
@@ -907,10 +898,7 @@ class HomeTabViewState extends State<HomeTabView> {
                   const Spacer(),
                   // Panah ini sengaja dibuat SAMA persis dengan panah di
                   // baris pemilihan pasar di atas (tanpa kotak/background).
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: primaryOrange,
-                  ),
+                  Icon(Icons.keyboard_arrow_down_rounded, color: primaryOrange),
                 ],
               ),
             ),
@@ -980,11 +968,7 @@ class HomeTabViewState extends State<HomeTabView> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.history_rounded,
-                size: 12,
-                color: secondaryTextColor,
-              ),
+              Icon(Icons.history_rounded, size: 12, color: secondaryTextColor),
               const SizedBox(width: 5),
               Text(
                 'HISTORICAL',
@@ -1518,95 +1502,133 @@ class HomeTabViewState extends State<HomeTabView> {
             )
           else ...[
             // ==================================================
-            // HEADER ROW
+            // TABEL HORIZONTAL SCROLL
             // ==================================================
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 10,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    primaryOrange.withOpacity(0.16),
-                    primaryOrange.withOpacity(0.04),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: SizedBox(
+                width: 500,
+                child: Column(
+                  children: [
+                    // ==================================================
+                    // HEADER ROW
+                    // ==================================================
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            primaryOrange.withOpacity(0.16),
+                            primaryOrange.withOpacity(0.04),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          _tableCell(
+                            'Tanggal',
+                            width: 120,
+                            isHeader: true,
+                            color: primaryOrange,
+                          ),
+                          _tableCell(
+                            'Open',
+                            width: 90,
+                            isHeader: true,
+                            color: primaryOrange,
+                          ),
+                          _tableCell(
+                            'High',
+                            width: 90,
+                            isHeader: true,
+                            color: primaryOrange,
+                          ),
+                          _tableCell(
+                            'Low',
+                            width: 90,
+                            isHeader: true,
+                            color: primaryOrange,
+                          ),
+                          _tableCell(
+                            'Close',
+                            width: 90,
+                            isHeader: true,
+                            color: primaryOrange,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // ==================================================
+                    // BODY ROWS
+                    // ==================================================
+                    ...List.generate(rows.length, (index) {
+                      final item = rows[index];
+                      final isEven = index % 2 == 0;
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isEven
+                              ? Colors.transparent
+                              : (isDarkMode
+                                    ? Colors.white.withOpacity(0.03)
+                                    : Colors.black.withOpacity(0.02)),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isDarkMode
+                                  ? Colors.white.withOpacity(0.06)
+                                  : Colors.black.withOpacity(0.05),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            _tableCell(
+                              item.dateFormatted,
+                              width: 120,
+                              color: secondaryTextColor,
+                            ),
+                            _tableCell(
+                              item.openFormatted,
+                              width: 90,
+                              color: primaryTextColor,
+                            ),
+                            _tableCell(
+                              item.highFormatted,
+                              width: 90,
+                              color: const Color(0xFF4CAF50),
+                            ),
+                            _tableCell(
+                              item.lowFormatted,
+                              width: 90,
+                              color: const Color(0xFFEF5350),
+                            ),
+                            _tableCell(
+                              item.closeFormatted,
+                              width: 90,
+                              color: primaryTextColor,
+                              bold: true,
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                   ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
                 ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  _tableCell('Tanggal', flex: 3, isHeader: true, color: primaryOrange),
-                  _tableCell('Open', flex: 2, isHeader: true, color: primaryOrange),
-                  _tableCell('High', flex: 2, isHeader: true, color: primaryOrange),
-                  _tableCell('Low', flex: 2, isHeader: true, color: primaryOrange),
-                  _tableCell('Close', flex: 2, isHeader: true, color: primaryOrange),
-                ],
               ),
             ),
-
-            // ==================================================
-            // BODY ROWS — Column biasa, tanpa scroll bersarang.
-            // ==================================================
-            ...List.generate(rows.length, (index) {
-              final item = rows[index];
-              final isEven = index % 2 == 0;
-
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: isEven
-                      ? Colors.transparent
-                      : (isDarkMode
-                            ? Colors.white.withOpacity(0.03)
-                            : Colors.black.withOpacity(0.02)),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isDarkMode
-                          ? Colors.white.withOpacity(0.06)
-                          : Colors.black.withOpacity(0.05),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    _tableCell(
-                      item.dateFormatted,
-                      flex: 3,
-                      color: secondaryTextColor,
-                    ),
-                    _tableCell(
-                      item.openFormatted,
-                      flex: 2,
-                      color: primaryTextColor,
-                    ),
-                    _tableCell(
-                      item.highFormatted,
-                      flex: 2,
-                      color: const Color(0xFF4CAF50),
-                    ),
-                    _tableCell(
-                      item.lowFormatted,
-                      flex: 2,
-                      color: const Color(0xFFEF5350),
-                    ),
-                    _tableCell(
-                      item.closeFormatted,
-                      flex: 2,
-                      color: primaryTextColor,
-                      bold: true,
-                    ),
-                  ],
-                ),
-              );
-            }),
-
             // ==================================================
             // TOMBOL LIHAT SELENGKAPNYA / SEMBUNYIKAN
             // ==================================================
@@ -1625,9 +1647,7 @@ class HomeTabViewState extends State<HomeTabView> {
                   margin: const EdgeInsets.only(top: 4),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: primaryOrange.withOpacity(0.35),
-                    ),
+                    border: Border.all(color: primaryOrange.withOpacity(0.35)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1663,16 +1683,17 @@ class HomeTabViewState extends State<HomeTabView> {
 
   Widget _tableCell(
     String text, {
-    required int flex,
+    required double width,
     required Color color,
     bool isHeader = false,
     bool bold = false,
   }) {
-    return Expanded(
-      flex: flex,
+    return SizedBox(
+      width: width,
       child: Text(
         text,
-        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+        overflow: TextOverflow.visible,
         style: GoogleFonts.poppins(
           fontSize: isHeader ? 10.5 : 11.5,
           fontWeight: isHeader || bold ? FontWeight.w700 : FontWeight.w500,

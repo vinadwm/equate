@@ -85,81 +85,139 @@ class _SplashViewState extends State<SplashView> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Ukuran logo menyesuaikan ukuran layar
+    final double logoSize = screenWidth < 360 ? 90 : 110;
+
+    // Lebar maksimum area teks
+    final double availableTextWidth = screenWidth - logoSize - 40;
+
+    final double textWidth = availableTextWidth.clamp(150.0, 210.0);
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Center(
-        child: AnimatedScale(
-          scale: _isScaled ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 1000),
-          curve: Curves.easeOutBack,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 110,
-                height: 110,
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(
-                      Icons.analytics_outlined,
-                      size: 80,
-                      color: Colors.amber[800],
-                    );
-                  },
-                ),
-              ),
 
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 1200),
-                curve: Curves.easeInOutCubic,
-                width: _isShifted ? 210 : 0,
-                clipBehavior: Clip.hardEdge,
-                decoration: const BoxDecoration(),
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 1000),
-                  curve: Curves.easeIn,
-                  opacity: _isShifted ? 1.0 : 0.0,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const NeverScrollableScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Equate',
-                            style: GoogleFonts.poppins(
-                              fontSize: 46,
-                              fontWeight: FontWeight.w700,
-                              fontStyle: FontStyle.italic,
-                              color: const Color(0xFF1A1A1A),
-                              letterSpacing: -1.5,
-                              height: 1.0,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+
+          child: AnimatedScale(
+            scale: _isScaled ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 1000),
+            curve: Curves.easeOutBack,
+
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+
+              children: [
+                // =====================================================
+                // LOGO
+                // =====================================================
+
+                SizedBox(
+                  width: logoSize,
+                  height: logoSize,
+
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    fit: BoxFit.contain,
+
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.analytics_outlined,
+                        size: logoSize * 0.7,
+                        color: Colors.amber[800],
+                      );
+                    },
+                  ),
+                ),
+
+                // =====================================================
+                // TEXT
+                // =====================================================
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 1200),
+                  curve: Curves.easeInOutCubic,
+
+                  width: _isShifted ? textWidth : 0,
+
+                  // PENTING:
+                  // Jangan gunakan Clip.hardEdge ketika width = 0
+                  clipBehavior: Clip.none,
+
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 1000),
+                    curve: Curves.easeIn,
+
+                    opacity: _isShifted ? 1.0 : 0.0,
+
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 4),
+
+                      child: SizedBox(
+                        width: textWidth,
+
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+
+                          mainAxisSize: MainAxisSize.min,
+
+                          children: [
+                            // =================================================
+                            // EQUATE
+                            // =================================================
+
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+
+                              child: Text(
+                                'Equate',
+                                maxLines: 1,
+
+                                style: GoogleFonts.poppins(
+                                  fontSize: 46,
+                                  fontWeight: FontWeight.w700,
+                                  fontStyle: FontStyle.italic,
+                                  color: const Color(0xFF1A1A1A),
+                                  letterSpacing: -1.5,
+                                  height: 1.0,
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Gold & Pivot Analysis',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.amber[800],
-                              letterSpacing: 0.2,
+
+                            const SizedBox(height: 2),
+
+                            // =================================================
+                            // SUBTITLE
+                            // =================================================
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+
+                              child: Text(
+                                'Gold & Pivot Analysis',
+                                maxLines: 1,
+
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.amber[800],
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

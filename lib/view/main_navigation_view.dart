@@ -245,31 +245,43 @@ class _MainNavigationViewState extends State<MainNavigationView> {
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 58,
-        child: AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 200),
-          style: GoogleFonts.poppins(
-            fontSize: 10,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: itemColor,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Icon(
-                  isSelected ? activeIcon : inactiveIcon,
-                  key: ValueKey(isSelected),
-                  size: 22,
-                  color: itemColor,
+        width: 70,
+        height: 52,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Center(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    isSelected ? activeIcon : inactiveIcon,
+                    key: ValueKey(isSelected),
+                    size: 22,
+                    color: itemColor,
+                  ),
                 ),
               ),
-              const SizedBox(height: 3),
-              Text(label, textAlign: TextAlign.center),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 3),
+
+            Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                height: 1.0,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: itemColor,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -64,23 +64,25 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
   final List<Map<String, dynamic>> _goldOptions = [
     {
       'title': 'Emas Digital',
-      'description': 'Kalkulasi transaksi jual beli emas digital/online.',
-      'icon': Icons.account_balance_wallet_rounded,
+      'description': 'Hitung profit atau loss dari posisi Buy/Sell.',
+      'icon': Icons.currency_exchange_rounded,
     },
     {
       'title': 'Emas Fisik',
-      'description': 'Hitung konversi & biaya cetak batang/perhiasan.',
-      'icon': Icons.view_in_ar_rounded,
+      'description':
+          'Hitung hasil transaksi emas berdasarkan modal dan harga posisi.',
+      'icon': Icons.workspace_premium_rounded,
     },
     {
       'title': 'Pivot Point Emas',
-      'description': 'Analisis level Support & Resistance harian.',
-      'icon': Icons.analytics_rounded,
+      'description':
+          'Tentukan acuan harga beli dan jual emas dari harga pembukaan.',
+      'icon': Icons.candlestick_chart_rounded,
     },
     {
       'title': 'Nest Emas',
-      'description': 'Kalkulator strategi Nest untuk transaksi Emas.',
-      'icon': Icons.nest_cam_wired_stand_rounded,
+      'description': 'Ikuti tren harga emas berdasarkan harga penutupan.',
+      'icon': Icons.insights_rounded,
     },
   ];
 
@@ -90,13 +92,14 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
   final List<Map<String, dynamic>> _hangsengOptions = [
     {
       'title': 'Pivot Point Hangseng',
-      'description': 'Analisis Support & Resistance transaksi indeks Hangseng.',
+      'description':
+          'Tentukan acuan harga beli dan jual hangseng dari harga pembukaan.',
       'icon': Icons.candlestick_chart_rounded,
     },
     {
       'title': 'Nest Hangseng',
-      'description': 'Kalkulator strategi Nest untuk transaksi Hangseng.',
-      'icon': Icons.nest_cam_wired_stand_rounded,
+      'description': 'Ikuti tren harga hangseng berdasarkan harga penutupan.',
+      'icon': Icons.insights_rounded,
     },
   ];
 
@@ -146,12 +149,14 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
 
     if (item is DigitalGoldModel) {
       title = 'Emas Digital';
-      details = '${item.weightInGram} Lot | Beli: ${_formatCurrency(item.buyPrice)}';
+      details =
+          '${item.weightInGram} Lot | Beli: ${_formatCurrency(item.buyPrice)}';
       result = item.profitLoss;
       timestamp = item.createdAt;
     } else if (item is PhysicalGoldModel) {
       title = 'Emas Fisik';
-      details = '${item.weightInGram} gram | Rp ${_formatCurrency(item.buyPrice)}/g';
+      details =
+          '${item.weightInGram} gram | Rp ${_formatCurrency(item.buyPrice)}/g';
       result = item.profitLoss;
       timestamp = item.createdAt;
     } else if (item is PivotGoldModel) {
@@ -168,7 +173,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       timestamp = item.createdAt;
     } else if (item is PivotHangsengModel) {
       title = 'Pivot Hangseng';
-      details = 'PP: ${item.pp ?? '-'} | H: ${item.high ?? '-'} | L: ${item.low ?? '-'}';
+      details =
+          'PP: ${item.pp ?? '-'} | H: ${item.high ?? '-'} | L: ${item.low ?? '-'}';
       result = item.pp ?? 0.0;
       isCurrency = false;
       timestamp = item.createdAt;
@@ -201,14 +207,17 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       builder: (context, currentThemeMode, child) {
         final isDarkMode = ThemeViewModel.isDarkMode;
 
-        final primaryTextColor =
-            isDarkMode ? Colors.white : const Color(0xFF2C2D30);
+        final primaryTextColor = isDarkMode
+            ? Colors.white
+            : const Color(0xFF2C2D30);
 
-        final bgGradientStart =
-            isDarkMode ? const Color(0xFF16181F) : Colors.white;
+        final bgGradientStart = isDarkMode
+            ? const Color(0xFF16181F)
+            : Colors.white;
 
-        final bgGradientEnd =
-            isDarkMode ? const Color(0xFF0D0E12) : Colors.white;
+        final bgGradientEnd = isDarkMode
+            ? const Color(0xFF0D0E12)
+            : Colors.white;
 
         return Scaffold(
           backgroundColor: isDarkMode ? const Color(0xFF0D0E12) : Colors.white,
@@ -564,8 +573,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           color: isExpanded
               ? primaryOrange.withOpacity(0.5)
               : isDarkMode
-                  ? Colors.white.withOpacity(0.08)
-                  : Colors.white.withOpacity(0.9),
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white.withOpacity(0.9),
           width: isExpanded ? 0.8 : 0.5,
         ),
         boxShadow: [
@@ -643,8 +652,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                   color: isExpanded
                       ? primaryOrange
                       : isDarkMode
-                          ? Colors.white54
-                          : const Color(0xFF8A8E9B),
+                      ? Colors.white54
+                      : const Color(0xFF8A8E9B),
                   size: 24,
                 ),
               ],
@@ -695,9 +704,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
         ],
       ),
       child: StreamBuilder<QuerySnapshot>(
-        stream: historiesRef
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
+        stream: historiesRef.orderBy('createdAt', descending: true).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Padding(
@@ -709,8 +716,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           }
 
           final docs = snapshot.data?.docs ?? [];
-          final allHistoryList =
-              docs.map((doc) => _parseFirestoreDoc(doc)).toList();
+          final allHistoryList = docs
+              .map((doc) => _parseFirestoreDoc(doc))
+              .toList();
 
           // FILTER HARI INI SAJA
           final now = DateTime.now();
@@ -725,60 +733,110 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // HEADER RIWAYAT + TOMBOL LIHAT SEMUANYA DI KANAN
+              // ==========================================================
+              // HEADER RIWAYAT + TOMBOL LIHAT SEMUANYA
+              // ==========================================================
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF9500).withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.history_rounded,
-                          color: Color(0xFFFF9500),
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Riwayat Hari Ini',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: primaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => HistoryView(
-                            historyList: allHistoryList,
-                            // 👇 Ini yang tadinya belum ada — supaya hapus
-                            // beneran menghapus dokumen di Firestore, bukan
-                            // cuma dari tampilan lokal.
-                            historyCollection: historiesRef,
+                  // ======================================================
+                  // BAGIAN KIRI
+                  // ======================================================
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9500).withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.history_rounded,
+                            color: Color(0xFFFF9500),
+                            size: 18,
                           ),
                         ),
-                      );
+                        const SizedBox(width: 10),
+
+                        // Teks dibuat fleksibel
+                        Expanded(
+                          child: FittedBox(
+                            alignment: Alignment.centerLeft,
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Riwayat Hari Ini',
+                              maxLines: 1,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: primaryTextColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // ======================================================
+                  // BAGIAN KANAN
+                  // ======================================================
+                  InkWell(
+                    onTap: () async {
+                      final user = FirebaseAuth.instance.currentUser;
+
+                      if (user == null) {
+                        return;
+                      }
+
+                      final historiesRef = FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(user.uid)
+                          .collection('histories');
+
+                      try {
+                        final snapshot = await historiesRef
+                            .orderBy('createdAt', descending: true)
+                            .get();
+
+                        final historyList = snapshot.docs
+                            .map((doc) => _parseFirestoreDoc(doc))
+                            .toList();
+
+                        if (!context.mounted) return;
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => HistoryView(
+                              historyList: historyList,
+                              historyCollection: historiesRef,
+                            ),
+                          ),
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Gagal mengambil riwayat: $e'),
+                          ),
+                        );
+                      }
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
+                        horizontal: 4,
                         vertical: 4,
                       ),
                       child: Text(
-                        'Lihat semuanya',
+                        'Lihat Semua',
+                        maxLines: 1,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFFFF9500),
                         ),
@@ -808,8 +866,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount:
-                      filteredToday.length > 5 ? 5 : filteredToday.length,
+                  itemCount: filteredToday.length > 5
+                      ? 5
+                      : filteredToday.length,
                   separatorBuilder: (context, index) {
                     return Divider(
                       color: isDarkMode
@@ -829,8 +888,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                     final isCurrency = parsed['isCurrency'] as bool;
                     final isPositive = result >= 0;
 
-                    final timeFormatted =
-                        DateFormat('HH:mm').format(timestamp);
+                    final timeFormatted = DateFormat('HH:mm').format(timestamp);
 
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -878,8 +936,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                             color: !isCurrency
                                 ? primaryTextColor
                                 : (isPositive
-                                    ? const Color(0xFF34C759)
-                                    : const Color(0xFFFF3B30)),
+                                      ? const Color(0xFF34C759)
+                                      : const Color(0xFFFF3B30)),
                           ),
                         ),
                       ],

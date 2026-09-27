@@ -228,13 +228,43 @@ class _PivotHangsengCalculatorContentState
       widget.onCalculate!(
         PivotHangsengModel(
           calculationDate: _viewModel.calculationDate,
-          title: 'Pivot Point',
+
+          title: 'Pivot Point Hangseng',
+
+          // INPUT
+          high: _viewModel.highValue,
+          low: _viewModel.lowValue,
+          close: _viewModel.closeValue,
+          open: _viewModel.openValue,
+
+          // PIVOT
+          pp: _viewModel.pp,
+          r1: _viewModel.r1,
+          r2: _viewModel.r2,
+          r3: _viewModel.r3,
+          r4: _viewModel.r4,
+          s1: _viewModel.s1,
+          s2: _viewModel.s2,
+          s3: _viewModel.s3,
+          s4: _viewModel.s4,
+
+          // DATE
+          previousDataDate: _viewModel.previousDataDate,
+          referenceDate: _viewModel.referenceDate,
+
+          // SIGNAL
+          signal: _viewModel.signal,
+
+          // RESULT UTAMA
+          result: _viewModel.pp ?? 0,
+
+          // DETAIL
           details:
               'H: ${_viewModel.high} | '
               'L: ${_viewModel.low} | '
               'C: ${_viewModel.close} | '
               'O: ${_viewModel.open}',
-          result: _viewModel.pp ?? 0,
+
           createdAt: DateTime.now(),
         ),
       );
@@ -879,191 +909,198 @@ class _PivotHangsengCalculatorContentState
                           ],
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // ==================================================
-                            // RESISTANCE
-                            // ==================================================
+                        child: AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          alignment: Alignment.topCenter,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // ==================================================
+                              // RESISTANCE
+                              // ==================================================
 
-                            if (_isR4Expanded) ...[
-                              _buildCompactResultRow(
-                                label: 'R4',
-                                value: vm.formatValue(vm.r4),
-                                labelColor: resistanceColor,
-                                valueColor: primaryTextColor,
-                                trailingIcon: Icons.keyboard_arrow_down_rounded,
-                                trailingIconColor: resistanceColor,
-                                onTrailingIconTap: () {
-                                  setState(() {
-                                    _isR4Expanded = false;
-                                  });
-                                },
-                              ),
-
-                              // R4 → R3
-                              if (vm.r4 != null && vm.r3 != null)
-                                _buildCompactMidpointRow(
-                                  value: vm.formatValue(
-                                    vm.midpoint(vm.r4!, vm.r3!),
-                                  ),
+                              if (_isR4Expanded) ...[
+                                _buildCompactResultRow(
+                                  label: 'R4',
+                                  value: vm.formatValue(vm.r4),
+                                  labelColor: resistanceColor,
+                                  valueColor: primaryTextColor,
+                                  trailingIcon: Icons.keyboard_arrow_up_rounded,
+                                  trailingIconColor: resistanceColor,
+                                  onTrailingIconTap: () {
+                                    setState(() {
+                                      _isR4Expanded = false;
+                                    });
+                                  },
                                 ),
 
-                              _buildCompactResultRow(
-                                label: 'R3',
-                                value: vm.formatValue(vm.r3),
-                                labelColor: resistanceColor,
-                                valueColor: primaryTextColor,
-                              ),
-
-                              // R3 → R2
-                              if (vm.r3 != null && vm.r2 != null)
-                                _buildCompactMidpointRow(
-                                  value: vm.formatValue(
-                                    vm.midpoint(vm.r3!, vm.r2!),
+                                // R4 → R3
+                                if (vm.r4 != null && vm.r3 != null)
+                                  _buildCompactMidpointRow(
+                                    value: vm.formatValue(
+                                      vm.midpoint(vm.r4!, vm.r3!),
+                                    ),
                                   ),
+
+                                _buildCompactResultRow(
+                                  label: 'R3',
+                                  value: vm.formatValue(vm.r3),
+                                  labelColor: resistanceColor,
+                                  valueColor: primaryTextColor,
                                 ),
 
-                              _buildCompactResultRow(
-                                label: 'R2',
-                                value: vm.formatValue(vm.r2),
-                                labelColor: resistanceColor,
-                                valueColor: primaryTextColor,
-                              ),
-
-                              // R2 → R1
-                              if (vm.r2 != null && vm.r1 != null)
-                                _buildCompactMidpointRow(
-                                  value: vm.formatValue(
-                                    vm.midpoint(vm.r2!, vm.r1!),
+                                // R3 → R2
+                                if (vm.r3 != null && vm.r2 != null)
+                                  _buildCompactMidpointRow(
+                                    value: vm.formatValue(
+                                      vm.midpoint(vm.r3!, vm.r2!),
+                                    ),
                                   ),
+
+                                _buildCompactResultRow(
+                                  label: 'R2',
+                                  value: vm.formatValue(vm.r2),
+                                  labelColor: resistanceColor,
+                                  valueColor: primaryTextColor,
                                 ),
 
-                              _buildCompactResultRow(
-                                label: 'R1',
-                                value: vm.formatValue(vm.r1),
-                                labelColor: resistanceColor,
-                                valueColor: primaryTextColor,
+                                // R2 → R1
+                                if (vm.r2 != null && vm.r1 != null)
+                                  _buildCompactMidpointRow(
+                                    value: vm.formatValue(
+                                      vm.midpoint(vm.r2!, vm.r1!),
+                                    ),
+                                  ),
+
+                                _buildCompactResultRow(
+                                  label: 'R1',
+                                  value: vm.formatValue(vm.r1),
+                                  labelColor: resistanceColor,
+                                  valueColor: primaryTextColor,
+                                ),
+
+                                // R1 → PP
+                                if (vm.r1 != null && vm.pp != null)
+                                  _buildCompactMidpointRow(
+                                    value: vm.formatValue(
+                                      vm.midpoint(vm.r1!, vm.pp!),
+                                    ),
+                                  ),
+                              ] else ...[
+                                _buildCompactResultRow(
+                                  label: 'R4',
+                                  value: vm.formatValue(vm.r4),
+                                  labelColor: resistanceColor,
+                                  valueColor: primaryTextColor,
+                                  trailingIcon:
+                                      Icons.keyboard_arrow_down_rounded,
+                                  trailingIconColor: resistanceColor,
+                                  onTrailingIconTap: () {
+                                    setState(() {
+                                      _isR4Expanded = true;
+                                    });
+                                  },
+                                ),
+                              ],
+
+                              // ==================================================
+                              // PIVOT POINT
+                              // ==================================================
+                              _buildPivotCenterRow(
+                                value: vm.formatValue(vm.pp),
+                                primaryTextColor: primaryTextColor,
+                                pivotColor: pivotColor,
                               ),
 
-                              // R1 → PP
-                              if (vm.r1 != null && vm.pp != null)
-                                _buildCompactMidpointRow(
-                                  value: vm.formatValue(
-                                    vm.midpoint(vm.r1!, vm.pp!),
+                              // ==================================================
+                              // SUPPORT
+                              // ==================================================
+                              if (_isS4Expanded) ...[
+                                // PP → S1
+                                if (vm.pp != null && vm.s1 != null)
+                                  _buildCompactMidpointRow(
+                                    value: vm.formatValue(
+                                      vm.midpoint(vm.pp!, vm.s1!),
+                                    ),
                                   ),
+
+                                _buildCompactResultRow(
+                                  label: 'S1',
+                                  value: vm.formatValue(vm.s1),
+                                  labelColor: supportColor,
+                                  valueColor: primaryTextColor,
                                 ),
-                            ] else ...[
-                              _buildCompactResultRow(
-                                label: 'R4',
-                                value: vm.formatValue(vm.r4),
-                                labelColor: resistanceColor,
-                                valueColor: primaryTextColor,
-                                trailingIcon: Icons.keyboard_arrow_down_rounded,
-                                trailingIconColor: resistanceColor,
-                                onTrailingIconTap: () {
-                                  setState(() {
-                                    _isR4Expanded = true;
-                                  });
-                                },
-                              ),
+
+                                // S1 → S2
+                                if (vm.s1 != null && vm.s2 != null)
+                                  _buildCompactMidpointRow(
+                                    value: vm.formatValue(
+                                      vm.midpoint(vm.s1!, vm.s2!),
+                                    ),
+                                  ),
+
+                                _buildCompactResultRow(
+                                  label: 'S2',
+                                  value: vm.formatValue(vm.s2),
+                                  labelColor: supportColor,
+                                  valueColor: primaryTextColor,
+                                ),
+
+                                // S2 → S3
+                                if (vm.s2 != null && vm.s3 != null)
+                                  _buildCompactMidpointRow(
+                                    value: vm.formatValue(
+                                      vm.midpoint(vm.s2!, vm.s3!),
+                                    ),
+                                  ),
+
+                                _buildCompactResultRow(
+                                  label: 'S3',
+                                  value: vm.formatValue(vm.s3),
+                                  labelColor: supportColor,
+                                  valueColor: primaryTextColor,
+                                ),
+
+                                // S3 → S4
+                                if (vm.s3 != null && vm.s4 != null)
+                                  _buildCompactMidpointRow(
+                                    value: vm.formatValue(
+                                      vm.midpoint(vm.s3!, vm.s4!),
+                                    ),
+                                  ),
+
+                                _buildCompactResultRow(
+                                  label: 'S4',
+                                  value: vm.formatValue(vm.s4),
+                                  labelColor: supportColor,
+                                  valueColor: primaryTextColor,
+                                  trailingIcon: Icons.keyboard_arrow_up_rounded,
+                                  trailingIconColor: supportColor,
+                                  onTrailingIconTap: () {
+                                    setState(() {
+                                      _isS4Expanded = false;
+                                    });
+                                  },
+                                ),
+                              ] else ...[
+                                _buildCompactResultRow(
+                                  label: 'S4',
+                                  value: vm.formatValue(vm.s4),
+                                  labelColor: supportColor,
+                                  valueColor: primaryTextColor,
+                                  trailingIcon:
+                                      Icons.keyboard_arrow_down_rounded,
+                                  trailingIconColor: supportColor,
+                                  onTrailingIconTap: () {
+                                    setState(() {
+                                      _isS4Expanded = true;
+                                    });
+                                  },
+                                ),
+                              ],
                             ],
-
-                            // ==================================================
-                            // PIVOT POINT
-                            // ==================================================
-                            _buildPivotCenterRow(
-                              value: vm.formatValue(vm.pp),
-                              primaryTextColor: primaryTextColor,
-                              pivotColor: pivotColor,
-                            ),
-
-                            // ==================================================
-                            // SUPPORT
-                            // ==================================================
-                            if (_isS4Expanded) ...[
-                              // PP → S1
-                              if (vm.pp != null && vm.s1 != null)
-                                _buildCompactMidpointRow(
-                                  value: vm.formatValue(
-                                    vm.midpoint(vm.pp!, vm.s1!),
-                                  ),
-                                ),
-
-                              _buildCompactResultRow(
-                                label: 'S1',
-                                value: vm.formatValue(vm.s1),
-                                labelColor: supportColor,
-                                valueColor: primaryTextColor,
-                              ),
-
-                              // S1 → S2
-                              if (vm.s1 != null && vm.s2 != null)
-                                _buildCompactMidpointRow(
-                                  value: vm.formatValue(
-                                    vm.midpoint(vm.s1!, vm.s2!),
-                                  ),
-                                ),
-
-                              _buildCompactResultRow(
-                                label: 'S2',
-                                value: vm.formatValue(vm.s2),
-                                labelColor: supportColor,
-                                valueColor: primaryTextColor,
-                              ),
-
-                              // S2 → S3
-                              if (vm.s2 != null && vm.s3 != null)
-                                _buildCompactMidpointRow(
-                                  value: vm.formatValue(
-                                    vm.midpoint(vm.s2!, vm.s3!),
-                                  ),
-                                ),
-
-                              _buildCompactResultRow(
-                                label: 'S3',
-                                value: vm.formatValue(vm.s3),
-                                labelColor: supportColor,
-                                valueColor: primaryTextColor,
-                              ),
-
-                              // S3 → S4
-                              if (vm.s3 != null && vm.s4 != null)
-                                _buildCompactMidpointRow(
-                                  value: vm.formatValue(
-                                    vm.midpoint(vm.s3!, vm.s4!),
-                                  ),
-                                ),
-
-                              _buildCompactResultRow(
-                                label: 'S4',
-                                value: vm.formatValue(vm.s4),
-                                labelColor: supportColor,
-                                valueColor: primaryTextColor,
-                                trailingIcon: Icons.keyboard_arrow_up_rounded,
-                                trailingIconColor: supportColor,
-                                onTrailingIconTap: () {
-                                  setState(() {
-                                    _isS4Expanded = false;
-                                  });
-                                },
-                              ),
-                            ] else ...[
-                              _buildCompactResultRow(
-                                label: 'S4',
-                                value: vm.formatValue(vm.s4),
-                                labelColor: supportColor,
-                                valueColor: primaryTextColor,
-                                trailingIcon: Icons.keyboard_arrow_up_rounded,
-                                trailingIconColor: supportColor,
-                                onTrailingIconTap: () {
-                                  setState(() {
-                                    _isS4Expanded = true;
-                                  });
-                                },
-                              ),
-                            ],
-                          ],
+                          ),
                         ),
                       ),
                     ],
@@ -1692,21 +1729,29 @@ class _PivotHangsengCalculatorContentState
                   // ICON SELALU DI UJUNG KANAN
                   if (trailingIcon != null)
                     Positioned(
-                      right: 7,
+                      right: 0,
                       child: GestureDetector(
                         onTap: onTrailingIconTap,
                         behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          width: 15,
-                          height: 15,
-                          decoration: BoxDecoration(
-                            color: trailingIconColor?.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            trailingIcon,
-                            size: 12,
-                            color: trailingIconColor,
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Center(
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: trailingIconColor?.withValues(
+                                  alpha: 0.12,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                trailingIcon,
+                                size: 15,
+                                color: trailingIconColor,
+                              ),
+                            ),
                           ),
                         ),
                       ),

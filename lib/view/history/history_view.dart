@@ -46,7 +46,8 @@ class _HistoryViewState extends State<HistoryView> {
   // Filter State
   int? _selectedDaysFilter; // null, 1 (Hari ini), 2, 3, 4, 5, 6, 7
   DateTimeRange? _selectedDateRange;
-  String _selectedCalcType = 'Semua'; // 'Semua', 'Emas Digital', 'Emas Fisik', 'Pivot Point', 'NEST'
+  String _selectedCalcType =
+      'Semua'; // 'Semua', 'Emas Digital', 'Emas Fisik', 'Pivot Point', 'NEST'
 
   final List<String> _markets = ['Semua', 'Emas', 'Hangseng'];
 
@@ -79,69 +80,180 @@ class _HistoryViewState extends State<HistoryView> {
     DateTime timestamp = DateTime.now();
     bool isCurrency = true;
     String marketType = 'Emas';
-    String subType = 'Lainnya'; // 'Emas Digital', 'Emas Fisik', 'Pivot Point', 'NEST'
+    String subType = 'Lainnya';
 
-    if (item is CalculationHistory) {
-      timestamp = item.createdAt;
-      title = item.category.isNotEmpty ? item.category : item.title;
-    }
+    // ============================================================
+    // 1. DIGITAL GOLD
+    // ============================================================
 
     if (item is DigitalGoldModel) {
       title = 'Emas Digital';
-      details = '${item.weightInGram} Lot | Beli: ${_formatCurrency(item.buyPrice)}';
+
+      details =
+          '${item.weightInGram} Lot | '
+          'Beli: ${_formatCurrency(item.buyPrice)}';
+
       result = item.profitLoss;
+      timestamp = item.createdAt;
+
       marketType = 'Emas';
       subType = 'Emas Digital';
-    } else if (item is PhysicalGoldModel) {
+    }
+    // ============================================================
+    // 2. PHYSICAL GOLD
+    // ============================================================
+    else if (item is PhysicalGoldModel) {
       title = 'Emas Fisik';
-      details = '${item.weightInGram} gram | Rp ${_formatCurrency(item.buyPrice)}/g';
+
+      details =
+          '${item.weightInGram} gram | '
+          'Rp ${_formatCurrency(item.buyPrice)}/g';
+
       result = item.profitLoss;
+      timestamp = item.createdAt;
+
       marketType = 'Emas';
       subType = 'Emas Fisik';
-    } else if (item is PivotGoldModel) {
+    }
+    // ============================================================
+    // 3. PIVOT GOLD
+    // ============================================================
+    else if (item is PivotGoldModel) {
       title = 'Pivot Gold (${item.type})';
-      details = 'PP: ${item.pp} | R1: ${item.r1} | S1: ${item.s1}';
-      result = item.pp;
-      isCurrency = false;
-      marketType = 'Emas';
-      subType = 'Pivot Point';
-    } else if (item is NestGoldModel) {
-      title = 'NEST Gold';
-      details = 'Signal: ${item.signalLabel} | Open: ${item.open ?? '-'}';
-      result = item.close ?? 0.0;
-      isCurrency = false;
-      marketType = 'Emas';
-      subType = 'NEST';
-    } else if (item is PivotHangsengModel) {
-      title = 'Pivot Hangseng';
-      details = 'PP: ${item.pp ?? '-'} | H: ${item.high ?? '-'} | L: ${item.low ?? '-'}';
-      result = item.pp ?? 0.0;
-      isCurrency = false;
-      marketType = 'Hangseng';
-      subType = 'Pivot Point';
-    } else if (item is NestHangsengModel) {
-      title = 'NEST Hangseng';
-      details = 'Signal: ${item.signalLabel} | Open: ${item.open ?? '-'}';
-      result = item.close ?? 0.0;
-      isCurrency = false;
-      marketType = 'Hangseng';
-      subType = 'NEST';
-    } else {
-      title = item.title?.toString() ?? 'Riwayat';
-      details = item.details?.toString() ?? 'Detail perhitungan';
-      result = (item.result is num) ? (item.result as num).toDouble() : 0.0;
-      if (item.createdAt is DateTime) timestamp = item.createdAt;
 
-      if (title.toLowerCase().contains('hangseng')) {
+      details =
+          'PP: ${item.pp} | '
+          'R1: ${item.r1} | '
+          'S1: ${item.s1}';
+
+      result = item.pp;
+      timestamp = item.createdAt;
+
+      isCurrency = false;
+      marketType = 'Emas';
+      subType = 'Pivot Point';
+    }
+    // ============================================================
+    // 4. NEST GOLD
+    // ============================================================
+    else if (item is NestGoldModel) {
+      title = 'NEST Gold';
+
+      details =
+          'Signal: ${item.signalLabel} | '
+          'Open: ${item.open ?? '-'}';
+
+      result = item.close ?? 0.0;
+      timestamp = item.createdAt;
+
+      isCurrency = false;
+      marketType = 'Emas';
+      subType = 'NEST';
+    }
+    // ============================================================
+    // 5. PIVOT HANGSENG
+    // ============================================================
+    else if (item is PivotHangsengModel) {
+      title = 'Pivot Hangseng';
+
+      details =
+          'PP: ${item.pp ?? '-'} | '
+          'H: ${item.high ?? '-'} | '
+          'L: ${item.low ?? '-'}';
+
+      result = item.pp ?? 0.0;
+      timestamp = item.createdAt;
+
+      isCurrency = false;
+      marketType = 'Hangseng';
+      subType = 'Pivot Point';
+    }
+    // ============================================================
+    // 6. NEST HANGSENG
+    // ============================================================
+    else if (item is NestHangsengModel) {
+      title = 'NEST Hangseng';
+
+      details =
+          'Signal: ${item.signalLabel} | '
+          'Open: ${item.open ?? '-'}';
+
+      result = item.close ?? 0.0;
+      timestamp = item.createdAt;
+
+      isCurrency = false;
+      marketType = 'Hangseng';
+      subType = 'NEST';
+    }
+    // ============================================================
+    // 7. MAP
+    // Untuk kompatibilitas data lama
+    // ============================================================
+    else if (item is Map) {
+      title = item['title']?.toString() ?? 'Riwayat';
+
+      details = item['details']?.toString() ?? 'Detail Perhitungan';
+
+      final rawResult = item['result'] ?? item['profitLoss'] ?? item['value'];
+
+      if (rawResult is num) {
+        result = rawResult.toDouble();
+      } else {
+        result = double.tryParse(rawResult?.toString() ?? '') ?? 0.0;
+      }
+
+      final rawTimestamp = item['timestamp'] ?? item['createdAt'];
+
+      if (rawTimestamp is DateTime) {
+        timestamp = rawTimestamp;
+      } else if (rawTimestamp is Timestamp) {
+        timestamp = rawTimestamp.toDate();
+      } else if (rawTimestamp != null) {
+        timestamp =
+            DateTime.tryParse(rawTimestamp.toString()) ?? DateTime.now();
+      }
+
+      final lowerTitle = title.toLowerCase();
+
+      if (lowerTitle.contains('hangseng')) {
         marketType = 'Hangseng';
       } else {
         marketType = 'Emas';
       }
 
-      if (title.toLowerCase().contains('pivot')) subType = 'Pivot Point';
-      else if (title.toLowerCase().contains('nest')) subType = 'NEST';
-      else if (title.toLowerCase().contains('digital')) subType = 'Emas Digital';
-      else if (title.toLowerCase().contains('fisik')) subType = 'Emas Fisik';
+      if (lowerTitle.contains('pivot')) {
+        subType = 'Pivot Point';
+      } else if (lowerTitle.contains('nest')) {
+        subType = 'NEST';
+      } else if (lowerTitle.contains('digital')) {
+        subType = 'Emas Digital';
+      } else if (lowerTitle.contains('fisik')) {
+        subType = 'Emas Fisik';
+      }
+    }
+    // ============================================================
+    // FALLBACK
+    // ============================================================
+    else if (item is CalculationHistory) {
+      title = item.title;
+      result = item.result;
+      timestamp = item.createdAt;
+
+      final lowerTitle = title.toLowerCase();
+
+      if (lowerTitle.contains('hangseng')) {
+        marketType = 'Hangseng';
+      } else {
+        marketType = 'Emas';
+      }
+
+      if (lowerTitle.contains('pivot')) {
+        subType = 'Pivot Point';
+        isCurrency = false;
+      } else if (lowerTitle.contains('nest')) {
+        subType = 'NEST';
+        isCurrency = false;
+      }
     }
 
     return {
@@ -180,7 +292,9 @@ class _HistoryViewState extends State<HistoryView> {
 
       // 3. Filter Berdasarkan Opsi Hari (1 - 7 Hari)
       if (_selectedDaysFilter != null) {
-        final limitDate = todayStart.subtract(Duration(days: _selectedDaysFilter! - 1));
+        final limitDate = todayStart.subtract(
+          Duration(days: _selectedDaysFilter! - 1),
+        );
         if (timestamp.isBefore(limitDate)) {
           return false;
         }
@@ -286,15 +400,21 @@ class _HistoryViewState extends State<HistoryView> {
   Future<void> _confirmDeleteSelected(bool isDarkMode) async {
     if (_selectedItems.isEmpty) return;
 
-    final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF2C2D30);
-    final secondaryTextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
+    final primaryTextColor = isDarkMode
+        ? Colors.white
+        : const Color(0xFF2C2D30);
+    final secondaryTextColor = isDarkMode
+        ? Colors.grey[400]!
+        : Colors.grey[600]!;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: isDarkMode ? const Color(0xFF1E1F24) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             'Hapus Riwayat?',
             style: GoogleFonts.plusJakartaSans(
@@ -379,24 +499,40 @@ class _HistoryViewState extends State<HistoryView> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF2C2D30);
-            final secondaryTextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
+            final primaryTextColor = isDarkMode
+                ? Colors.white
+                : const Color(0xFF2C2D30);
+            final secondaryTextColor = isDarkMode
+                ? Colors.grey[400]!
+                : Colors.grey[600]!;
 
             // Sub-tipe dinamis tergantung tab pasar aktif saat ini
             List<String> calcOptions = ['Semua'];
             if (_selectedMarket == 'Emas') {
-              calcOptions.addAll(['Emas Digital', 'Emas Fisik', 'Pivot Point', 'NEST']);
+              calcOptions.addAll([
+                'Emas Digital',
+                'Emas Fisik',
+                'Pivot Point',
+                'NEST',
+              ]);
             } else if (_selectedMarket == 'Hangseng') {
               calcOptions.addAll(['Pivot Point', 'NEST']);
             } else {
-              calcOptions.addAll(['Emas Digital', 'Emas Fisik', 'Pivot Point', 'NEST']);
+              calcOptions.addAll([
+                'Emas Digital',
+                'Emas Fisik',
+                'Pivot Point',
+                'NEST',
+              ]);
             }
 
             return Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: isDarkMode ? const Color(0xFF1E1F24) : Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -444,7 +580,7 @@ class _HistoryViewState extends State<HistoryView> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -471,18 +607,25 @@ class _HistoryViewState extends State<HistoryView> {
                           label: Text(label),
                           selected: isSelected,
                           selectedColor: const Color(0xFFFF9500),
-                          backgroundColor: isDarkMode ? const Color(0xFF2A2B30) : const Color(0xFFF0F1F5),
+                          backgroundColor: isDarkMode
+                              ? const Color(0xFF2A2B30)
+                              : const Color(0xFFF0F1F5),
                           labelStyle: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             color: isSelected
                                 ? Colors.white
-                                : (isDarkMode ? Colors.grey[300] : Colors.black87),
+                                : (isDarkMode
+                                      ? Colors.grey[300]
+                                      : Colors.black87),
                           ),
                           onSelected: (selected) {
                             setSheetState(() {
                               _selectedDaysFilter = selected ? days : null;
-                              _selectedDateRange = null; // Reset custom date range jika pilih quick
+                              _selectedDateRange =
+                                  null; // Reset custom date range jika pilih quick
                             });
                             setState(() {});
                           },
@@ -511,13 +654,19 @@ class _HistoryViewState extends State<HistoryView> {
                           label: Text(opt),
                           selected: isSelected,
                           selectedColor: const Color(0xFFFF9500),
-                          backgroundColor: isDarkMode ? const Color(0xFF2A2B30) : const Color(0xFFF0F1F5),
+                          backgroundColor: isDarkMode
+                              ? const Color(0xFF2A2B30)
+                              : const Color(0xFFF0F1F5),
                           labelStyle: GoogleFonts.plusJakartaSans(
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
                             color: isSelected
                                 ? Colors.white
-                                : (isDarkMode ? Colors.grey[300] : Colors.black87),
+                                : (isDarkMode
+                                      ? Colors.grey[300]
+                                      : Colors.black87),
                           ),
                           onSelected: (selected) {
                             setSheetState(() {
@@ -547,7 +696,9 @@ class _HistoryViewState extends State<HistoryView> {
                           context: context,
                           initialDateRange: _selectedDateRange,
                           firstDate: DateTime(2020),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
@@ -577,7 +728,11 @@ class _HistoryViewState extends State<HistoryView> {
                           setState(() {});
                         }
                       },
-                      icon: const Icon(Icons.date_range_rounded, color: Color(0xFFFF9500), size: 18),
+                      icon: const Icon(
+                        Icons.date_range_rounded,
+                        color: Color(0xFFFF9500),
+                        size: 18,
+                      ),
                       label: Text(
                         _selectedDateRange == null
                             ? 'Pilih Tanggal'
@@ -595,7 +750,10 @@ class _HistoryViewState extends State<HistoryView> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                     ),
 
@@ -638,21 +796,29 @@ class _HistoryViewState extends State<HistoryView> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = ThemeViewModel.isDarkMode;
-    final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF2C2D30);
-    final secondaryTextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
+    final primaryTextColor = isDarkMode
+        ? Colors.white
+        : const Color(0xFF2C2D30);
+    final secondaryTextColor = isDarkMode
+        ? Colors.grey[400]!
+        : Colors.grey[600]!;
 
     final filteredList = _getFilteredList();
     final groupedHistory = _groupHistoryByDate(filteredList);
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF0D0E12) : const Color(0xFFF8F9FA),
+      backgroundColor: isDarkMode
+          ? const Color(0xFF0D0E12)
+          : const Color(0xFFF8F9FA),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
           icon: Icon(
-            _isSelectionMode ? Icons.close_rounded : Icons.arrow_back_ios_new_rounded,
+            _isSelectionMode
+                ? Icons.close_rounded
+                : Icons.arrow_back_ios_new_rounded,
             size: _isSelectionMode ? 24 : 20,
             color: primaryTextColor,
           ),
@@ -665,7 +831,9 @@ class _HistoryViewState extends State<HistoryView> {
           },
         ),
         title: Text(
-          _isSelectionMode ? '${_selectedItems.length} Dipilih' : 'Semua Riwayat',
+          _isSelectionMode
+              ? '${_selectedItems.length} Dipilih'
+              : 'Semua Riwayat',
           style: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w800,
             fontSize: 18,
@@ -675,7 +843,10 @@ class _HistoryViewState extends State<HistoryView> {
         actions: _isSelectionMode
             ? [
                 IconButton(
-                  icon: const Icon(Icons.delete_rounded, color: Color(0xFFFF3B30)),
+                  icon: const Icon(
+                    Icons.delete_rounded,
+                    color: Color(0xFFFF3B30),
+                  ),
                   tooltip: 'Hapus',
                   onPressed: _selectedItems.isEmpty
                       ? null
@@ -690,7 +861,9 @@ class _HistoryViewState extends State<HistoryView> {
                     children: [
                       Icon(
                         Icons.tune_rounded,
-                        color: _hasActiveFilters ? const Color(0xFFFF9500) : primaryTextColor,
+                        color: _hasActiveFilters
+                            ? const Color(0xFFFF9500)
+                            : primaryTextColor,
                       ),
                       if (_hasActiveFilters)
                         Positioned(
@@ -760,10 +933,14 @@ class _HistoryViewState extends State<HistoryView> {
                                   market,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 14,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w800
+                                        : FontWeight.w500,
                                     color: isSelected
                                         ? primaryTextColor
-                                        : (isDarkMode ? Colors.grey[500] : const Color(0xFF7D828A)),
+                                        : (isDarkMode
+                                              ? Colors.grey[500]
+                                              : const Color(0xFF7D828A)),
                                   ),
                                 ),
                               ),
@@ -815,14 +992,17 @@ class _HistoryViewState extends State<HistoryView> {
                                       ? 'Hari Ini'
                                       : '$_selectedDaysFilter Hari Terakhir',
                                 ),
-                                backgroundColor: const Color(0xFFFF9500).withOpacity(0.15),
+                                backgroundColor: const Color(
+                                  0xFFFF9500,
+                                ).withOpacity(0.15),
                                 labelStyle: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFFFF9500),
                                 ),
                                 padding: EdgeInsets.zero,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
                               ),
                             ),
                           if (_selectedCalcType != 'Semua')
@@ -830,14 +1010,17 @@ class _HistoryViewState extends State<HistoryView> {
                               padding: const EdgeInsets.only(right: 6),
                               child: Chip(
                                 label: Text(_selectedCalcType),
-                                backgroundColor: const Color(0xFFFF9500).withOpacity(0.15),
+                                backgroundColor: const Color(
+                                  0xFFFF9500,
+                                ).withOpacity(0.15),
                                 labelStyle: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFFFF9500),
                                 ),
                                 padding: EdgeInsets.zero,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
                               ),
                             ),
                         ],
@@ -873,7 +1056,9 @@ class _HistoryViewState extends State<HistoryView> {
                         Icon(
                           Icons.history_rounded,
                           size: 48,
-                          color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                          color: isDarkMode
+                              ? Colors.grey[700]
+                              : Colors.grey[300],
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -902,7 +1087,9 @@ class _HistoryViewState extends State<HistoryView> {
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                     itemCount: groupedHistory.keys.length,
                     itemBuilder: (context, dateIndex) {
-                      final dateHeader = groupedHistory.keys.elementAt(dateIndex);
+                      final dateHeader = groupedHistory.keys.elementAt(
+                        dateIndex,
+                      );
                       final itemsForDate = groupedHistory[dateHeader]!;
 
                       return Column(
@@ -910,7 +1097,11 @@ class _HistoryViewState extends State<HistoryView> {
                         children: [
                           // DATE HEADER
                           Padding(
-                            padding: const EdgeInsets.only(top: 12, bottom: 8, left: 4),
+                            padding: const EdgeInsets.only(
+                              top: 12,
+                              bottom: 8,
+                              left: 4,
+                            ),
                             child: Text(
                               dateHeader,
                               style: GoogleFonts.plusJakartaSans(
@@ -928,12 +1119,17 @@ class _HistoryViewState extends State<HistoryView> {
                             final itemTitle = parsed['title'] as String;
                             final itemDetails = parsed['details'] as String;
                             final itemResult = parsed['result'] as double;
-                            final itemTimestamp = parsed['timestamp'] as DateTime;
+                            final itemTimestamp =
+                                parsed['timestamp'] as DateTime;
                             final isCurrency = parsed['isCurrency'] as bool;
 
                             final isPositive = itemResult >= 0;
-                            final timeFormatted = DateFormat('HH:mm').format(itemTimestamp);
-                            final isItemSelected = _selectedItems.contains(rawItem);
+                            final timeFormatted = DateFormat(
+                              'HH:mm',
+                            ).format(itemTimestamp);
+                            final isItemSelected = _selectedItems.contains(
+                              rawItem,
+                            );
 
                             String formattedValue;
                             if (isCurrency) {
@@ -954,13 +1150,15 @@ class _HistoryViewState extends State<HistoryView> {
                                   color: isItemSelected
                                       ? const Color(0xFFFF9500)
                                       : (isDarkMode
-                                          ? Colors.white.withOpacity(0.08)
-                                          : Colors.black.withOpacity(0.04)),
+                                            ? Colors.white.withOpacity(0.08)
+                                            : Colors.black.withOpacity(0.04)),
                                   width: isItemSelected ? 1.5 : 0.8,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+                                    color: Colors.black.withOpacity(
+                                      isDarkMode ? 0.2 : 0.03,
+                                    ),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
                                   ),
@@ -977,13 +1175,18 @@ class _HistoryViewState extends State<HistoryView> {
                                         context: context,
                                         isScrollControlled: true,
                                         backgroundColor: Colors.transparent,
-                                        builder: (context) => HistoryDetailSheet(
-                                          item: rawItem,
-                                          isDarkMode: isDarkMode,
-                                          primaryTextColor: primaryTextColor,
-                                          secondaryTextColor: secondaryTextColor,
-                                          primaryOrange: const Color(0xFFFF9500),
-                                        ),
+                                        builder: (context) =>
+                                            HistoryDetailSheet(
+                                              item: rawItem,
+                                              isDarkMode: isDarkMode,
+                                              primaryTextColor:
+                                                  primaryTextColor,
+                                              secondaryTextColor:
+                                                  secondaryTextColor,
+                                              primaryOrange: const Color(
+                                                0xFFFF9500,
+                                              ),
+                                            ),
                                       );
                                     }
                                   },
@@ -996,28 +1199,36 @@ class _HistoryViewState extends State<HistoryView> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
                                         if (_isSelectionMode)
                                           Padding(
-                                            padding: const EdgeInsets.only(right: 10),
+                                            padding: const EdgeInsets.only(
+                                              right: 10,
+                                            ),
                                             child: Icon(
                                               isItemSelected
                                                   ? Icons.check_circle_rounded
-                                                  : Icons.radio_button_unchecked_rounded,
+                                                  : Icons
+                                                        .radio_button_unchecked_rounded,
                                               color: isItemSelected
                                                   ? const Color(0xFFFF9500)
                                                   : (isDarkMode
-                                                      ? Colors.grey[600]
-                                                      : Colors.grey[400]),
+                                                        ? Colors.grey[600]
+                                                        : Colors.grey[400]),
                                               size: 22,
                                             ),
                                           ),
                                         Container(
                                           padding: const EdgeInsets.all(10),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFFF9500).withOpacity(0.12),
-                                            borderRadius: BorderRadius.circular(14),
+                                            color: const Color(
+                                              0xFFFF9500,
+                                            ).withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
                                           ),
                                           child: const Icon(
                                             Icons.calculate_rounded,
@@ -1028,35 +1239,40 @@ class _HistoryViewState extends State<HistoryView> {
                                         const SizedBox(width: 14),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 itemTitle,
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: primaryTextColor,
-                                                ),
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: primaryTextColor,
+                                                    ),
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
                                                 itemDetails,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 11,
-                                                  color: secondaryTextColor,
-                                                ),
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
+                                                      fontSize: 11,
+                                                      color: secondaryTextColor,
+                                                    ),
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
                                                 timeFormatted,
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 10,
-                                                  color: isDarkMode
-                                                      ? Colors.grey[500]
-                                                      : Colors.grey[400],
-                                                ),
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
+                                                      fontSize: 10,
+                                                      color: isDarkMode
+                                                          ? Colors.grey[500]
+                                                          : Colors.grey[400],
+                                                    ),
                                               ),
                                             ],
                                           ),
@@ -1070,8 +1286,10 @@ class _HistoryViewState extends State<HistoryView> {
                                             color: !isCurrency
                                                 ? primaryTextColor
                                                 : (isPositive
-                                                    ? const Color(0xFF34C759)
-                                                    : const Color(0xFFFF3B30)),
+                                                      ? const Color(0xFF34C759)
+                                                      : const Color(
+                                                          0xFFFF3B30,
+                                                        )),
                                           ),
                                         ),
                                       ],

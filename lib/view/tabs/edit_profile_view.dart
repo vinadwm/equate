@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -197,6 +198,10 @@ class _EditProfileViewState extends State<EditProfileView> {
 
   Future<void> _selectDate() async {
     final isDarkMode = ThemeViewModel.isDarkMode;
+    const primaryOrange = Color(0xFFFF9500);
+    final glassFill = isDarkMode
+        ? Colors.white.withOpacity(0.14)
+        : Colors.white.withOpacity(0.78);
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -206,13 +211,28 @@ class _EditProfileViewState extends State<EditProfileView> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: const Color(0xFFFF9800),
+            // Warna dialog dibuat translucent (bukan solid putih/hitam)
+            // supaya terasa seperti kaca.
+            dialogBackgroundColor: glassFill,
+            colorScheme: ColorScheme(
+              brightness: isDarkMode ? Brightness.dark : Brightness.light,
+              primary: primaryOrange,
               onPrimary: Colors.white,
+              secondary: primaryOrange,
+              onSecondary: Colors.white,
+              error: Colors.red,
+              onError: Colors.white,
+              surface: glassFill,
               onSurface: isDarkMode ? Colors.white : Colors.black,
             ),
           ),
-          child: child!,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+              child: child,
+            ),
+          ),
         );
       },
     );

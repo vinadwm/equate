@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import 'package:equate/view/tabs/change_password_view.dart';
 import 'package:equate/view/tabs/edit_profile_view.dart';
+import 'package:equate/view/history/history_view.dart';
 import 'package:equate/view/auth/login_view.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/profile_viewmodel.dart';
@@ -94,6 +95,55 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     setState(() {});
   }
 
+  Future<void> _openHistoryView() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return;
+    }
+
+    final historiesRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('histories');
+
+    try {
+      final snapshot = await historiesRef
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final List<dynamic> historyList = [];
+
+      for (final doc in snapshot.docs) {
+        try {
+          final model = _parseFirestoreDoc(doc);
+
+          historyList.add(model);
+        } catch (e) {
+          debugPrint('Gagal parsing history ${doc.id}: $e');
+        }
+      }
+
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HistoryView(
+            historyList: historyList,
+            historyCollection: historiesRef,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal mengambil riwayat: $e')));
+    }
+  }
+
   // ==========================================================
   // DENGARKAN STATUS LOGIN DULU (biar gak race condition kalau
   // Firebase Auth belum selesai restore sesi saat widget ini dibuat),
@@ -169,25 +219,33 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   // ==========================================================
   dynamic _parseFirestoreDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    final category = (data['category'] ?? '').toString();
+
+    final category = (data['category'] ?? '').toString().trim();
 
     switch (category) {
       case 'NEST Gold':
         return NestGoldModel.fromFirestore(doc);
+
       case 'Emas Digital':
       case 'Digital Gold':
         return DigitalGoldModel.fromFirestore(doc);
+
       case 'Emas Fisik':
       case 'Physical Gold':
         return PhysicalGoldModel.fromFirestore(doc);
+
       case 'Pivot Gold':
         return PivotGoldModel.fromFirestore(doc);
+
       case 'Pivot Hangseng':
         return PivotHangsengModel.fromFirestore(doc);
+
       case 'NEST Hangseng':
         return NestHangsengModel.fromFirestore(doc);
+
       default:
-        return NestGoldModel.fromFirestore(doc);
+        debugPrint('⚠️ Category history tidak dikenali: $category');
+        return null;
     }
   }
 
@@ -294,7 +352,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
             ? Colors.white.withOpacity(0.08)
             : const Color(0xFFEFEFEF);
 
-        final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF1D1D1F);
+        final primaryTextColor = isDarkMode
+            ? Colors.white
+            : const Color(0xFF1D1D1F);
         final secondaryTextColor = isDarkMode
             ? const Color(0xFFA1A1AA)
             : const Color(0xFF8E8E93);
@@ -383,11 +443,13 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                           width: 120,
                                           height: 120,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => _AnimatedThemedIcon(
-                                            icon: Icons.person_rounded,
-                                            size: 60,
-                                            color: secondaryTextColor,
-                                          ),
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  _AnimatedThemedIcon(
+                                                    icon: Icons.person_rounded,
+                                                    size: 60,
+                                                    color: secondaryTextColor,
+                                                  ),
                                         ),
                                       )
                                     : _AnimatedThemedIcon(
@@ -508,30 +570,39 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           child: SizedBox(
                             height: 46,
                             child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryOrange,
-                                foregroundColor: Colors.white,
-                                shadowColor: Colors.transparent,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ).copyWith(
-                                overlayColor: WidgetStateProperty.resolveWith(
-                                  (states) {
-                                    if (states.contains(WidgetState.hovered) ||
-                                        states.contains(WidgetState.pressed)) {
-                                      return Colors.white.withOpacity(0.15);
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
+                              style:
+                                  ElevatedButton.styleFrom(
+                                    backgroundColor: primaryOrange,
+                                    foregroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ).copyWith(
+                                    overlayColor:
+                                        WidgetStateProperty.resolveWith((
+                                          states,
+                                        ) {
+                                          if (states.contains(
+                                                WidgetState.hovered,
+                                              ) ||
+                                              states.contains(
+                                                WidgetState.pressed,
+                                              )) {
+                                            return Colors.white.withOpacity(
+                                              0.15,
+                                            );
+                                          }
+                                          return null;
+                                        }),
+                                  ),
                               onPressed: () async {
                                 await Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const EditProfileView(),
+                                    builder: (context) =>
+                                        const EditProfileView(),
                                   ),
                                 );
                                 await _profileViewModel.refreshProfile();
@@ -560,33 +631,44 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           child: SizedBox(
                             height: 46,
                             child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryOrange.withOpacity(0.1),
-                                foregroundColor: primaryOrange,
-                                shadowColor: Colors.transparent,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  side: BorderSide(
-                                    color: primaryOrange.withOpacity(0.3),
+                              style:
+                                  ElevatedButton.styleFrom(
+                                    backgroundColor: primaryOrange.withOpacity(
+                                      0.1,
+                                    ),
+                                    foregroundColor: primaryOrange,
+                                    shadowColor: Colors.transparent,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      side: BorderSide(
+                                        color: primaryOrange.withOpacity(0.3),
+                                      ),
+                                    ),
+                                  ).copyWith(
+                                    overlayColor:
+                                        WidgetStateProperty.resolveWith((
+                                          states,
+                                        ) {
+                                          if (states.contains(
+                                                WidgetState.hovered,
+                                              ) ||
+                                              states.contains(
+                                                WidgetState.pressed,
+                                              )) {
+                                            return primaryOrange.withOpacity(
+                                              0.12,
+                                            );
+                                          }
+                                          return null;
+                                        }),
                                   ),
-                                ),
-                              ).copyWith(
-                                overlayColor: WidgetStateProperty.resolveWith(
-                                  (states) {
-                                    if (states.contains(WidgetState.hovered) ||
-                                        states.contains(WidgetState.pressed)) {
-                                      return primaryOrange.withOpacity(0.12);
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
                               onPressed: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const ChangePasswordView(),
+                                    builder: (context) =>
+                                        const ChangePasswordView(),
                                   ),
                                 );
                               },
@@ -595,12 +677,17 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 color: primaryOrange,
                                 size: 16,
                               ),
-                              label: Text(
-                                'Ubah Sandi',
-                                style: GoogleFonts.poppins(
-                                  color: primaryOrange,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                              label: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Ubah Sandi',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: GoogleFonts.poppins(
+                                    color: primaryOrange,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                             ),
@@ -666,23 +753,23 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                           child: const Text('RIWAYAT PERHITUNGAN'),
                         ),
                         if (_calculationHistory.isNotEmpty)
-                          GestureDetector(
-                            onTap: () {
-                              _showCalculationHistory(
-                                isDarkMode: isDarkMode,
-                                primaryTextColor: primaryTextColor,
-                                secondaryTextColor: secondaryTextColor,
-                                cardBgColor: cardBgColor,
-                                borderColor: borderColor,
-                                primaryOrange: primaryOrange,
-                              );
-                            },
-                            child: Text(
-                              'Lihat Semua',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: primaryOrange,
+                          InkWell(
+                            onTap: _openHistoryView,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 4,
+                              ),
+                              child: Text(
+                                'Lihat Semua',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: primaryOrange,
+                                ),
                               ),
                             ),
                           ),
@@ -721,7 +808,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? primaryOrange : cardBgColor,
+                                  color: isSelected
+                                      ? primaryOrange
+                                      : cardBgColor,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
                                     color: isSelected
@@ -766,7 +855,9 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                         borderRadius: BorderRadius.circular(20),
                         child: _isHistoryLoading
                             ? Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 28),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 28,
+                                ),
                                 child: Center(
                                   child: SizedBox(
                                     width: 22,
@@ -779,98 +870,114 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                 ),
                               )
                             : _filteredHistory.isEmpty
-                                ? Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 24),
-                                    child: Column(
-                                      children: [
-                                        _AnimatedThemedIcon(
-                                          icon: Icons.history_rounded,
-                                          size: 36,
-                                          color: secondaryTextColor,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Belum ada riwayat untuk kategori ini.',
-                                          textAlign: TextAlign.center,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 12,
-                                            color: secondaryTextColor,
-                                          ),
-                                        ),
-                                      ],
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 24,
+                                ),
+                                child: Column(
+                                  children: [
+                                    _AnimatedThemedIcon(
+                                      icon: Icons.history_rounded,
+                                      size: 36,
+                                      color: secondaryTextColor,
                                     ),
-                                  )
-                                : Column(
-                                    children: List.generate(displayHistory.length, (index) {
-                                      final history = displayHistory[index];
-                                      return Column(
-                                        children: [
-                                          ListTile(
-                                            contentPadding: const EdgeInsets.symmetric(
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Belum ada riwayat untuk kategori ini.',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: secondaryTextColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : Column(
+                                children: List.generate(displayHistory.length, (
+                                  index,
+                                ) {
+                                  final history = displayHistory[index];
+                                  return Column(
+                                    children: [
+                                      ListTile(
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
                                               horizontal: 16,
                                               vertical: 4,
                                             ),
-                                            hoverColor: primaryOrange.withOpacity(0.06),
-                                            splashColor: primaryOrange.withOpacity(0.1),
-                                            leading: Container(
-                                              width: 42,
-                                              height: 42,
-                                              decoration: BoxDecoration(
-                                                color: primaryOrange.withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              child: Icon(
-                                                history['category'] == 'Emas'
-                                                    ? Icons.monetization_on_outlined
-                                                    : Icons.calculate_outlined,
-                                                color: primaryOrange,
-                                                size: 20,
-                                              ),
+                                        hoverColor: primaryOrange.withOpacity(
+                                          0.06,
+                                        ),
+                                        splashColor: primaryOrange.withOpacity(
+                                          0.1,
+                                        ),
+                                        leading: Container(
+                                          width: 42,
+                                          height: 42,
+                                          decoration: BoxDecoration(
+                                            color: primaryOrange.withOpacity(
+                                              0.1,
                                             ),
-                                            title: Text(
-                                              history['title'] ?? '-',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: primaryTextColor,
-                                              ),
-                                            ),
-                                            subtitle: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  history['result'] ?? '-',
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 11,
-                                                    color: secondaryTextColor,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  history['date'] ?? '-',
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 10,
-                                                    color: secondaryTextColor,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            trailing: _AnimatedThemedIcon(
-                                              icon: Icons.chevron_right_rounded,
-                                              color: secondaryTextColor,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
                                             ),
                                           ),
-                                          if (index != displayHistory.length - 1)
-                                            AnimatedContainer(
-                                              duration: _kAnimDuration,
-                                              curve: _kAnimCurve,
-                                              height: 1,
-                                              margin: const EdgeInsets.only(left: 72),
-                                              color: borderColor,
+                                          child: Icon(
+                                            history['category'] == 'Emas'
+                                                ? Icons.monetization_on_outlined
+                                                : Icons.calculate_outlined,
+                                            color: primaryOrange,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        title: Text(
+                                          history['title'] ?? '-',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: primaryTextColor,
+                                          ),
+                                        ),
+                                        subtitle: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              history['result'] ?? '-',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 11,
+                                                color: secondaryTextColor,
+                                              ),
                                             ),
-                                        ],
-                                      );
-                                    }),
-                                  ),
+                                            Text(
+                                              history['date'] ?? '-',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 10,
+                                                color: secondaryTextColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        trailing: _AnimatedThemedIcon(
+                                          icon: Icons.chevron_right_rounded,
+                                          color: secondaryTextColor,
+                                        ),
+                                      ),
+                                      if (index != displayHistory.length - 1)
+                                        AnimatedContainer(
+                                          duration: _kAnimDuration,
+                                          curve: _kAnimCurve,
+                                          height: 1,
+                                          margin: const EdgeInsets.only(
+                                            left: 72,
+                                          ),
+                                          color: borderColor,
+                                        ),
+                                    ],
+                                  );
+                                }),
+                              ),
                       ),
                     ),
 
@@ -904,27 +1011,33 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                             color: Colors.redAccent,
                           ),
                         ),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: Colors.redAccent.withOpacity(0.4),
-                          ),
-                          backgroundColor: Colors.redAccent.withOpacity(0.04),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ).copyWith(
-                          overlayColor: WidgetStateProperty.resolveWith(
-                            (states) {
-                              if (states.contains(WidgetState.hovered) ||
-                                  states.contains(WidgetState.pressed)) {
-                                return Colors.redAccent.withOpacity(0.1);
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
+                        style:
+                            OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: Colors.redAccent.withOpacity(0.4),
+                              ),
+                              backgroundColor: Colors.redAccent.withOpacity(
+                                0.04,
+                              ),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ).copyWith(
+                              overlayColor: WidgetStateProperty.resolveWith((
+                                states,
+                              ) {
+                                if (states.contains(WidgetState.hovered) ||
+                                    states.contains(WidgetState.pressed)) {
+                                  return Colors.redAccent.withOpacity(0.1);
+                                }
+                                return null;
+                              }),
+                            ),
                       ),
+                    ),
+                    SizedBox(
+                      height: 110 + MediaQuery.of(context).padding.bottom,
                     ),
                   ],
                 ),
@@ -1141,7 +1254,8 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           history['title'] ?? '-',

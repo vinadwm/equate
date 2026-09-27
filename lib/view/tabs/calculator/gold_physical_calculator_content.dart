@@ -41,6 +41,7 @@ class _GoldPhysicalCalculatorContentState
   bool _hasInput = false;
   double? _hasilAkhir;
   bool _isCalculated = false;
+  bool _isGoldPhysicalExplanationExpanded = false;
 
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
@@ -794,14 +795,18 @@ class _GoldPhysicalCalculatorContentState
 
     final subText = isDarkMode ? Colors.grey[300] : Colors.grey[700];
 
+    // ============================================================
+    // TERM CARD
+    // ============================================================
+
     Widget term(String title, String desc, IconData icon) {
       return Expanded(
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: isDarkMode
-                ? Colors.white.withOpacity(0.05)
-                : Colors.white.withOpacity(0.75),
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.white.withValues(alpha: 0.75),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -811,12 +816,16 @@ class _GoldPhysicalCalculatorContentState
                 children: [
                   Icon(icon, size: 14, color: primaryOrange),
                   const SizedBox(width: 5),
-                  Text(
-                    title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: primaryTextColor,
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: primaryTextColor,
+                      ),
                     ),
                   ),
                 ],
@@ -836,6 +845,10 @@ class _GoldPhysicalCalculatorContentState
       );
     }
 
+    // ============================================================
+    // RESULT RULE
+    // ============================================================
+
     Widget rule({
       required IconData icon,
       required Color color,
@@ -847,9 +860,9 @@ class _GoldPhysicalCalculatorContentState
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(isDarkMode ? 0.12 : 0.08),
+          color: color.withValues(alpha: isDarkMode ? 0.12 : 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -857,7 +870,7 @@ class _GoldPhysicalCalculatorContentState
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.18),
+                color: color.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 18, color: color),
@@ -907,7 +920,13 @@ class _GoldPhysicalCalculatorContentState
       );
     }
 
-    return Container(
+    // ============================================================
+    // MAIN CARD
+    // ============================================================
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 0),
@@ -920,59 +939,91 @@ class _GoldPhysicalCalculatorContentState
               : const [Color(0xFFFFF1D0), Color(0xFFFFFBF3)],
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: primaryOrange.withOpacity(0.55)),
+        border: Border.all(color: primaryOrange.withValues(alpha: 0.55)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: primaryOrange.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(11),
+          // ========================================================
+          // HEADER - BISA DIKLIK
+          // ========================================================
+
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isGoldPhysicalExplanationExpanded =
+                    !_isGoldPhysicalExplanationExpanded;
+              });
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: primaryOrange.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(
+                    Icons.lightbulb_rounded,
+                    size: 20,
+                    color: primaryOrange,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.lightbulb_rounded,
-                  size: 20,
-                  color: primaryOrange,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Apa itu Emas Fisik?',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: primaryTextColor,
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Apa itu Emas Fisik?',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: primaryTextColor,
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Investasi emas batangan',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: primaryOrange,
+                      const SizedBox(height: 2),
+                      Text(
+                        'Investasi emas batangan',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: primaryOrange,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // ==================================================
+                // PANAH EXPAND / COLLAPSE
+                // ==================================================
+                AnimatedRotation(
+                  turns: _isGoldPhysicalExplanationExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 250),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 25,
+                    color: primaryOrange,
+                  ),
+                ),
+              ],
+            ),
           ),
 
+          // ========================================================
+          // DESKRIPSI UTAMA - SELALU TAMPIL
+          // ========================================================
           const SizedBox(height: 12),
 
           Text(
             'Emas Fisik adalah investasi emas dalam bentuk batangan nyata. '
-            'Keuntungan atau kerugiannya dihitung dari selisih harga jual dan '
-            'harga beli per gram, setelah dikonversi dari harga emas '
+            'Keuntungan atau kerugiannya dihitung dari selisih harga jual '
+            'dan harga beli per gram, setelah dikonversi dari harga emas '
             'internasional (USD/troy ounce) ke Rupiah menggunakan kurs.',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
@@ -981,88 +1032,115 @@ class _GoldPhysicalCalculatorContentState
             ),
           ),
 
-          const SizedBox(height: 12),
+          // ========================================================
+          // DETAIL - HANYA MUNCUL SAAT EXPAND
+          // ========================================================
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 250),
+            crossFadeState: _isGoldPhysicalExplanationExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
 
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              term(
-                'Modal & Kurs',
-                'Modal adalah dana yang diinvestasikan. Kurs adalah nilai '
-                    'tukar USD ke Rupiah saat itu.',
-                Icons.account_balance_wallet_rounded,
-              ),
-              const SizedBox(width: 8),
-              term(
-                'Harga Beli/Jual',
-                'Harga emas internasional (per troy ounce) saat beli dan '
-                    'saat dijual kembali.',
-                Icons.swap_vert_rounded,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          Text(
-            'Cara membaca hasil',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: primaryTextColor,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          rule(
-            icon: Icons.trending_up_rounded,
-            color: profitColor,
-            label: 'UNTUNG',
-            condition: 'Harga Jual lebih tinggi dari Harga Beli',
-            example:
-                'Selisih harga per gram dikalikan berat emas menghasilkan '
-                'keuntungan.',
-          ),
-
-          rule(
-            icon: Icons.trending_down_rounded,
-            color: lossColor,
-            label: 'RUGI',
-            condition: 'Harga Jual lebih rendah dari Harga Beli',
-            example:
-                'Selisih harga per gram bernilai negatif, sehingga hasil '
-                'akhir menjadi kerugian.',
-          ),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? Colors.white.withOpacity(0.05)
-                  : Colors.white.withOpacity(0.75),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+            secondChild: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.tips_and_updates_rounded,
-                  size: 15,
-                  color: primaryOrange,
-                ),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: Text(
-                    'Tips: harga emas fisik biasanya lebih stabil dan cocok '
-                    'untuk investasi jangka menengah-panjang dibanding trading '
-                    'harian.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 9.5,
-                      height: 1.45,
-                      color: subText,
+                const SizedBox(height: 14),
+
+                // --------------------------------------------------
+                // MODAL & KURS / HARGA BELI & JUAL
+                // --------------------------------------------------
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    term(
+                      'Modal & Kurs',
+                      'Modal adalah dana yang diinvestasikan. '
+                          'Kurs adalah nilai tukar USD ke Rupiah saat itu.',
+                      Icons.account_balance_wallet_rounded,
                     ),
+                    const SizedBox(width: 8),
+                    term(
+                      'Harga Beli/Jual',
+                      'Harga emas internasional per troy ounce '
+                          'saat beli dan saat dijual kembali.',
+                      Icons.swap_vert_rounded,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // --------------------------------------------------
+                // CARA MEMBACA HASIL
+                // --------------------------------------------------
+                Text(
+                  'Cara membaca hasil',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: primaryTextColor,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // UNTUNG
+                rule(
+                  icon: Icons.trending_up_rounded,
+                  color: profitColor,
+                  label: 'UNTUNG',
+                  condition: 'Harga Jual lebih tinggi dari Harga Beli',
+                  example:
+                      'Selisih harga per gram dikalikan berat emas '
+                      'menghasilkan keuntungan.',
+                ),
+
+                // RUGI
+                rule(
+                  icon: Icons.trending_down_rounded,
+                  color: lossColor,
+                  label: 'RUGI',
+                  condition: 'Harga Jual lebih rendah dari Harga Beli',
+                  example:
+                      'Selisih harga per gram bernilai negatif, '
+                      'sehingga hasil akhir menjadi kerugian.',
+                ),
+
+                // --------------------------------------------------
+                // TIPS
+                // --------------------------------------------------
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.white.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.tips_and_updates_rounded,
+                        size: 15,
+                        color: primaryOrange,
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          'Tips: harga emas fisik biasanya lebih stabil '
+                          'dan cocok untuk investasi jangka menengah-panjang '
+                          'dibanding trading harian.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9.5,
+                            height: 1.45,
+                            color: subText,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

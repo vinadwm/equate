@@ -38,10 +38,7 @@ class DecimalTextInputFormatter extends TextInputFormatter {
 class GoldDigitalCalculatorContent extends StatefulWidget {
   final Function(dynamic)? onCalculate;
 
-  const GoldDigitalCalculatorContent({
-    super.key,
-    this.onCalculate,
-  });
+  const GoldDigitalCalculatorContent({super.key, this.onCalculate});
 
   @override
   State<GoldDigitalCalculatorContent> createState() =>
@@ -75,6 +72,8 @@ class _GoldDigitalCalculatorContentState
   final TextEditingController _hargaCloseController = TextEditingController(
     text: '0,00',
   );
+
+  bool _isDigitalGoldExplanationExpanded = false;
 
   // ============================================================
   // INIT
@@ -186,48 +185,58 @@ class _GoldDigitalCalculatorContentState
   // CALCULATE & SAVE TO FIRESTORE
   // ============================================================
 
-Future<void> _calculateGoldDigital() async {
-  await _viewModel.calculateGoldDigital();
+  Future<void> _calculateGoldDigital() async {
+    await _viewModel.calculateGoldDigital();
 
-  if (_viewModel.digitalHasilNetto != null) {
-    try {
-      final historyModel = DigitalGoldModel(
-        result: _viewModel.digitalHasilNetto!,
-        weightInGram: _parseFormattedDouble(_lotController.text), // lot / gram
-        buyPrice: _parseFormattedDouble(_hargaOpenController.text), // harga open/beli
-        currentPrice: _parseFormattedDouble(_hargaCloseController.text), // harga close/sekarang
-        profitLoss: _viewModel.digitalHasilNetto!,
-        createdAt: DateTime.now(),
-      );
-
-      if (mounted) {
-        await Provider.of<HistoryViewModel>(context, listen: false)
-            .addHistory(historyModel);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kalkulasi Emas Digital berhasil disimpan ke Riwayat!'),
-            backgroundColor: Color(0xFF18B85A),
-          ),
+    if (_viewModel.digitalHasilNetto != null) {
+      try {
+        final historyModel = DigitalGoldModel(
+          result: _viewModel.digitalHasilNetto!,
+          weightInGram: _parseFormattedDouble(
+            _lotController.text,
+          ), // lot / gram
+          buyPrice: _parseFormattedDouble(
+            _hargaOpenController.text,
+          ), // harga open/beli
+          currentPrice: _parseFormattedDouble(
+            _hargaCloseController.text,
+          ), // harga close/sekarang
+          profitLoss: _viewModel.digitalHasilNetto!,
+          createdAt: DateTime.now(),
         );
-      }
-    } catch (e) {
-      debugPrint('Gagal menyimpan riwayat ke Firestore: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menyimpan: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+
+        if (mounted) {
+          await Provider.of<HistoryViewModel>(
+            context,
+            listen: false,
+          ).addHistory(historyModel);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Kalkulasi Emas Digital berhasil disimpan ke Riwayat!',
+              ),
+              backgroundColor: Color(0xFF18B85A),
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Gagal menyimpan riwayat ke Firestore: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal menyimpan: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
-  }
 
-  if (widget.onCalculate != null) {
-    widget.onCalculate!(_viewModel.digitalHasilNetto);
+    if (widget.onCalculate != null) {
+      widget.onCalculate!(_viewModel.digitalHasilNetto);
+    }
   }
-}
 
   // ============================================================
   // EXPORT - IMAGE
@@ -414,9 +423,7 @@ Future<void> _calculateGoldDigital() async {
         : const Color(0xFFEEEEEE);
 
     final signalColor = _viewModel.digitalIsCalculated
-        ? (_digitalIsProfit
-              ? const Color(0xFF22C55E)
-              : const Color(0xFFFF3B30))
+        ? (_digitalIsProfit ? const Color(0xFF22C55E) : const Color(0xFFFF3B30))
         : primaryOrange;
 
     return SingleChildScrollView(
@@ -834,14 +841,18 @@ Future<void> _calculateGoldDigital() async {
 
     final subText = isDarkMode ? Colors.grey[300] : Colors.grey[700];
 
+    // ============================================================
+    // TERM CARD
+    // ============================================================
+
     Widget term(String title, String desc, IconData icon) {
       return Expanded(
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: isDarkMode
-                ? Colors.white.withOpacity(0.05)
-                : Colors.white.withOpacity(0.75),
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.white.withValues(alpha: 0.75),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -851,12 +862,16 @@ Future<void> _calculateGoldDigital() async {
                 children: [
                   Icon(icon, size: 14, color: primaryOrange),
                   const SizedBox(width: 5),
-                  Text(
-                    title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: primaryTextColor,
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: primaryTextColor,
+                      ),
                     ),
                   ),
                 ],
@@ -876,6 +891,10 @@ Future<void> _calculateGoldDigital() async {
       );
     }
 
+    // ============================================================
+    // RESULT RULE
+    // ============================================================
+
     Widget rule({
       required IconData icon,
       required Color color,
@@ -887,9 +906,9 @@ Future<void> _calculateGoldDigital() async {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(isDarkMode ? 0.12 : 0.08),
+          color: color.withValues(alpha: isDarkMode ? 0.12 : 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -897,7 +916,7 @@ Future<void> _calculateGoldDigital() async {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.18),
+                color: color.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 18, color: color),
@@ -947,7 +966,13 @@ Future<void> _calculateGoldDigital() async {
       );
     }
 
-    return Container(
+    // ============================================================
+    // MAIN CARD
+    // ============================================================
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -959,59 +984,91 @@ Future<void> _calculateGoldDigital() async {
               : const [Color(0xFFFFF1D0), Color(0xFFFFFBF3)],
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: primaryOrange.withOpacity(0.55)),
+        border: Border.all(color: primaryOrange.withValues(alpha: 0.55)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: primaryOrange.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(11),
+          // ========================================================
+          // HEADER - BISA DIKLIK
+          // ========================================================
+
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isDigitalGoldExplanationExpanded =
+                    !_isDigitalGoldExplanationExpanded;
+              });
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: primaryOrange.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(
+                    Icons.lightbulb_rounded,
+                    size: 20,
+                    color: primaryOrange,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.lightbulb_rounded,
-                  size: 20,
-                  color: primaryOrange,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Apa itu Emas Digital?',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: primaryTextColor,
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Apa itu Emas Digital?',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: primaryTextColor,
+                        ),
                       ),
-                    ),
-                    Text(
-                      'Investasi emas tanpa fisik',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: primaryOrange,
+                      const SizedBox(height: 2),
+                      Text(
+                        'Investasi emas tanpa fisik',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: primaryOrange,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // ==================================================
+                // PANAH EXPAND / COLLAPSE
+                // ==================================================
+                AnimatedRotation(
+                  turns: _isDigitalGoldExplanationExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 250),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 25,
+                    color: primaryOrange,
+                  ),
+                ),
+              ],
+            ),
           ),
 
+          // ========================================================
+          // DESKRIPSI UTAMA - SELALU TAMPIL
+          // ========================================================
           const SizedBox(height: 12),
 
           Text(
-            'Emas Digital adalah cara transaksi emas secara non-fisik. Kamu '
-            'membuka posisi Buy atau Sell pada harga tertentu (Open), lalu '
-            'menutupnya di harga lain (Close) untuk mendapatkan selisih '
+            'Emas Digital adalah cara transaksi emas secara non-fisik. '
+            'Kamu membuka posisi Buy atau Sell pada harga tertentu (Open), '
+            'lalu menutupnya di harga lain (Close) untuk mendapatkan selisih '
             'keuntungan atau kerugian dari sejumlah Lot yang dipilih.',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
@@ -1020,84 +1077,113 @@ Future<void> _calculateGoldDigital() async {
             ),
           ),
 
-          const SizedBox(height: 12),
+          // ========================================================
+          // DETAIL - HANYA MUNCUL SAAT EXPAND
+          // ========================================================
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 250),
+            crossFadeState: _isDigitalGoldExplanationExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
 
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              term(
-                'Lot',
-                'Jumlah satuan emas digital yang kamu transaksikan.',
-                Icons.scale_rounded,
-              ),
-              const SizedBox(width: 8),
-              term(
-                'Open / Close',
-                'Harga saat posisi dibuka dan saat posisi ditutup.',
-                Icons.swap_vert_rounded,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          Text(
-            'Cara membaca hasil',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: primaryTextColor,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          rule(
-            icon: Icons.trending_up_rounded,
-            color: buyColor,
-            label: 'BUY',
-            condition: 'Untung jika Close lebih tinggi dari Open',
-            example:
-                'Contoh: Open 1.000 dan Close 1.050 → Untung dari kenaikan harga.',
-          ),
-
-          rule(
-            icon: Icons.trending_down_rounded,
-            color: sellColor,
-            label: 'SELL',
-            condition: 'Untung jika Close lebih rendah dari Open',
-            example:
-                'Contoh: Open 1.050 dan Close 1.000 → Untung dari penurunan harga.',
-          ),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? Colors.white.withOpacity(0.05)
-                  : Colors.white.withOpacity(0.75),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+            secondChild: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.tips_and_updates_rounded,
-                  size: 15,
-                  color: primaryOrange,
-                ),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: Text(
-                    'Tips: pastikan posisi Buy/Sell sesuai analisa arah harga '
-                    'sebelum menghitung, karena posisi ini yang menentukan cara '
-                    'membaca untung/rugi.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 9.5,
-                      height: 1.45,
-                      color: subText,
+                const SizedBox(height: 14),
+
+                // --------------------------------------------------
+                // LOT / OPEN-CLOSE
+                // --------------------------------------------------
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    term(
+                      'Lot',
+                      'Jumlah satuan emas digital yang kamu transaksikan.',
+                      Icons.scale_rounded,
                     ),
+                    const SizedBox(width: 8),
+                    term(
+                      'Open / Close',
+                      'Harga saat posisi dibuka dan saat posisi ditutup.',
+                      Icons.swap_vert_rounded,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // --------------------------------------------------
+                // CARA MEMBACA HASIL
+                // --------------------------------------------------
+                Text(
+                  'Cara membaca hasil',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: primaryTextColor,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // BUY
+                rule(
+                  icon: Icons.trending_up_rounded,
+                  color: buyColor,
+                  label: 'BUY',
+                  condition: 'Untung jika Close lebih tinggi dari Open',
+                  example:
+                      'Contoh: Open 1.000 dan Close 1.050 → '
+                      'Untung dari kenaikan harga.',
+                ),
+
+                // SELL
+                rule(
+                  icon: Icons.trending_down_rounded,
+                  color: sellColor,
+                  label: 'SELL',
+                  condition: 'Untung jika Close lebih rendah dari Open',
+                  example:
+                      'Contoh: Open 1.050 dan Close 1.000 → '
+                      'Untung dari penurunan harga.',
+                ),
+
+                // --------------------------------------------------
+                // TIPS
+                // --------------------------------------------------
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.white.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.tips_and_updates_rounded,
+                        size: 15,
+                        color: primaryOrange,
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          'Tips: pastikan posisi Buy/Sell sesuai analisa '
+                          'arah harga sebelum menghitung, karena posisi ini '
+                          'menentukan cara membaca untung/rugi.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 9.5,
+                            height: 1.45,
+                            color: subText,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1370,9 +1456,7 @@ Future<void> _calculateGoldDigital() async {
     return TextField(
       controller: controller,
       keyboardType: TextInputType.numberWithOptions(decimal: decimal),
-      inputFormatters: [
-        DecimalTextInputFormatter(),
-      ],
+      inputFormatters: [DecimalTextInputFormatter()],
       style: GoogleFonts.plusJakartaSans(
         fontSize: 14,
         fontWeight: FontWeight.w600,
