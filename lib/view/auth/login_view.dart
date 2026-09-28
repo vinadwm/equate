@@ -1,17 +1,130 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import 'package:equate/viewmodel/theme_viewmodel.dart';
 
 import 'signup_view.dart';
+import 'auth_glass_widgets.dart';
 import '../main_navigation_view.dart';
 import '../../viewmodel/auth_viewmodel.dart';
 
+// ================================================================
+// HALAMAN INDUK (LOGIN + DAFTAR)
+// Background dipasang sekali di sini dan tidak ikut bergeser.
+// Hanya kartu kaca (form) yang berganti dengan animasi geser.
+// ================================================================
 class LoginView extends StatefulWidget {
-  const LoginView({super.key});
+  /// Set true kalau ingin langsung membuka form Daftar.
+  final bool startWithSignUp;
+
+  const LoginView({super.key, this.startWithSignUp = false});
 
   @override
   State<LoginView> createState() => _LoginViewState();
 }
 
 class _LoginViewState extends State<LoginView> {
+  late bool _showSignUp;
+
+  @override
+  void initState() {
+    super.initState();
+    _showSignUp = widget.startWithSignUp;
+  }
+
+  void _switchTo({required bool signUp}) {
+    FocusScope.of(context).unfocus();
+    setState(() => _showSignUp = signUp);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeViewModel.themeMode,
+      builder: (context, currentThemeMode, _) {
+        final t = AuthTokens(ThemeViewModel.isDarkMode);
+
+        return Scaffold(
+          backgroundColor: t.pageBackground,
+          body: AuthGlassBackground(
+            t: t,
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 340),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      layoutBuilder: (currentChild, previousChildren) {
+                        return Stack(
+                          alignment: Alignment.topCenter,
+                          children: [
+                            ...previousChildren,
+                            if (currentChild != null) currentChild,
+                          ],
+                        );
+                      },
+                      transitionBuilder: (child, animation) {
+                        // Daftar masuk dari kanan, Masuk masuk dari kiri.
+                        final isSignUp = child.key == const ValueKey('signup');
+                        final offset = Tween<Offset>(
+                          begin: Offset(isSignUp ? 0.3 : -0.3, 0),
+                          end: Offset.zero,
+                        ).animate(animation);
+
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: offset,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: _showSignUp
+                          ? SignUpForm(
+                              key: const ValueKey('signup'),
+                              t: t,
+                              onGoToLogin: () => _switchTo(signUp: false),
+                              onSignedUp: () => _switchTo(signUp: false),
+                            )
+                          : LoginForm(
+                              key: const ValueKey('login'),
+                              t: t,
+                              onGoToSignUp: () => _switchTo(signUp: true),
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ================================================================
+// FORM LOGIN (kartu kaca + tautan di bawahnya)
+// ================================================================
+class LoginForm extends StatefulWidget {
+  final AuthTokens t;
+  final VoidCallback onGoToSignUp;
+
+  const LoginForm({super.key, required this.t, required this.onGoToSignUp});
+
+  @override
+  State<LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends State<LoginForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -42,10 +155,6 @@ class _LoginViewState extends State<LoginView> {
 
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-
-    // ----------------------------------------------------------
-    // VALIDASI
-    // ----------------------------------------------------------
 
     final emailError = _authViewModel.validateEmail(email);
 
@@ -117,182 +226,23 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  Future<void> _handleForgotPassword() async {
-    final emailController = TextEditingController(
-      text: _emailController.text.trim(),
-    );
+  // ============================================================
+  // LUPA KATA SANDI
+  // ============================================================
 
+  Future<void> _handleForgotPassword() async {
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.35),
       builder: (dialogContext) {
-        bool isSending = false;
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: const Text(
-                'Lupa Kata Sandi?',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Masukkan email akunmu. Kami akan mengirimkan link untuk membuat kata sandi baru.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.black54,
-                      height: 1.5,
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  const Text(
-                    'E-Mail',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  TextField(
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    enabled: !isSending,
-                    decoration: InputDecoration(
-                      hintText: 'Masukkan email',
-                      filled: true,
-                      fillColor: const Color(0xFFF7F7F9),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 13,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFFF9800),
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSending
-                      ? null
-                      : () {
-                          Navigator.pop(dialogContext, false);
-                        },
-                  child: const Text(
-                    'Batal',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-
-                ElevatedButton(
-                  onPressed: isSending
-                      ? null
-                      : () async {
-                          final email = emailController.text.trim();
-
-                          final emailError = _authViewModel.validateEmail(
-                            email,
-                          );
-
-                          if (emailError != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(emailError),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
-                            return;
-                          }
-
-                          setDialogState(() {
-                            isSending = true;
-                          });
-
-                          try {
-                            await _authViewModel.resetPassword(email);
-
-                            if (!context.mounted) return;
-
-                            Navigator.pop(dialogContext, true);
-                          } catch (e) {
-                            if (!context.mounted) return;
-
-                            setDialogState(() {
-                              isSending = false;
-                            });
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  e.toString().replaceFirst('Exception: ', ''),
-                                ),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF9800),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: isSending
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Kirim Link',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                ),
-              ],
-            );
-          },
+        return _ForgotPasswordDialog(
+          authViewModel: _authViewModel,
+          tokens: AuthTokens(ThemeViewModel.isDarkMode),
+          initialEmail: _emailController.text.trim(),
         );
       },
     );
-
-    emailController.dispose();
 
     if (result == true && mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -320,324 +270,332 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryOrange = Color(0xFFFF9800);
+    final t = widget.t;
 
     return ListenableBuilder(
       listenable: _authViewModel,
       builder: (context, child) {
         final isLoading = _authViewModel.isLoading;
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFFAFAFA),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AuthGlassCard(
+              t: t,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 20),
-
-                  // ==================================================
-                  // ILUSTRASI
-                  // ==================================================
-                  Center(
-                    child: CircleAvatar(
-                      radius: 75,
-                      backgroundColor: Colors.transparent,
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/photoLogin.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.person_pin,
-                              size: 80,
-                              color: primaryOrange,
-                            );
-                          },
+                  // Judul + tombol Google
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Masuk',
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: -0.8,
+                            color: t.textPrimary,
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ==================================================
-                  // TITLE
-                  // ==================================================
-                  const Text(
-                    'Selamat Datang Kembali!',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                      AuthGooglePill(
+                        t: t,
+                        onTap: isLoading ? null : _handleGoogleLogin,
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 4),
 
-                  Row(
-                    children: [
-                      const Text(
-                        'Belum punya akun? ',
-                        style: TextStyle(color: Colors.black54, fontSize: 13),
-                      ),
-                      GestureDetector(
-                        onTap: isLoading
-                            ? null
-                            : () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const SignUpView(),
-                                  ),
-                                );
-                              },
-                        child: const Text(
-                          'Daftar',
-                          style: TextStyle(
-                            color: primaryOrange,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'Lanjutkan memantau emas dan Hang Seng.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: t.textSecondary,
+                    ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
 
-                  // ==================================================
-                  // FORM CARD
-                  // ==================================================
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // Email
+                  AuthPillField(
+                    t: t,
+                    controller: _emailController,
+                    hint: 'Alamat e-mail',
+                    icon: Icons.alternate_email_rounded,
+                    enabled: !isLoading,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Kata sandi + "Lupa?"
+                  AuthPillField(
+                    t: t,
+                    controller: _passwordController,
+                    hint: 'Kata sandi',
+                    icon: Icons.lock_outline_rounded,
+                    obscure: _isObscure,
+                    enabled: !isLoading,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) {
+                      if (!isLoading) _handleLogin();
+                    },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // EMAIL
-                        const Text(
-                          'E-Mail',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          enabled: !isLoading,
-                          decoration: _inputDecoration(),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // PASSWORD
-                        const Text(
-                          'Kata Sandi',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: _isObscure,
-                          enabled: !isLoading,
-                          decoration: _inputDecoration(
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _isObscure
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: Colors.grey,
-                              ),
-                              onPressed: isLoading
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _isObscure = !_isObscure;
-                                      });
-                                    },
+                        GestureDetector(
+                          onTap: isLoading
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _isObscure = !_isObscure;
+                                  });
+                                },
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 10,
+                            ),
+                            child: Icon(
+                              _isObscure
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 18,
+                              color: t.textSecondary,
                             ),
                           ),
                         ),
-
-                        const SizedBox(height: 8),
-
-                        const Text(
-                          'Minimal 8 karakter, 1 huruf kapital, dan 1 angka.',
-                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                        AuthMiniPill(
+                          t: t,
+                          label: 'Lupa?',
+                          onTap: isLoading ? null : _handleForgotPassword,
                         ),
-
-                        const SizedBox(height: 8),
-
-                        // LUPA PASSWORD
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: GestureDetector(
-                            onTap: isLoading ? null : _handleForgotPassword,
-                            child: const Text(
-                              'Lupa kata sandi?',
-                              style: TextStyle(
-                                color: primaryOrange,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // BUTTON MASUK
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryOrange,
-                              disabledBackgroundColor: primaryOrange
-                                  .withOpacity(0.5),
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: isLoading ? null : _handleLogin,
-                            child: isLoading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Masuk',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                          ),
-                        ),
+                        const SizedBox(width: 7),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 18),
 
-                  // ==================================================
-                  // ATAU
-                  // ==================================================
+                  // Catatan + tombol masuk
                   Row(
-                    children: const [
-                      Expanded(child: Divider(color: Color(0xFFE0E0E0))),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
                         child: Text(
-                          'ATAU',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                          'Pastikan e-mail dan kata sandimu sudah benar.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            height: 1.45,
+                            color: t.textSecondary,
                           ),
                         ),
                       ),
-                      Expanded(child: Divider(color: Color(0xFFE0E0E0))),
+                      const SizedBox(width: 14),
+                      AuthActionButton(
+                        t: t,
+                        label: 'Masuk',
+                        isLoading: isLoading,
+                        onPressed: isLoading ? null : _handleLogin,
+                      ),
                     ],
                   ),
 
                   const SizedBox(height: 20),
 
-                  // ==================================================
-                  // GOOGLE
-                  // ==================================================
                   Center(
-                    child: InkWell(
-                      onTap: isLoading ? null : _handleGoogleLogin,
-                      borderRadius: BorderRadius.circular(30),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          'assets/images/google.png',
-                          height: 28,
-                          width: 28,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.g_mobiledata,
-                              size: 32,
-                              color: Colors.red,
-                            );
-                          },
-                        ),
+                    child: Text(
+                      'Riwayat perhitunganmu tersimpan aman di akunmu.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        color: t.textSecondary,
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
-          ),
+
+            const SizedBox(height: 10),
+
+            AuthBottomLink(
+              t: t,
+              question: 'Belum punya akun?',
+              actionLabel: 'Daftar',
+              onTap: isLoading ? null : widget.onGoToSignUp,
+            ),
+          ],
         );
       },
     );
   }
+}
 
-  // ============================================================
-  // INPUT DECORATION
-  // ============================================================
+// ================================================================
+// DIALOG LUPA KATA SANDI (kaca)
+// ================================================================
+class _ForgotPasswordDialog extends StatefulWidget {
+  final AuthViewModel authViewModel;
+  final AuthTokens tokens;
+  final String initialEmail;
 
-  InputDecoration _inputDecoration({Widget? suffixIcon}) {
-    return InputDecoration(
-      filled: true,
-      fillColor: const Color(0xFFF7F7F9),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
+  const _ForgotPasswordDialog({
+    required this.authViewModel,
+    required this.tokens,
+    required this.initialEmail,
+  });
+
+  @override
+  State<_ForgotPasswordDialog> createState() => _ForgotPasswordDialogState();
+}
+
+class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
+  late final TextEditingController _emailController;
+
+  bool _isSending = false;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.initialEmail);
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final email = _emailController.text.trim();
+
+    final emailError = widget.authViewModel.validateEmail(email);
+
+    if (emailError != null) {
+      setState(() => _errorText = emailError);
+      return;
+    }
+
+    setState(() {
+      _isSending = true;
+      _errorText = null;
+    });
+
+    try {
+      await widget.authViewModel.resetPassword(email);
+
+      if (!mounted) return;
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isSending = false;
+        _errorText = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.tokens;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: AuthGlassCard(
+          t: t,
+          radius: 30,
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Lupa kata sandi?',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: -0.4,
+                  color: t.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Masukkan email akunmu. Kami akan mengirim link untuk membuat kata sandi baru.',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: t.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 18),
+              AuthPillField(
+                t: t,
+                controller: _emailController,
+                hint: 'Alamat e-mail',
+                icon: Icons.alternate_email_rounded,
+                enabled: !_isSending,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) {
+                  if (!_isSending) _submit();
+                },
+              ),
+              if (_errorText != null) ...[
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: Text(
+                    _errorText!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
+                      color: const Color(0xFFFF3B30),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _isSending
+                        ? null
+                        : () => Navigator.pop(context, false),
+                    child: Text(
+                      'Batal',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: t.textSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  AuthActionButton(
+                    t: t,
+                    label: 'Kirim link',
+                    isLoading: _isSending,
+                    onPressed: _isSending ? null : _submit,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFEEEEEE)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFFF9800), width: 1.5),
-      ),
-      suffixIcon: suffixIcon,
     );
   }
 }
