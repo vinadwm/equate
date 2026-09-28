@@ -673,28 +673,22 @@ class HomeTabViewState extends State<HomeTabView> {
     EdgeInsetsGeometry padding = const EdgeInsets.all(18),
     double radius = 22,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          width: double.infinity,
-          padding: padding,
-          decoration: BoxDecoration(
-            color: glassFill,
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(color: glassBorder, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDarkMode ? 0.28 : 0.05),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: glassFill,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: glassBorder, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDarkMode ? 0.20 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
-          child: child,
-        ),
+        ],
       ),
+      child: child,
     );
   }
 
