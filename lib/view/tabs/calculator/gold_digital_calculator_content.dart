@@ -373,7 +373,7 @@ class _GoldDigitalCalculatorContentState
   List<String> get _digitalRecommendationSteps {
     if (_digitalIsProfit) {
       return [
-        'Pertimbangkan untuk close posisi sekarang agar keuntungan yang sudah '
+        'Pertimbangkan untuk settled posisi sekarang agar keuntungan yang sudah '
             'didapat lebih terjaga.',
         'Jika masih yakin tren harga akan berlanjut, kamu bisa menahan posisi '
             'sambil rutin memantau pergerakan harga.',
@@ -536,8 +536,8 @@ class _GoldDigitalCalculatorContentState
 
                 const SizedBox(height: 22),
 
-                // CLOSE POSITION
-                _buildLabel('Close Position', labelTextColor),
+                // SETTLED POSITION
+                _buildLabel('Settled Position', labelTextColor),
 
                 const SizedBox(height: 8),
 
@@ -1068,7 +1068,7 @@ class _GoldDigitalCalculatorContentState
           Text(
             'Emas Digital adalah cara transaksi emas secara non-fisik. '
             'Kamu membuka posisi Buy atau Sell pada harga tertentu (Open), '
-            'lalu menutupnya di harga lain (Close) untuk mendapatkan selisih '
+            'lalu melepasnya di harga lain (Settled/Liquid) untuk mendapatkan selisih '
             'keuntungan atau kerugian dari sejumlah Lot yang dipilih.',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
@@ -1105,8 +1105,8 @@ class _GoldDigitalCalculatorContentState
                     ),
                     const SizedBox(width: 8),
                     term(
-                      'Open / Close',
-                      'Harga saat posisi dibuka dan saat posisi ditutup.',
+                      'Open / Settled',
+                      'Harga saat posisi dibuka dan saat posisi dilepas.',
                       Icons.swap_vert_rounded,
                     ),
                   ],
@@ -1133,9 +1133,9 @@ class _GoldDigitalCalculatorContentState
                   icon: Icons.trending_up_rounded,
                   color: buyColor,
                   label: 'BUY',
-                  condition: 'Untung jika Close lebih tinggi dari Open',
+                  condition: 'Untung jika Settled lebih tinggi dari Open',
                   example:
-                      'Contoh: Open 1.000 dan Close 1.050 → '
+                      'Contoh: Open 1.000 dan Settled 1.050 → '
                       'Untung dari kenaikan harga.',
                 ),
 
@@ -1144,9 +1144,9 @@ class _GoldDigitalCalculatorContentState
                   icon: Icons.trending_down_rounded,
                   color: sellColor,
                   label: 'SELL',
-                  condition: 'Untung jika Close lebih rendah dari Open',
+                  condition: 'Untung jika Settled lebih rendah dari Open',
                   example:
-                      'Contoh: Open 1.050 dan Close 1.000 → '
+                      'Contoh: Open 1.050 dan Settled 1.000 → '
                       'Untung dari penurunan harga.',
                 ),
 
