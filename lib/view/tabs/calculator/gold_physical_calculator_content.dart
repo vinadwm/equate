@@ -111,8 +111,11 @@ class _GoldPhysicalCalculatorContentState
 
   void _calculateGold() {
     final double? modal = _parseFormattedNumber(_modalController.text);
+
     final double? hargaBeli = _parseFormattedNumber(_hargaBeliController.text);
+
     final double? hargaJual = _parseFormattedNumber(_hargaJualController.text);
+
     final double? kurs = _parseFormattedNumber(_kursController.text);
 
     const double toz = 31.1;
@@ -121,48 +124,112 @@ class _GoldPhysicalCalculatorContentState
         hargaBeli != null &&
         hargaJual != null &&
         kurs != null &&
+        modal > 0 &&
         hargaBeli > 0 &&
+        hargaJual > 0 &&
         kurs > 0) {
-      final double step1 = (hargaBeli * kurs) / toz; // harga beli per gram
-      final double step2 = (hargaJual * kurs) / toz; // harga jual per gram
-      final double step3 = step2 - step1; // selisih per gram
+      // ==========================================================
+      // STEP 1
+      // Harga beli Rupiah / gram
+      // (harga beli USD × kurs) / 31.1
+      // Ambil angka bulat saja, TANPA pembulatan
+      // ==========================================================
 
-      if (step1 > 0) {
-        final double step4 = modal / step1; // berat emas (gram)
-        final double step5 = step3 * step4; // hasil akhir (profit/loss)
+      final double hasilStep1 = (hargaBeli * kurs) / toz;
 
-        setState(() {
-          _hasilAkhir = step5;
-          _isCalculated = true;
-        });
+      final double step1 = hasilStep1.truncateToDouble();
 
-        // ==========================================================
-        // FIX: bangun PhysicalGoldModel yang LENGKAP dan kirim lewat
-        // onCalculate, bukan cuma angka `step5` mentah.
-        //
-        // Catatan mapping (silakan sesuaikan jika arti fieldnya beda
-        // di project kamu):
-        //   - weightInGram      -> berat emas hasil hitung (step4)
-        //   - karat             -> tidak ada input karat di form ini,
-        //                          default 24 (emas murni)
-        //   - buyPrice          -> harga beli per gram (step1)
-        //   - currentPricePerGram -> harga jual per gram (step2)
-        //   - certificateFee    -> tidak ada input di form ini, default 0
-        // ==========================================================
-        if (widget.onCalculate != null) {
-          widget.onCalculate!(
-            PhysicalGoldModel(
-              title: 'Kalkulasi Emas Fisik',
-              result: step5,
-              weightInGram: step4,
-              karat: 24,
-              buyPrice: step1,
-              currentPricePerGram: step2,
-              certificateFee: 0.0,
-              createdAt: DateTime.now(),
-            ),
-          );
-        }
+      // ==========================================================
+      // STEP 2
+      // Harga jual Rupiah / gram
+      // (harga jual USD × kurs) / 31.1
+      // Ambil angka bulat saja, TANPA pembulatan
+      // ==========================================================
+
+      final double hasilStep2 = (hargaJual * kurs) / toz;
+
+      final double step2 = hasilStep2.truncateToDouble();
+
+      // ==========================================================
+      // STEP 3
+      // Selisih harga
+      // ==========================================================
+
+      final double step3 = step2 - step1;
+
+      // ==========================================================
+      // STEP 4
+      // Berat emas
+      // modal / step1
+      //
+      // Maksimal 2 angka di belakang koma
+      // TANPA pembulatan
+      // ==========================================================
+
+      if (step1 <= 0) return;
+
+      final double hasilStep4 = modal / step1;
+
+      final double step4 = (hasilStep4 * 100).truncateToDouble() / 100;
+
+      // ==========================================================
+      // STEP 5
+      // Hasil keuntungan / kerugian
+      // step3 × step4
+      // Ambil angka bulat saja, TANPA pembulatan
+      // ==========================================================
+
+      final double hasilStep5 = step3 * step4;
+
+      final double step5 = hasilStep5.truncateToDouble();
+
+      // ==========================================================
+      // TAMPILKAN HASIL
+      // ==========================================================
+
+      setState(() {
+        _hasilAkhir = step5;
+        _isCalculated = true;
+      });
+
+      // ==========================================================
+      // SIMPAN DATA LENGKAP KE HISTORY
+      // ==========================================================
+
+      if (widget.onCalculate != null) {
+        widget.onCalculate!(
+          PhysicalGoldModel(
+            title: 'Kalkulasi Emas Fisik',
+
+            // Hasil akhir = STEP 5
+            result: step5,
+
+            // Berat emas = STEP 4
+            weightInGram: step4,
+
+            // ======================================================
+            // INPUT ASLI
+            // ======================================================
+            modal: modal,
+            kurs: kurs,
+            hargaBeliUsd: hargaBeli,
+            hargaJualUsd: hargaJual,
+
+            // ======================================================
+            // HASIL KONVERSI
+            // ======================================================
+
+            // STEP 1
+            buyPrice: step1,
+
+            // STEP 2
+            currentPricePerGram: step2,
+
+            certificateFee: 0.0,
+
+            createdAt: DateTime.now(),
+          ),
+        );
       }
     }
   }
@@ -494,6 +561,7 @@ class _GoldPhysicalCalculatorContentState
                         inputFillColor,
                         borderColor,
                         glowValue: _glowAnimation.value,
+                        prefixText: '\$ ',
                         hintText: '0,00',
                       ),
                     ),
@@ -506,6 +574,7 @@ class _GoldPhysicalCalculatorContentState
                         inputFillColor,
                         borderColor,
                         glowValue: _glowAnimation.value,
+                        prefixText: '\$ ',
                         hintText: '0,00',
                       ),
                     ),

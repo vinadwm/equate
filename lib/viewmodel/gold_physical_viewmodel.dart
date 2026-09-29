@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
@@ -32,6 +34,88 @@ class GoldPhysicalViewModel extends ChangeNotifier {
 
   double? get hasilAkhir => _hasilAkhir;
   bool get isCalculated => _isCalculated;
+
+  // ============================================================
+  // NILAI NUMERIK INPUT
+  // ============================================================
+
+  double? get modalValue => _parseNumber(_modal);
+
+  double? get kursValue => _parseNumber(_kurs);
+
+  /// Harga emas dunia saat beli dalam USD/toz
+  double? get hargaBeliUsd => _parseNumber(_hargaBeli);
+
+  /// Harga emas dunia saat jual dalam USD/toz
+  double? get hargaJualUsd => _parseNumber(_hargaJual);
+
+  // ============================================================
+  // FUNGSI TRUNCATE
+  // ============================================================
+
+  /// Memotong angka tanpa pembulatan.
+  ///
+  /// Contoh:
+  /// 2009789.0976 -> 2009789
+  /// 0.473829 -> 0.47
+  double _truncate(double value, int decimalPlaces) {
+    final factor = pow(10, decimalPlaces).toDouble();
+    return (value * factor).truncateToDouble() / factor;
+  }
+
+  // ============================================================
+  // HASIL KONVERSI
+  // ============================================================
+
+  /// Harga beli dalam Rupiah/gram
+  ///
+  /// Contoh:
+  /// 2.009.789,0976
+  /// menjadi
+  /// 2.009.789
+  double? get hargaBeliPerGram {
+    if (kursValue == null || hargaBeliUsd == null) {
+      return null;
+    }
+
+    final hasil = (hargaBeliUsd! * kursValue!) / _toz;
+
+    return _truncate(hasil, 0);
+  }
+
+  /// Harga jual dalam Rupiah/gram
+  ///
+  /// Contoh:
+  /// 2.100.456,8921
+  /// menjadi
+  /// 2.100.456
+  double? get hargaJualPerGram {
+    if (kursValue == null || hargaJualUsd == null) {
+      return null;
+    }
+
+    final hasil = (hargaJualUsd! * kursValue!) / _toz;
+
+    return _truncate(hasil, 0);
+  }
+
+  /// Berat emas yang didapat berdasarkan modal
+  ///
+  /// Maksimal 2 angka di belakang koma,
+  /// tanpa pembulatan.
+  double? get beratEmas {
+    if (modalValue == null || hargaBeliPerGram == null) {
+      return null;
+    }
+
+    if (hargaBeliPerGram! <= 0) {
+      return null;
+    }
+
+    final hasil = modalValue! / hargaBeliPerGram!;
+
+    return _truncate(hasil, 2);
+  }
 
   // ============================================================
   // INPUT STATE
@@ -116,37 +200,64 @@ class GoldPhysicalViewModel extends ChangeNotifier {
     final double hargaBeliValue = _parseNumber(_hargaBeli)!;
     final double hargaJualValue = _parseNumber(_hargaJual)!;
 
-    // ==========================================================
-    // HARGA BELI DALAM RUPIAH PER GRAM
-    // ==========================================================
-
-    final double hargaBeliPerGram = (hargaBeliValue * kursValue) / _toz;
+    const double toz = 31.1;
 
     // ==========================================================
-    // HARGA JUAL DALAM RUPIAH PER GRAM
+    // STEP 1
+    // HARGA BELI = (HARGA BELI USD × KURS) / TOZ
+    // AMBIL BILANGAN BULAT, TANPA PEMBULATAN
     // ==========================================================
 
-    final double hargaJualPerGram = (hargaJualValue * kursValue) / _toz;
+    final double hasilStep1 = (hargaBeliValue * kursValue) / toz;
+
+    final double step1 = hasilStep1.truncateToDouble();
 
     // ==========================================================
+    // STEP 2
+    // HARGA JUAL = (HARGA JUAL USD × KURS) / TOZ
+    // AMBIL BILANGAN BULAT, TANPA PEMBULATAN
+    // ==========================================================
+
+    final double hasilStep2 = (hargaJualValue * kursValue) / toz;
+
+    final double step2 = hasilStep2.truncateToDouble();
+
+    // ==========================================================
+    // STEP 3
     // SELISIH HARGA
+    // STEP 2 - STEP 1
     // ==========================================================
 
-    final double selisihHarga = hargaJualPerGram - hargaBeliPerGram;
+    final double step3 = step2 - step1;
 
     // ==========================================================
-    // BERAT EMAS YANG DIDAPAT DARI MODAL
+    // STEP 4
+    // BERAT EMAS
+    // MODAL / STEP 1
+    // MAKSIMAL 2 ANGKA DI BELAKANG KOMA
+    // TANPA PEMBULATAN
     // ==========================================================
 
-    final double beratEmas = modalValue / hargaBeliPerGram;
+    final double hasilStep4 = modalValue / step1;
+
+    final double step4 = (hasilStep4 * 100).truncateToDouble() / 100;
 
     // ==========================================================
-    // HASIL AKHIR
+    // STEP 5
+    // PROFIT / RUGI
+    // STEP 3 × STEP 4
+    // AMBIL BILANGAN BULAT, TANPA PEMBULATAN
     // ==========================================================
 
-    final double hasil = selisihHarga * beratEmas;
+    final double hasilStep5 = step3 * step4;
 
-    _hasilAkhir = hasil;
+    final double step5 = hasilStep5.truncateToDouble();
+
+    // ==========================================================
+    // SIMPAN HASIL
+    // ==========================================================
+
+    _hasilAkhir = step5;
     _isCalculated = true;
 
     notifyListeners();

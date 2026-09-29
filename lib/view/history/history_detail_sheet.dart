@@ -11,7 +11,6 @@ import '../../model/physical_gold_model.dart';
 import '../../model/pivot_gold_model.dart';
 import '../../model/pivot_hangseng_model.dart';
 
-
 class HistoryDetailSheet extends StatelessWidget {
   final dynamic item;
   final bool isDarkMode;
@@ -35,6 +34,54 @@ class HistoryDetailSheet extends StatelessWidget {
       decimalDigits: 0,
     );
     return formatter.format(amount);
+  }
+
+  String _getPivotRecommendation({required double? pp, required double? open}) {
+    if (pp == null || open == null || open <= 0) {
+      return 'BELUM TERSEDIA';
+    }
+
+    if (pp > open) {
+      return 'BUY';
+    }
+
+    if (pp < open) {
+      return 'SELL';
+    }
+
+    return 'BUY/SELL';
+  }
+
+  Color _getRecommendationColor(String recommendation) {
+    switch (recommendation) {
+      case 'BUY':
+        return const Color(0xFF34C759);
+      case 'SELL':
+        return const Color(0xFFFF3B30);
+      case 'BUY/SELL':
+        return primaryOrange;
+      default:
+        return secondaryTextColor;
+    }
+  }
+
+  Color _getSignalColor(String signal) {
+    switch (signal.toUpperCase()) {
+      case 'BUY':
+        return const Color(0xFF34C759);
+
+      case 'SELL':
+        return const Color(0xFFFF3B30);
+
+      case 'BUY/SELL':
+        return primaryOrange;
+
+      case 'BELUM TERSEDIA':
+        return secondaryTextColor;
+
+      default:
+        return primaryTextColor;
+    }
   }
 
   // Helper extractor data header dan ringkasan
@@ -151,7 +198,10 @@ class HistoryDetailSheet extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: primaryOrange.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -202,7 +252,9 @@ class HistoryDetailSheet extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                isCurrency ? 'Total Profit/Rugi:' : 'Pivot Point / Nilai Utama:',
+                isCurrency
+                    ? 'Total Profit/Rugi:'
+                    : 'Pivot Point / Nilai Utama:',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -218,7 +270,9 @@ class HistoryDetailSheet extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: !isCurrency
                       ? primaryOrange
-                      : (result >= 0 ? const Color(0xFF34C759) : const Color(0xFFFF3B30)),
+                      : (result >= 0
+                            ? const Color(0xFF34C759)
+                            : const Color(0xFFFF3B30)),
                 ),
               ),
             ],
@@ -234,13 +288,18 @@ class HistoryDetailSheet extends StatelessWidget {
   Widget _buildDigitalGoldSection(DigitalGoldModel data) {
     return Column(
       children: [
-        _buildRow('Berat Emas', '${data.weightInGram} Lot/Gram'),
-        _buildRow('Harga Beli', _formatCurrency(data.buyPrice)),
-        _buildRow('Harga Saat Ini', _formatCurrency(data.currentPrice)),
+        _buildRow('Jumlah Lot', '${data.weightInGram} Lot'),
+        _buildRow('Harga Open', '\$${data.buyPrice.toStringAsFixed(2)} / toz'),
         _buildRow(
-          'Estimasi Profit/Rugi',
+          'Harga Liquid',
+          '\$${data.currentPrice.toStringAsFixed(2)} / toz',
+        ),
+        _buildRow(
+          'Profit/Rugi',
           _formatCurrency(data.profitLoss),
-          valueColor: data.profitLoss >= 0 ? const Color(0xFF34C759) : const Color(0xFFFF3B30),
+          valueColor: data.profitLoss >= 0
+              ? const Color(0xFF34C759)
+              : const Color(0xFFFF3B30),
           isBold: true,
         ),
       ],
@@ -250,13 +309,26 @@ class HistoryDetailSheet extends StatelessWidget {
   Widget _buildPhysicalGoldSection(PhysicalGoldModel data) {
     return Column(
       children: [
-        _buildRow('Berat Emas', '${data.weightInGram} gram'),
-        _buildRow('Harga Beli / Gram', _formatCurrency(data.buyPrice)),
-        _buildRow('Harga Buyback / Gram', _formatCurrency(data.currentPrice)),
+        _buildRow('Modal', _formatCurrency(data.modal)),
         _buildRow(
-          'Estimasi Profit/Rugi',
+          'Kurs',
+          'Rp ${NumberFormat('#,##0.00', 'id_ID').format(data.kurs)} / USD',
+        ),
+        _buildRow(
+          'Harga Beli',
+          '\$${data.hargaBeliUsd.toStringAsFixed(2)} / toz',
+        ),
+        _buildRow(
+          'Harga Jual',
+          '\$${data.hargaJualUsd.toStringAsFixed(2)} / toz',
+        ),
+        _buildRow('Berat Emas', '${data.weightInGram.toStringAsFixed(2)} gram'),
+        _buildRow(
+          'Profit/Rugi',
           _formatCurrency(data.profitLoss),
-          valueColor: data.profitLoss >= 0 ? const Color(0xFF34C759) : const Color(0xFFFF3B30),
+          valueColor: data.profitLoss >= 0
+              ? const Color(0xFF34C759)
+              : const Color(0xFFFF3B30),
           isBold: true,
         ),
       ],
@@ -264,18 +336,32 @@ class HistoryDetailSheet extends StatelessWidget {
   }
 
   Widget _buildPivotGoldSection(PivotGoldModel data) {
+    final recommendation = _getPivotRecommendation(
+      pp: data.pp,
+      open: data.open,
+    );
+
     return Column(
       children: [
-        _buildRow('Tipe Calculation', data.type),
+        _buildRow(
+          'Rekomendasi',
+          recommendation,
+          isBold: true,
+          valueColor: _getRecommendationColor(recommendation),
+        ),
         _buildRow('High', data.high.toStringAsFixed(2)),
         _buildRow('Low', data.low.toStringAsFixed(2)),
         _buildRow('Close', data.close.toStringAsFixed(2)),
+        _buildRow('Open', data.open.toStringAsFixed(2)),
         const SizedBox(height: 6),
-        _buildRow('Pivot Point (PP)', data.pp.toStringAsFixed(2), isBold: true, valueColor: primaryOrange),
+        _buildRow(
+          'Pivot Point (PP)',
+          data.pp.toStringAsFixed(2),
+          isBold: true,
+          valueColor: primaryOrange,
+        ),
         _buildRow('Resistance 1 (R1)', data.r1.toStringAsFixed(2)),
         _buildRow('Support 1 (S1)', data.s1.toStringAsFixed(2)),
-        if (data.r2 != null) _buildRow('Resistance 2 (R2)', data.r2!.toStringAsFixed(2)),
-        if (data.s2 != null) _buildRow('Support 2 (S2)', data.s2!.toStringAsFixed(2)),
       ],
     );
   }
@@ -283,23 +369,58 @@ class HistoryDetailSheet extends StatelessWidget {
   Widget _buildNestGoldSection(NestGoldModel data) {
     return Column(
       children: [
-        _buildRow('Sinyal', data.signalLabel, isBold: true, valueColor: primaryOrange),
-        _buildRow('Harga Open', data.open != null ? data.open!.toStringAsFixed(2) : '-'),
-        _buildRow('Harga High', data.high != null ? data.high!.toStringAsFixed(2) : '-'),
-        _buildRow('Harga Low', data.low != null ? data.low!.toStringAsFixed(2) : '-'),
-        _buildRow('Harga Close', data.close != null ? data.close!.toStringAsFixed(2) : '-'),
+        _buildRow(
+          'Rekomendasi',
+          data.signalLabel,
+          isBold: true,
+          valueColor: _getSignalColor(data.signalLabel),
+        ),
+        _buildRow(
+          'Harga Open',
+          data.open != null ? data.open!.toStringAsFixed(2) : '-',
+        ),
+        _buildRow(
+          'Harga Close',
+          data.close != null ? data.close!.toStringAsFixed(2) : '-',
+        ),
       ],
     );
   }
 
   Widget _buildPivotHangsengSection(PivotHangsengModel data) {
+    final recommendation = _getPivotRecommendation(
+      pp: data.pp,
+      open: data.open,
+    );
+
     return Column(
       children: [
-        _buildRow('High', data.high != null ? data.high!.toStringAsFixed(2) : '-'),
+        _buildRow(
+          'Rekomendasi',
+          recommendation,
+          isBold: true,
+          valueColor: _getRecommendationColor(recommendation),
+        ),
+        _buildRow(
+          'High',
+          data.high != null ? data.high!.toStringAsFixed(2) : '-',
+        ),
         _buildRow('Low', data.low != null ? data.low!.toStringAsFixed(2) : '-'),
-        _buildRow('Close', data.close != null ? data.close!.toStringAsFixed(2) : '-'),
+        _buildRow(
+          'Close',
+          data.close != null ? data.close!.toStringAsFixed(2) : '-',
+        ),
+        _buildRow(
+          'Open',
+          data.open != null ? data.open!.toStringAsFixed(2) : '-',
+        ),
         const SizedBox(height: 6),
-        _buildRow('Pivot Point (PP)', data.pp != null ? data.pp!.toStringAsFixed(2) : '-', isBold: true, valueColor: primaryOrange),
+        _buildRow(
+          'Pivot Point (PP)',
+          data.pp != null ? data.pp!.toStringAsFixed(2) : '-',
+          isBold: true,
+          valueColor: primaryOrange,
+        ),
         _buildRow('R1', data.r1 != null ? data.r1!.toStringAsFixed(2) : '-'),
         _buildRow('S1', data.s1 != null ? data.s1!.toStringAsFixed(2) : '-'),
       ],
@@ -309,11 +430,20 @@ class HistoryDetailSheet extends StatelessWidget {
   Widget _buildNestHangsengSection(NestHangsengModel data) {
     return Column(
       children: [
-        _buildRow('Sinyal', data.signalLabel, isBold: true, valueColor: primaryOrange),
-        _buildRow('Harga Open', data.open != null ? data.open!.toStringAsFixed(2) : '-'),
-        _buildRow('Harga High', data.high != null ? data.high!.toStringAsFixed(2) : '-'),
-        _buildRow('Harga Low', data.low != null ? data.low!.toStringAsFixed(2) : '-'),
-        _buildRow('Harga Close', data.close != null ? data.close!.toStringAsFixed(2) : '-'),
+        _buildRow(
+          'Rekomendasi',
+          data.signalLabel,
+          isBold: true,
+          valueColor: _getSignalColor(data.signalLabel),
+        ),
+        _buildRow(
+          'Harga Open',
+          data.open != null ? data.open!.toStringAsFixed(2) : '-',
+        ),
+        _buildRow(
+          'Harga Close',
+          data.close != null ? data.close!.toStringAsFixed(2) : '-',
+        ),
       ],
     );
   }
@@ -326,7 +456,12 @@ class HistoryDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(String label, String value, {Color? valueColor, bool isBold = false}) {
+  Widget _buildRow(
+    String label,
+    String value, {
+    Color? valueColor,
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(

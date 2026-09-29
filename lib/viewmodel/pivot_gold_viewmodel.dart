@@ -1060,10 +1060,7 @@ class PivotGoldViewModel extends ChangeNotifier {
                     'Tanggal Signal : '
                     '${reference.dateFormatted}',
                   ),
-                  pw.Text(
-                    'Open Newsmaker : '
-                    '${reference.openFormatted}',
-                  ),
+                  pw.Text('Open : ${reference.openFormatted}'),
                   pw.Text(
                     'Signal : $signalLabel',
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
@@ -1074,10 +1071,7 @@ class PivotGoldViewModel extends ChangeNotifier {
                     'Tanggal Signal : '
                     '${_formatDate(calculationDate)}',
                   ),
-                  pw.Text(
-                    'Open Newsmaker : '
-                    'Data belum tersedia',
-                  ),
+                  pw.Text('Open : Data belum tersedia'),
                   pw.Text(
                     'Signal : BELUM TERSEDIA',
                     style: pw.TextStyle(fontWeight: pw.FontWeight.bold),

@@ -187,19 +187,35 @@ class _PivotGoldCalculatorContentState
       return;
     }
 
+    // ==========================================================
     // SIMPAN KE HISTORY
+    // ==========================================================
     if (widget.onCalculate != null) {
+      final openVal = _viewModel.openValue ?? 0.0;
       final highVal = _viewModel.highValue ?? 0.0;
       final lowVal = _viewModel.lowValue ?? 0.0;
       final closeVal = _viewModel.closeValue ?? 0.0;
 
+      final recommendation = switch (_viewModel.signal) {
+        PivotSignal.buy => 'BUY',
+        PivotSignal.sell => 'SELL',
+        PivotSignal.neutral => 'NETRAL',
+        PivotSignal.unavailable => 'BELUM TERSEDIA',
+      };
+
       widget.onCalculate!(
         PivotGoldModel(
           title: 'Pivot Point Gold',
+
           type: _viewModel.type,
+
+          // DATA INPUT
+          open: openVal,
           high: highVal,
           low: lowVal,
           close: closeVal,
+
+          // HASIL PIVOT
           pp: _viewModel.pp ?? 0.0,
           r1: _viewModel.r1 ?? 0.0,
           r2: _viewModel.r2 ?? 0.0,
@@ -209,11 +225,18 @@ class _PivotGoldCalculatorContentState
           s2: _viewModel.s2 ?? 0.0,
           s3: _viewModel.s3 ?? 0.0,
           s4: _viewModel.s4 ?? 0.0,
+
+          // SIGNAL
+          recommendation: _viewModel.signalLabel,
+
           result: _viewModel.pp ?? 0.0,
+
           details:
+              'Open: ${openVal.toStringAsFixed(2)} | '
               'H: ${highVal.toStringAsFixed(2)} | '
               'L: ${lowVal.toStringAsFixed(2)} | '
               'C: ${closeVal.toStringAsFixed(2)}',
+
           createdAt: DateTime.now(),
         ),
       );
