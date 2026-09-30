@@ -351,7 +351,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Hitung estimasi profit, margin, dan pivot point transaksi.',
+                'Hitung estimasi profit dan pivot point transaksi.',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   color: isDarkMode
@@ -369,7 +369,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             children: [
               _buildSoftClayButton(
                 context,
-                title: 'Emas (XUL)',
+                title: 'Emas',
                 subtitle: 'Kalkulator Emas Digital, Fisik, Pivot & Nest',
                 icon: Icons.monetization_on_rounded,
                 isExpanded: _isGoldDropdownOpen,
