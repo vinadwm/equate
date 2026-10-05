@@ -178,6 +178,11 @@ class PivotGoldViewModel extends ChangeNotifier {
   /// Tidak menggunakan fallback.
   /// Karena Open harus berasal dari tanggal hari ini.
   HistoricalDataModel? get referenceData {
+    final liveData = historicalDataViewModel.liveGoldData;
+    if (liveData != null && liveData.open > 0) {
+      return liveData;
+    }
+
     final data = historicalDataViewModel.getDataForMarket(
       'LGD Daily',
       date: calculationDate,
@@ -219,6 +224,8 @@ class PivotGoldViewModel extends ChangeNotifier {
     );
   }
 
+  HistoricalDataModel? get liveGoldData => historicalDataViewModel.liveGoldData;
+
   DateTime? get previousDataDate {
     return previousGoldData?.date;
   }
@@ -234,6 +241,10 @@ class PivotGoldViewModel extends ChangeNotifier {
   /// H-1 = Minggu 14 September.
   /// Maka sistem mencari Jumat 12 September.
   bool get isPreviousDataFallback {
+    if (liveGoldData != null) {
+      return false;
+    }
+
     final data = previousGoldData;
 
     if (data == null) {
@@ -252,7 +263,7 @@ class PivotGoldViewModel extends ChangeNotifier {
   }
 
   bool get isPreviousDataAvailable {
-    final data = previousGoldData;
+    final data = liveGoldData ?? previousGoldData;
 
     if (data == null) {
       return false;
@@ -278,6 +289,10 @@ class PivotGoldViewModel extends ChangeNotifier {
     final previousAvailable = isPreviousDataAvailable;
 
     if (openAvailable && previousAvailable) {
+      if (liveGoldData != null) {
+        return 'Quote Gold NewsMaker tersedia.';
+      }
+
       return 'Data historical tersedia.';
     }
 
@@ -311,12 +326,13 @@ class PivotGoldViewModel extends ChangeNotifier {
   // ============================================================
 
   bool fillFromHistoricalData() {
-    final previousData = previousGoldData;
+    final liveData = liveGoldData;
+    final previousData = liveData ?? previousGoldData;
 
     bool hlcSuccess = false;
 
     // ----------------------------------------------------------
-    // HIGH / LOW / CLOSE
+    // Prefer the current NewsMaker quote; fall back to archived daily data.
     // ----------------------------------------------------------
 
     if (previousData == null) {

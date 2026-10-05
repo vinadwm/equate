@@ -7,6 +7,65 @@ import 'package:equate/model/historical_data_model.dart';
 
 class HistoricalDataService {
   static const String _baseUrl = 'https://newsmaker.id/api/historical-data';
+  static const String _liveQuotesUrl =
+      'https://www.newsmaker.id/api/live-quotes';
+
+  Future<List<HistoricalDataModel>> getLiveMarketData() async {
+    final response = await http.get(
+      Uri.parse(_liveQuotesUrl),
+      headers: {'Accept': 'application/json'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Server mengembalikan status ${response.statusCode}');
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic> || decoded['data'] is! List) {
+      throw Exception('Format response live quotes tidak valid.');
+    }
+
+    final quotes = decoded['data'] as List;
+    const markets = {
+      'XUL10': ('LGD Daily', -1),
+      'HKK50_BBJ': ('HSI Daily', -2),
+    };
+    final result = <HistoricalDataModel>[];
+
+    for (final quote in quotes) {
+      if (quote is! Map) {
+        continue;
+      }
+
+      final market = markets[quote['symbol']?.toString()];
+      if (market == null) continue;
+
+      final date = DateTime.tryParse(
+        quote['date_time']?.toString() ??
+            quote['serverDateTime']?.toString() ??
+            '',
+      );
+
+      if (date == null) {
+        throw Exception('Tanggal quote Gold tidak valid.');
+      }
+
+      result.add(
+        HistoricalDataModel.fromJson({
+          'id': market.$2,
+          'tanggal': date.toIso8601String(),
+          'open': quote['open'],
+          'high': quote['high'],
+          'low': quote['low'],
+          'close': quote['last'] ?? quote['price'],
+          'category': market.$1,
+        }),
+      );
+    }
+
+    return result;
+  }
 
   Future<List<HistoricalDataModel>> getHistoricalData() async {
     try {

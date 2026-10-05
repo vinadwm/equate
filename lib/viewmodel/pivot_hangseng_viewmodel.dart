@@ -139,6 +139,11 @@ class PivotHangsengViewModel extends ChangeNotifier {
   ///
   /// Tidak menggunakan fallback.
   HistoricalDataModel? get referenceData {
+    final liveData = historicalDataViewModel.liveHangsengData;
+    if (liveData != null && liveData.open > 0) {
+      return liveData;
+    }
+
     final date = calculationDate;
 
     final data = historicalDataViewModel.getDataForMarket(
@@ -199,11 +204,19 @@ class PivotHangsengViewModel extends ChangeNotifier {
   /// Mengambil data Hangseng TEPAT satu hari kalender sebelum
   /// tanggal perhitungan.
   HistoricalDataModel? get previousHangsengData {
+    final liveData = historicalDataViewModel.liveHangsengData;
+    if (liveData != null) {
+      return liveData;
+    }
+
     return historicalDataViewModel.getLatestAvailableData(
       'HSI Daily',
       previousDate,
     );
   }
+
+  HistoricalDataModel? get liveHangsengData =>
+      historicalDataViewModel.liveHangsengData;
 
   // ============================================================
   // TANGGAL DATA H/L/C
@@ -255,6 +268,10 @@ class PivotHangsengViewModel extends ChangeNotifier {
     final previousAvailable = isPreviousDataAvailable;
 
     if (openAvailable && previousAvailable) {
+      if (historicalDataViewModel.liveHangsengData != null) {
+        return 'Quote Hangseng NewsMaker tersedia.';
+      }
+
       return 'Data historical tersedia.';
     }
 
@@ -789,6 +806,8 @@ class PivotHangsengViewModel extends ChangeNotifier {
   // ============================================================
 
   void _onHistoricalDataChanged() {
+    if (!_autoMode) return;
+
     final previousData = previousHangsengData;
     final reference = referenceData;
 

@@ -912,6 +912,17 @@ class HomeTabViewState extends State<HomeTabView> {
     required Color primaryTextColor,
     required Color secondaryTextColor,
   }) {
+    final liveData = switch (data.category.trim().toUpperCase()) {
+      'LGD DAILY' => _historicalViewModel.liveGoldData,
+      'HSI DAILY' => _historicalViewModel.liveHangsengData,
+      _ => null,
+    };
+    final isShowingLiveData =
+        liveData != null &&
+        data.date.year == liveData.date.year &&
+        data.date.month == liveData.date.month &&
+        data.date.day == liveData.date.day;
+
     return Row(
       children: [
         Expanded(
@@ -962,10 +973,16 @@ class HomeTabViewState extends State<HomeTabView> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.history_rounded, size: 12, color: secondaryTextColor),
+              Icon(
+                isShowingLiveData
+                    ? Icons.wifi_tethering_rounded
+                    : Icons.history_rounded,
+                size: 12,
+                color: secondaryTextColor,
+              ),
               const SizedBox(width: 5),
               Text(
-                'HISTORICAL',
+                isShowingLiveData ? 'LIVE SNAPSHOT' : 'HISTORICAL',
                 style: GoogleFonts.poppins(
                   fontSize: 9,
                   fontWeight: FontWeight.w600,

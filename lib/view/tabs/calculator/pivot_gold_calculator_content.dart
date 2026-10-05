@@ -560,7 +560,9 @@ class _PivotGoldCalculatorContentState
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            previousData != null
+                            vm.liveGoldData != null
+                                ? 'Gold • LIVE ${vm.liveGoldData!.dateFormatted}'
+                                : previousData != null
                                 ? 'Gold • H/L/C ${previousData.dateFormatted}'
                                 : 'Menunggu data Gold...',
                             style: GoogleFonts.plusJakartaSans(
@@ -623,9 +625,12 @@ class _PivotGoldCalculatorContentState
                       Expanded(
                         child: Text(
                           autoMode
-                              ? 'High, Low, dan Close otomatis diambil dari data Gold '
-                                    'hari sebelumnya (atau data terakhir yang tersedia jika libur). '
-                                    'Matikan mode Otomatis untuk mengisi sendiri.'
+                              ? vm.liveGoldData != null
+                                    ? 'Open, High, Low, dan Close otomatis diambil dari quote Gold NewsMaker terbaru. '
+                                          'Matikan mode Otomatis untuk mengisi sendiri.'
+                                    : 'High, Low, dan Close otomatis diambil dari data Gold '
+                                          'hari sebelumnya (atau data terakhir yang tersedia jika libur). '
+                                          'Matikan mode Otomatis untuk mengisi sendiri.'
                               : 'Mode Manual aktif. Isi High, Low, dan Close sesuai '
                                     'kebutuhan, lalu tekan HITUNG.',
                           style: GoogleFonts.plusJakartaSans(

@@ -1,5 +1,13 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 import 'package:equate/viewmodel/nest_hangseng_viewmodel.dart';
@@ -23,6 +31,8 @@ class NestHangsengCalculatorContent extends StatefulWidget {
 
 class _NestHangsengCalculatorContentState
     extends State<NestHangsengCalculatorContent> {
+  final GlobalKey _globalKey = GlobalKey();
+
   final TextEditingController _closeController = TextEditingController();
 
   final TextEditingController _openController = TextEditingController();
@@ -213,6 +223,105 @@ class _NestHangsengCalculatorContentState
     }
   }
 
+  Future<void> _exportAsImage() async {
+    try {
+      var hasAccess = await Gal.hasAccess();
+      if (!hasAccess) {
+        await Gal.requestAccess();
+        hasAccess = await Gal.hasAccess();
+      }
+
+      if (!hasAccess) {
+        _showSnackBar(
+          'Izin akses galeri ditolak.',
+          backgroundColor: Colors.red,
+        );
+        return;
+      }
+
+      final boundary =
+          _globalKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+      if (boundary == null) {
+        _showSnackBar(
+          'Gagal mengambil hasil kalkulasi.',
+          backgroundColor: Colors.red,
+        );
+        return;
+      }
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        _showSnackBar('Gagal membuat gambar.', backgroundColor: Colors.red);
+        return;
+      }
+
+      final output = await getTemporaryDirectory();
+      final filePath =
+          '${output.path}/nest_hangseng_${DateTime.now().millisecondsSinceEpoch}.png';
+      await File(filePath).writeAsBytes(byteData.buffer.asUint8List());
+      await Gal.putImage(filePath);
+
+      _showSnackBar(
+        'Gambar berhasil disimpan ke Galeri.',
+        backgroundColor: const Color(0xFF18B85A),
+      );
+    } catch (e) {
+      _showSnackBar('Gagal menyimpan gambar: $e', backgroundColor: Colors.red);
+    }
+  }
+
+  Future<void> _exportAsPdf() async {
+    try {
+      final pdfBytes = await _viewModel.buildPdf();
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+      );
+    } catch (e) {
+      _showSnackBar('Gagal membuat PDF: $e', backgroundColor: Colors.red);
+    }
+  }
+
+  void _showExportModal() {
+    if (!_viewModel.isCalculated) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(
+                Icons.image_rounded,
+                color: Color(0xFFFF9E0F),
+              ),
+              title: const Text('Export sebagai Gambar (PNG)'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportAsImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.picture_as_pdf_rounded,
+                color: Colors.redAccent,
+              ),
+              title: const Text('Export sebagai PDF'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportAsPdf();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ============================================================
   // BUILD
   // ============================================================
@@ -320,7 +429,9 @@ class _NestHangsengCalculatorContentState
 
                           Text(
                             closeData != null
-                                ? 'Hangseng • Close ${_fmt(_viewModel.previousDataDisplayDate)}'
+                                ? _viewModel.liveHangsengData != null
+                                      ? 'Hangseng • LIVE ${_fmt(_viewModel.previousDataDisplayDate)}'
+                                      : 'Hangseng • Close ${_fmt(_viewModel.previousDataDisplayDate)}'
                                 : 'Menunggu data Hangseng...',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 10,
@@ -383,9 +494,12 @@ class _NestHangsengCalculatorContentState
                       Expanded(
                         child: Text(
                           autoMode
-                              ? 'Open diambil dari data Hangseng hari ini dan Close '
-                                    'dari data hari sebelumnya. Matikan mode Otomatis '
-                                    'jika ingin mengisi sendiri.'
+                              ? _viewModel.liveHangsengData != null
+                                    ? 'Open dan harga terakhir diambil dari quote Hangseng NewsMaker terbaru. '
+                                          'Matikan mode Otomatis jika ingin mengisi sendiri.'
+                                    : 'Open diambil dari data Hangseng hari ini dan Close '
+                                          'dari data hari sebelumnya. Matikan mode Otomatis '
+                                          'jika ingin mengisi sendiri.'
                               : 'Mode Manual aktif. Isi Open dan Close sesuai kebutuhan, '
                                     'lalu tekan HITUNG.',
                           style: GoogleFonts.plusJakartaSans(
@@ -409,7 +523,9 @@ class _NestHangsengCalculatorContentState
                     Expanded(
                       child: _buildInput(
                         label: 'Close',
-                        subtitle: 'Kemarin',
+                        subtitle: _viewModel.liveHangsengData != null
+                            ? 'Live'
+                            : 'Kemarin',
                         controller: _closeController,
                         textColor: primaryTextColor,
                         fillColor: inputFillColor,
@@ -508,91 +624,107 @@ class _NestHangsengCalculatorContentState
           // ======================================================
           // HASIL
           // ======================================================
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardBgColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: borderColor),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(
-                    alpha: isDarkMode ? 0.25 : 0.035,
-                  ),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.check_circle, color: signalColor, size: 18),
-
-                    const SizedBox(width: 6),
-
-                    Text(
-                      'Hasil',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: primaryTextColor,
-                      ),
+          RepaintBoundary(
+            key: _globalKey,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBgColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(
+                      alpha: isDarkMode ? 0.25 : 0.035,
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                Divider(height: 1, color: dividerColor),
-
-                const SizedBox(height: 16),
-
-                if (_viewModel.isCalculated) ...[
-                  Center(
-                    child: Text(
-                      _viewModel.signalLabel,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 42,
-                        fontWeight: FontWeight.w800,
-                        color: signalColor,
-                      ),
-                    ),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, color: signalColor, size: 18),
 
-                  const SizedBox(height: 6),
+                      const SizedBox(width: 6),
 
-                  Center(
-                    child: Text(
-                      _viewModel.signalDescription,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 22),
-                      child: Text(
-                        'Belum ada hasil',
+                      Text(
+                        'Hasil',
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: primaryTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Divider(height: 1, color: dividerColor),
+
+                  const SizedBox(height: 16),
+
+                  if (_viewModel.isCalculated) ...[
+                    Center(
+                      child: Text(
+                        _viewModel.signalLabel,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 42,
+                          fontWeight: FontWeight.w800,
+                          color: signalColor,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    Center(
+                      child: Text(
+                        _viewModel.signalDescription,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
                           color: Colors.grey[500],
                         ),
                       ),
                     ),
-                  ),
+                  ] else ...[
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 22),
+                        child: Text(
+                          'Belum ada hasil',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
+
+          if (_viewModel.isCalculated) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 40,
+              child: OutlinedButton.icon(
+                onPressed: _showExportModal,
+                icon: const Icon(Icons.ios_share_rounded, size: 16),
+                label: const Text('EXPORT HASIL'),
+              ),
+            ),
+          ],
 
           // ======================================================
           // SARAN SETELAH HASIL
@@ -899,7 +1031,9 @@ class _NestHangsengCalculatorContentState
                     const SizedBox(width: 8),
                     term(
                       'Close',
-                      'Harga terakhir saat pasar ditutup pada hari sebelumnya.',
+                      _viewModel.liveHangsengData != null
+                          ? 'Harga terakhir dari quote sesi berjalan.'
+                          : 'Harga terakhir saat pasar ditutup pada hari sebelumnya.',
                       Icons.nightlight_round,
                     ),
                   ],
@@ -1045,7 +1179,7 @@ class _NestHangsengCalculatorContentState
                 const SizedBox(height: 1),
                 Text(
                   auto
-                      ? 'Data diisi otomatis dari historical'
+                      ? 'Data otomatis dari NewsMaker'
                       : 'Isi data sendiri sesuai kebutuhan',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 9,

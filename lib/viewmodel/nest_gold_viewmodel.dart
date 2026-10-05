@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 import 'package:equate/model/historical_data_model.dart';
 import 'historical_data_viewmodel.dart';
@@ -516,6 +518,60 @@ class NestGoldViewModel extends ChangeNotifier {
       'Catatan: Ini adalah alat bantu analisis teknikal sederhana, bukan '
       'jaminan hasil dan bukan nasihat keuangan. Selalu lakukan riset '
       'tambahan sebelum mengambil keputusan.';
+
+  Future<Uint8List> buildPdf() async {
+    if (!_isCalculated) {
+      throw StateError('Hasil NEST Gold belum dihitung.');
+    }
+
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (context) => pw.Padding(
+          padding: const pw.EdgeInsets.all(24),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'HASIL KALKULASI NEST GOLD',
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 16),
+              pw.TableHelper.fromTextArray(
+                headers: ['Data', 'Nilai'],
+                data: [
+                  ['Tanggal', _formatDate(calculationDate)],
+                  ['Open', _parseNumber(_open)?.toStringAsFixed(2) ?? '-'],
+                  ['Close', _parseNumber(_close)?.toStringAsFixed(2) ?? '-'],
+                  ['Sinyal', signalLabel],
+                  ['Keterangan', signalDescription],
+                ],
+              ),
+              pw.SizedBox(height: 16),
+              pw.Text(recommendationTitle),
+              pw.SizedBox(height: 8),
+              for (final step in recommendationSteps)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.Text('- $step'),
+                ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                recommendationDisclaimer,
+                style: const pw.TextStyle(fontSize: 9),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return pdf.save();
+  }
 
   // ============================================================
   // RESET

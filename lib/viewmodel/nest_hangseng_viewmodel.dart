@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 import 'package:equate/model/historical_data_model.dart';
 import 'historical_data_viewmodel.dart';
@@ -87,6 +89,11 @@ class NestHangsengViewModel extends ChangeNotifier {
   // ============================================================
 
   HistoricalDataModel? get todayHangsengData {
+    final liveData = historicalDataViewModel.liveHangsengData;
+    if (liveData != null && liveData.open > 0) {
+      return liveData;
+    }
+
     // OPEN HANYA BOLEH MENGAMBIL DATA HARI INI.
     // Tidak ada fallback ke hari sebelumnya.
     final data = historicalDataViewModel.getDataForMarket(
@@ -104,6 +111,9 @@ class NestHangsengViewModel extends ChangeNotifier {
 
     return data;
   }
+
+  HistoricalDataModel? get liveHangsengData =>
+      historicalDataViewModel.liveHangsengData;
 
   double? get todayOpen {
     return todayHangsengData?.open;
@@ -124,6 +134,11 @@ class NestHangsengViewModel extends ChangeNotifier {
   // Contoh: H-1 = tanggal 19 tidak ada -> ambil tanggal 18.
 
   HistoricalDataModel? get yesterdayHangsengData {
+    final liveData = historicalDataViewModel.liveHangsengData;
+    if (liveData != null && liveData.close > 0) {
+      return liveData;
+    }
+
     return historicalDataViewModel.getLatestAvailableData(
       'HSI Daily',
       previousDate,
@@ -135,6 +150,10 @@ class NestHangsengViewModel extends ChangeNotifier {
   }
 
   bool get isPreviousDataFallback {
+    if (historicalDataViewModel.liveHangsengData != null) {
+      return false;
+    }
+
     final data = yesterdayHangsengData;
 
     if (data == null) {
@@ -169,6 +188,10 @@ class NestHangsengViewModel extends ChangeNotifier {
     final closeAvailable = isCloseDataAvailable;
 
     if (openAvailable && closeAvailable) {
+      if (historicalDataViewModel.liveHangsengData != null) {
+        return 'Quote Hangseng NewsMaker tersedia.';
+      }
+
       return 'Data historical tersedia.';
     }
 
@@ -380,7 +403,8 @@ class NestHangsengViewModel extends ChangeNotifier {
 
     return NestHangsengModel(
       calculationDate: calculationDate,
-      previousDate: previousDate,
+      previousDate:
+          historicalDataViewModel.liveHangsengData?.date ?? previousDate,
       open: openValue,
       close: closeValue,
       result: closeValue,
@@ -518,6 +542,60 @@ class NestHangsengViewModel extends ChangeNotifier {
       'jaminan hasil dan bukan nasihat keuangan. Selalu lakukan riset '
       'tambahan sebelum mengambil keputusan.';
 
+  Future<Uint8List> buildPdf() async {
+    if (!_isCalculated) {
+      throw StateError('Hasil NEST Hangseng belum dihitung.');
+    }
+
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (context) => pw.Padding(
+          padding: const pw.EdgeInsets.all(24),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'HASIL KALKULASI NEST HANGSENG',
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 16),
+              pw.TableHelper.fromTextArray(
+                headers: ['Data', 'Nilai'],
+                data: [
+                  ['Tanggal', _formatDate(calculationDate)],
+                  ['Open', _parseNumber(_open)?.toStringAsFixed(2) ?? '-'],
+                  ['Close', _parseNumber(_close)?.toStringAsFixed(2) ?? '-'],
+                  ['Sinyal', signalLabel],
+                  ['Keterangan', signalDescription],
+                ],
+              ),
+              pw.SizedBox(height: 16),
+              pw.Text(recommendationTitle),
+              pw.SizedBox(height: 8),
+              for (final step in recommendationSteps)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.Text('- $step'),
+                ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                recommendationDisclaimer,
+                style: const pw.TextStyle(fontSize: 9),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return pdf.save();
+  }
+
   // ============================================================
   // RESET
   // ============================================================
@@ -550,7 +628,7 @@ class NestHangsengViewModel extends ChangeNotifier {
   // ============================================================
 
   void _onHistoricalDataChanged() {
-    if (_autoMode && _isAutoFilled) {
+    if (_autoMode) {
       fillFromHistoricalData();
     }
   }

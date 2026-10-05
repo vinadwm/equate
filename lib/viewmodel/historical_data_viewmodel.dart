@@ -12,6 +12,8 @@ class HistoricalDataViewModel extends ChangeNotifier {
   String? _errorMessage;
 
   List<HistoricalDataModel> _allData = [];
+  HistoricalDataModel? _liveGoldData;
+  HistoricalDataModel? _liveHangsengData;
 
   HistoricalMarket _selectedMarket = HistoricalMarket.gold;
   DateTime? _selectedDate;
@@ -31,6 +33,10 @@ class HistoricalDataViewModel extends ChangeNotifier {
   DateTime? get selectedDate => _selectedDate;
 
   int get chartDays => _chartDays;
+
+  HistoricalDataModel? get liveGoldData => _liveGoldData;
+
+  HistoricalDataModel? get liveHangsengData => _liveHangsengData;
 
   // ============================================================
   // GET DATA BERDASARKAN MARKET DAN TANGGAL
@@ -259,17 +265,47 @@ class HistoricalDataViewModel extends ChangeNotifier {
 
     try {
       _allData = await _service.getHistoricalData();
-
-      _setDefaultDate();
     } catch (e) {
       debugPrint('Historical data error: $e');
-
       _errorMessage = 'Gagal mengambil data historical.';
-    } finally {
-      _isLoading = false;
+    }
 
+    try {
+      final liveData = await _service.getLiveMarketData();
+      _liveGoldData = _findLiveData(liveData, 'LGD Daily');
+      _liveHangsengData = _findLiveData(liveData, 'HSI Daily');
+
+      for (final quote in liveData) {
+        _allData.removeWhere(
+          (item) =>
+              item.category.trim().toUpperCase() ==
+                  quote.category.trim().toUpperCase() &&
+              _isSameDate(item.date, quote.date),
+        );
+        _allData.add(quote);
+      }
+    } catch (e) {
+      debugPrint('Live market quote error: $e');
+      _liveGoldData = null;
+      _liveHangsengData = null;
+    } finally {
+      _setDefaultDate();
+      _isLoading = false;
       notifyListeners();
     }
+  }
+
+  HistoricalDataModel? _findLiveData(
+    List<HistoricalDataModel> data,
+    String category,
+  ) {
+    for (final item in data) {
+      if (item.category.trim().toUpperCase() == category.toUpperCase()) {
+        return item;
+      }
+    }
+
+    return null;
   }
 
   // ============================================================

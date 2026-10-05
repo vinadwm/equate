@@ -573,7 +573,9 @@ class _PivotHangsengCalculatorContentState
                           const SizedBox(height: 2),
 
                           Text(
-                            previousData != null
+                            vm.liveHangsengData != null
+                                ? 'Hangseng • LIVE ${vm.liveHangsengData!.dateFormatted}'
+                                : previousData != null
                                 ? 'High, Low, Close: ${previousData.dateFormatted} • Open: hari ini'
                                 : 'Menunggu data Hangseng...',
                             style: GoogleFonts.plusJakartaSans(
@@ -642,9 +644,12 @@ class _PivotHangsengCalculatorContentState
                       Expanded(
                         child: Text(
                           autoMode
-                              ? 'High, Low, dan Close otomatis diambil dari data Hangseng '
-                                    'hari sebelumnya (atau data terakhir yang tersedia jika libur). '
-                                    'Matikan mode Otomatis untuk mengisi sendiri.'
+                              ? vm.liveHangsengData != null
+                                    ? 'Open, High, Low, dan Close otomatis diambil dari quote Hangseng NewsMaker terbaru. '
+                                          'Matikan mode Otomatis untuk mengisi sendiri.'
+                                    : 'High, Low, dan Close otomatis diambil dari data Hangseng '
+                                          'hari sebelumnya (atau data terakhir yang tersedia jika libur). '
+                                          'Matikan mode Otomatis untuk mengisi sendiri.'
                               : 'Mode Manual aktif. Isi High, Low, dan Close sesuai '
                                     'kebutuhan, lalu tekan HITUNG.',
                           style: GoogleFonts.plusJakartaSans(
@@ -1202,7 +1207,7 @@ class _PivotHangsengCalculatorContentState
 
                 Text(
                   auto
-                      ? 'Data diisi otomatis dari historical'
+                      ? 'Data otomatis dari NewsMaker'
                       : 'Isi data sendiri sesuai kebutuhan',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 9,
@@ -1489,7 +1494,9 @@ class _PivotHangsengCalculatorContentState
                     const SizedBox(width: 8),
                     term(
                       'High',
-                      'Harga tertinggi pada hari sebelumnya.',
+                      _viewModel.liveHangsengData != null
+                          ? 'Harga tertinggi pada quote sesi berjalan.'
+                          : 'Harga tertinggi pada hari sebelumnya.',
                       Icons.arrow_upward_rounded,
                     ),
                   ],
@@ -1502,13 +1509,17 @@ class _PivotHangsengCalculatorContentState
                   children: [
                     term(
                       'Low',
-                      'Harga terendah pada hari sebelumnya.',
+                      _viewModel.liveHangsengData != null
+                          ? 'Harga terendah pada quote sesi berjalan.'
+                          : 'Harga terendah pada hari sebelumnya.',
                       Icons.arrow_downward_rounded,
                     ),
                     const SizedBox(width: 8),
                     term(
                       'Close',
-                      'Harga terakhir pada hari sebelumnya.',
+                      _viewModel.liveHangsengData != null
+                          ? 'Harga terakhir dari quote sesi berjalan.'
+                          : 'Harga terakhir pada hari sebelumnya.',
                       Icons.nightlight_round,
                     ),
                   ],
