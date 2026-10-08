@@ -37,10 +37,24 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+
     <queries>
+        <!-- Bawaan Flutter -->
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+
+        <!-- DITAMBAHKAN: buka link https (WhatsApp wa.me) lewat url_launcher -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+
+        <!-- DITAMBAHKAN: buka aplikasi telepon (tombol telepon CS) -->
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
         </intent>
     </queries>
 </manifest>
