@@ -12,16 +12,28 @@ class HistoricalDataViewModel extends ChangeNotifier {
   String? _errorMessage;
 
   List<HistoricalDataModel> _allData = [];
+
   HistoricalDataModel? _liveGoldData;
   HistoricalDataModel? _liveHangsengData;
 
   HistoricalMarket _selectedMarket = HistoricalMarket.gold;
   DateTime? _selectedDate;
 
+  // ============================================================
+  // CHART RANGE
+  // ============================================================
+
   int _chartDays = 30;
 
   // ============================================================
-  // GETTER
+  // HISTORY TABLE RANGE
+  // 7 / 30 / 90 / 365 hari
+  // ============================================================
+
+  int _historyDays = 7;
+
+  // ============================================================
+  // GETTERS
   // ============================================================
 
   bool get isLoading => _isLoading;
@@ -34,12 +46,14 @@ class HistoricalDataViewModel extends ChangeNotifier {
 
   int get chartDays => _chartDays;
 
+  int get historyDays => _historyDays;
+
   HistoricalDataModel? get liveGoldData => _liveGoldData;
 
   HistoricalDataModel? get liveHangsengData => _liveHangsengData;
 
   // ============================================================
-  // GET DATA BERDASARKAN MARKET DAN TANGGAL
+  // GET DATA FOR MARKET
   // ============================================================
 
   HistoricalDataModel? getDataForMarket(String category, {DateTime? date}) {
@@ -50,7 +64,6 @@ class HistoricalDataViewModel extends ChangeNotifier {
     }).toList();
 
     if (marketData.isEmpty) {
-      debugPrint('❌ Tidak ada data untuk category: $targetCategory');
       return null;
     }
 
@@ -66,16 +79,11 @@ class HistoricalDataViewModel extends ChangeNotifier {
       }
     }
 
-    debugPrint(
-      '❌ Tidak ada $targetCategory untuk tanggal '
-      '${date.day}/${date.month}/${date.year}',
-    );
-
     return null;
   }
 
   // ============================================================
-  // GET DATA GOLD HARI SEBELUMNYA
+  // PREVIOUS GOLD DATA
   // ============================================================
 
   HistoricalDataModel? getPreviousGoldData(DateTime date) {
@@ -95,6 +103,10 @@ class HistoricalDataViewModel extends ChangeNotifier {
     return null;
   }
 
+  // ============================================================
+  // GOLD DATA FOR SPECIFIC DATE
+  // ============================================================
+
   HistoricalDataModel? getGoldDataForDate(DateTime date) {
     for (final item in _allData) {
       final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
@@ -111,21 +123,9 @@ class HistoricalDataViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // DATA TERAKHIR YANG TERSEDIA (FALLBACK LIBUR / WEEKEND)
+  // LATEST AVAILABLE DATA
   // ============================================================
-  //
-  // Mencari data `category` TEPAT pada `onOrBeforeDate`. Kalau tidak ada
-  // (misalnya karena weekend/hari libur newsmaker), otomatis mundur
-  // hari demi hari sampai maksimal `maxLookbackDays` untuk menemukan
-  // data valid terakhir yang tersedia.
-  //
-  // Contoh:
-  // onOrBeforeDate = tanggal 19 (Minggu, tidak ada data)
-  // -> mundur ke 18 (Sabtu, tidak ada data juga)
-  // -> mundur ke 17 (Jumat, ADA data) -> dikembalikan
-  //
-  // Data yang bank holiday atau close-nya 0 dianggap tidak valid
-  // dan akan dilewati.
+
   HistoricalDataModel? getLatestAvailableData(
     String category,
     DateTime onOrBeforeDate, {
@@ -165,7 +165,7 @@ class HistoricalDataViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // CATEGORY
+  // SELECTED CATEGORY
   // ============================================================
 
   String get selectedCategory {
@@ -216,7 +216,7 @@ class HistoricalDataViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // DATA SESUAI TANGGAL YANG DIPILIH
+  // SELECTED DATA
   // ============================================================
 
   HistoricalDataModel? get selectedData {
@@ -254,7 +254,72 @@ class HistoricalDataViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // LOAD DATA
+  // HISTORICAL TABLE DATA
+  //
+  // Data terbaru berada di atas.
+  //
+  // Range dihitung berdasarkan tanggal DATA TERBARU,
+  // bukan DateTime.now(), supaya tidak bermasalah ketika
+  // data API terakhir bukan hari ini.
+  // ============================================================
+
+  List<HistoricalDataModel> get filteredHistoricalData {
+    final data = List<HistoricalDataModel>.from(marketData);
+
+    if (data.isEmpty) {
+      return [];
+    }
+
+    data.sort((a, b) => b.date.compareTo(a.date));
+
+    // Semua data
+    if (_historyDays == -1) {
+      return data;
+    }
+
+    final latestDate = DateTime(
+      data.first.date.year,
+      data.first.date.month,
+      data.first.date.day,
+    );
+
+    final startDate = latestDate.subtract(Duration(days: _historyDays - 1));
+
+    return data.where((item) {
+      final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
+
+      return !itemDate.isBefore(startDate) && !itemDate.isAfter(latestDate);
+    }).toList();
+  }
+
+  // ============================================================
+  // HISTORY RANGE LABEL
+  // ============================================================
+
+  String get historyRangeLabel {
+    switch (_historyDays) {
+      case 7:
+        return '7 Hari';
+
+      case 30:
+        return '30 Hari';
+
+      case 90:
+        return '90 Hari';
+
+      case 365:
+        return '1 Tahun';
+
+      case -1:
+        return 'Semua';
+
+      default:
+        return '$_historyDays Hari';
+    }
+  }
+
+  // ============================================================
+  // LOAD HISTORICAL DATA
   // ============================================================
 
   Future<void> loadHistoricalData() async {
@@ -267,13 +332,21 @@ class HistoricalDataViewModel extends ChangeNotifier {
       _allData = await _service.getHistoricalData();
     } catch (e) {
       debugPrint('Historical data error: $e');
+
       _errorMessage = 'Gagal mengambil data historical.';
     }
 
     try {
       final liveData = await _service.getLiveMarketData();
+
       _liveGoldData = _findLiveData(liveData, 'LGD Daily');
+
       _liveHangsengData = _findLiveData(liveData, 'HSI Daily');
+
+      // ========================================================
+      // GANTI DATA HISTORICAL DENGAN LIVE DATA
+      // jika category + tanggal sama.
+      // ========================================================
 
       for (final quote in liveData) {
         _allData.removeWhere(
@@ -282,18 +355,26 @@ class HistoricalDataViewModel extends ChangeNotifier {
                   quote.category.trim().toUpperCase() &&
               _isSameDate(item.date, quote.date),
         );
+
         _allData.add(quote);
       }
     } catch (e) {
       debugPrint('Live market quote error: $e');
+
       _liveGoldData = null;
       _liveHangsengData = null;
     } finally {
       _setDefaultDate();
+
       _isLoading = false;
+
       notifyListeners();
     }
   }
+
+  // ============================================================
+  // FIND LIVE DATA
+  // ============================================================
 
   HistoricalDataModel? _findLiveData(
     List<HistoricalDataModel> data,
@@ -349,7 +430,21 @@ class HistoricalDataViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // DEFAULT DATE
+  // CHANGE HISTORY TABLE RANGE
+  // ============================================================
+
+  void changeHistoryRange(int days) {
+    if (_historyDays == days) {
+      return;
+    }
+
+    _historyDays = days;
+
+    notifyListeners();
+  }
+
+  // ============================================================
+  // SET DEFAULT DATE
   // ============================================================
 
   void _setDefaultDate() {
@@ -362,7 +457,7 @@ class HistoricalDataViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // CHECK DATE
+  // SAME DATE
   // ============================================================
 
   bool _isSameDate(DateTime first, DateTime second) {
@@ -372,7 +467,7 @@ class HistoricalDataViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // CHECK AVAILABLE DATE
+  // DATE AVAILABLE
   // ============================================================
 
   bool isDateAvailable(DateTime date) {
