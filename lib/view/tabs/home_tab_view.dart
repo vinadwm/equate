@@ -8,6 +8,7 @@ import 'package:fl_chart/fl_chart.dart';
 
 import 'package:equate/model/user_model.dart';
 import 'package:equate/model/historical_data_model.dart';
+import 'package:equate/view/tabs/historical_data_view.dart';
 import 'package:equate/viewmodel/auth_viewmodel.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
@@ -1194,19 +1195,19 @@ class HomeTabViewState extends State<HomeTabView> {
                   isDarkMode: isDarkMode,
                 ),
                 _buildChartRangeButton(
-                  label: '30H',
+                  label: '1B',
                   days: 30,
                   primaryOrange: primaryOrange,
                   isDarkMode: isDarkMode,
                 ),
                 _buildChartRangeButton(
-                  label: '90H',
+                  label: '3B',
                   days: 90,
                   primaryOrange: primaryOrange,
                   isDarkMode: isDarkMode,
                 ),
                 _buildChartRangeButton(
-                  label: '1Y',
+                  label: '1T',
                   days: 365,
                   primaryOrange: primaryOrange,
                   isDarkMode: isDarkMode,
@@ -1436,15 +1437,11 @@ class HomeTabViewState extends State<HomeTabView> {
     // diganti Column biasa (tanpa scroll bersarang) + jumlah baris
     // dibatasi & bisa di-expand manual lewat tombol, biar page tetap
     // ringan meski data historis banyak.
-    final allRows = _historicalViewModel.chartData.reversed.toList();
+    final allRows = List<HistoricalDataModel>.from(
+      _historicalViewModel.marketData,
+    )..sort((a, b) => b.date.compareTo(a.date));
 
-    final int displayLimit = _isHistoryTableExpanded
-        ? _kExpandedRows
-        : _kCollapsedRows;
-
-    final rows = allRows.length > displayLimit
-        ? allRows.sublist(0, displayLimit)
-        : allRows;
+    final rows = allRows.length > 7 ? allRows.sublist(0, 7) : allRows;
 
     final bool hasMore = allRows.length > _kCollapsedRows;
 
@@ -1458,6 +1455,7 @@ class HomeTabViewState extends State<HomeTabView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(7),
@@ -1473,10 +1471,17 @@ class HomeTabViewState extends State<HomeTabView> {
                   color: Colors.white,
                 ),
               ),
+
               const SizedBox(width: 10),
+
+              // ==========================
+              // JUDUL
+              // ==========================
               Expanded(
                 child: Text(
                   'Tabel Data Historis',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -1484,13 +1489,48 @@ class HomeTabViewState extends State<HomeTabView> {
                   ),
                 ),
               ),
-              Text(
-                allRows.length > rows.length
-                    ? '${rows.length} dari ${allRows.length} data'
-                    : '${rows.length} data',
-                style: GoogleFonts.poppins(
-                  fontSize: 9.5,
-                  color: secondaryTextColor,
+
+              const SizedBox(width: 10),
+
+              // ==========================
+              // LIHAT SEMUA + JUMLAH DATA
+              // ==========================
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => HistoricalDataView(
+                        historicalDataViewModel: _historicalViewModel,
+                      ),
+                    ),
+                  );
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // LIHAT SEMUA
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Lihat Semua',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFFF9500),
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 9,
+                          color: Color(0xFFFF9500),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
