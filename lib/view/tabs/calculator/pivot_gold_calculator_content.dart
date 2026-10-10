@@ -811,7 +811,8 @@ class _PivotGoldCalculatorContentState
                         opacity: 0.08,
                         child: Image.asset(
                           'assets/images/logoEWF.png',
-                          width: 260,
+                          width: 500,
+                          height: 500,
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -1265,6 +1266,79 @@ class _PivotGoldCalculatorContentState
       );
     }
 
+    // ============================================================
+    // WIDGET RUMUS PIVOT POINT
+    // ============================================================
+
+    Widget formulaText(String text, {bool small = false}) {
+      return Text(
+        text,
+        textAlign: TextAlign.center,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: small ? 9 : 10,
+          fontWeight: FontWeight.w700,
+          color: primaryTextColor,
+        ),
+      );
+    }
+
+    Widget fraction({required String numerator, required String denominator}) {
+      return SizedBox(
+        width: 100,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            formulaText(numerator, small: true),
+            Container(
+              height: 1.2,
+              margin: const EdgeInsets.symmetric(vertical: 3),
+              color: primaryOrange,
+            ),
+            formulaText(denominator, small: true),
+          ],
+        ),
+      );
+    }
+
+    Widget formulaItem(String label, String formula, Color color) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: isDarkMode ? 0.12 : 0.07),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            formulaText(formula, small: true),
+          ],
+        ),
+      );
+    }
+
+    Widget formulaGrid(List<Widget> items) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: items.map((item) {
+            return SizedBox(width: 169, height: 50, child: item);
+          }).toList(),
+        ),
+      );
+    }
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
@@ -1462,6 +1536,147 @@ class _PivotGoldCalculatorContentState
                   condition: 'Pivot Point sama dengan Open',
                   example: 'Arah belum jelas, sebaiknya tunggu konfirmasi.',
                 ),
+
+                // --------------------------------------------------
+                // RUMUS PIVOT POINT & MIDPOINT
+                // --------------------------------------------------
+                Text(
+                  'Rumus Perhitungan',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: primaryTextColor,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // PIVOT POINT UTAMA
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: primaryOrange.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: primaryOrange.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        'PP:',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: primaryOrange,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Center(
+                          child: fraction(
+                            numerator: 'High + Low + Close',
+                            denominator: '3',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // RESISTANCE
+                Text(
+                  'Resistance',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: buyColor,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                formulaGrid([
+                  formulaItem('R1:', '2 × PP − Low', buyColor),
+                  formulaItem('R2:', 'PP + (High − Low)', buyColor),
+                  formulaItem('R3:', 'PP + 2 × (High − Low)', buyColor),
+                  formulaItem('R4:', 'PP + 3 × (High − Low)', buyColor),
+                ]),
+
+                const SizedBox(height: 10),
+
+                // SUPPORT
+                Text(
+                  'Support',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: sellColor,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                formulaGrid([
+                  formulaItem('S1:', '2 × PP − High', sellColor),
+                  formulaItem('S2:', 'PP − (High − Low)', sellColor),
+                  formulaItem('S3:', 'PP − 2 × (High − Low)', sellColor),
+                  formulaItem('S4:', 'PP − 3 × (High − Low)', sellColor),
+                ]),
+
+                const SizedBox(height: 10),
+
+                // MIDPOINT
+                Text(
+                  'Midpoint (Titik Tengah)',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: primaryOrange,
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.white.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      formulaText('Midpoint = (Level A + Level B) / 2'),
+                      const SizedBox(height: 6),
+                      Center(
+                        child: fraction(
+                          numerator: '(Level A + Level B)',
+                          denominator: '2',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Contoh: midpoint antara PP dan R1 = (PP + R1) / 2. '
+                        'Rumus yang sama berlaku untuk setiap dua level '
+                        'yang berdekatan, misalnya R1–R2 atau S1–PP.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9.5,
+                          height: 1.45,
+                          color: subText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 10),
 
                 // ------------------------------------------------
                 // TIPS

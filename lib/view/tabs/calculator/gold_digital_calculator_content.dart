@@ -642,6 +642,12 @@ class _GoldDigitalCalculatorContentState
               padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
               decoration: BoxDecoration(
                 color: cardBgColor,
+                // Watermark PT EWF ikut tersimpan saat hasil diekspor ke PNG.
+                image: const DecorationImage(
+                  image: AssetImage('assets/images/logoEWF.png'),
+                  fit: BoxFit.contain,
+                  opacity: 0.07,
+                ),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: _viewModel.digitalIsCalculated
@@ -1148,6 +1154,213 @@ class _GoldDigitalCalculatorContentState
                   example:
                       'Contoh: Open 1.050 dan Settled 1.000 → '
                       'Untung dari penurunan harga.',
+                ),
+
+                // --------------------------------------------------
+                // RUMUS PERHITUNGAN EMAS DIGITAL
+                // --------------------------------------------------
+                Text(
+                  'Rumus Perhitungan',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: primaryTextColor,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.white.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: primaryOrange.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '1. Menghitung Kontrak Size',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: primaryTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Kontrak Size = Selisih harga Settled dan Open '
+                        'dengan memperhatikan posisi Buy atau Sell.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          height: 1.45,
+                          color: subText,
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // BUY
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.trending_up_rounded,
+                            size: 15,
+                            color: buyColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'BUY: Kontrak Size positif jika Settled > Open, '
+                              'dan negatif jika Settled < Open.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                height: 1.45,
+                                color: subText,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      // SELL
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.trending_down_rounded,
+                            size: 15,
+                            color: sellColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'SELL: Kontrak Size positif jika Settled < Open, '
+                              'dan negatif jika Settled > Open.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                height: 1.45,
+                                color: subText,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 14),
+                      Divider(
+                        color: primaryOrange.withValues(alpha: 0.25),
+                        height: 1,
+                      ),
+                      const SizedBox(height: 12),
+
+                      Text(
+                        '2. Menghitung Hasil Kotor (Bruto)',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: primaryTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: primaryOrange.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Bruto = Lot × Kontrak Size × Rp1.000.000',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            height: 1.5,
+                            color: primaryTextColor,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      Text(
+                        '3. Menghitung Hasil Bersih (Netto)',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: primaryTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: buyColor.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Bersih = Bruto − Rp300.000 − Rp33.000',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            height: 1.5,
+                            color: primaryTextColor,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      Text(
+                        'Fee transaksi: Rp300.000\n'
+                        'PPN: Rp33.000\n'
+                        'Total potongan: Rp333.000',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 10,
+                          height: 1.6,
+                          color: subText,
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 15,
+                            color: primaryOrange,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Hasil bruto adalah keuntungan atau kerugian sebelum '
+                              'potongan. Hasil bersih diperoleh setelah fee dan PPN '
+                              'dikurangkan.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 9.5,
+                                height: 1.45,
+                                color: subText,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
 
                 // --------------------------------------------------

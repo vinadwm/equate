@@ -1680,52 +1680,6 @@ class HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
             ),
-            // ==================================================
-            // TOMBOL LIHAT SELENGKAPNYA / SEMBUNYIKAN
-            // ==================================================
-            if (hasMore) ...[
-              const SizedBox(height: 4),
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    _isHistoryTableExpanded = !_isHistoryTableExpanded;
-                  });
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  margin: const EdgeInsets.only(top: 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: primaryOrange.withOpacity(0.35)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _isHistoryTableExpanded
-                            ? 'Sembunyikan'
-                            : 'Lihat Selengkapnya',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: primaryOrange,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        _isHistoryTableExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        size: 18,
-                        color: primaryOrange,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ],
         ],
       ),

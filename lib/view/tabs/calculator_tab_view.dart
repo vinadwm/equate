@@ -23,7 +23,6 @@ import 'package:equate/model/digital_gold_model.dart';
 import 'package:equate/model/physical_gold_model.dart';
 import 'package:equate/model/pivot_gold_model.dart';
 import 'package:equate/model/pivot_hangseng_model.dart';
-import 'package:equate/model/nest_hangseng_model.dart';
 
 // ==========================================================
 // CALCULATOR CONTENT
@@ -33,7 +32,6 @@ import 'calculator/gold_physical_calculator_content.dart';
 import 'calculator/pivot_gold_calculator_content.dart';
 import 'calculator/pivot_hangseng_calculator_content.dart';
 import 'calculator/nest_gold_calculator_content.dart';
-import 'calculator/nest_hangseng_calculator_content.dart';
 
 // ==========================================================
 // CUSTOM MENU
@@ -96,11 +94,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
           'Tentukan acuan harga beli dan jual hangseng dari harga pembukaan.',
       'icon': Icons.candlestick_chart_rounded,
     },
-    {
-      'title': 'Nest Hangseng',
-      'description': 'Ikuti tren harga hangseng berdasarkan harga penutupan.',
-      'icon': Icons.insights_rounded,
-    },
   ];
 
   String _formatCurrency(double amount) {
@@ -133,8 +126,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
         return PivotGoldModel.fromFirestore(doc);
       case 'Pivot Hangseng':
         return PivotHangsengModel.fromFirestore(doc);
-      case 'NEST Hangseng':
-        return NestHangsengModel.fromFirestore(doc);
       default:
         return NestGoldModel.fromFirestore(doc);
     }
@@ -176,12 +167,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
       details =
           'PP: ${item.pp ?? '-'} | H: ${item.high ?? '-'} | L: ${item.low ?? '-'}';
       result = item.pp ?? 0.0;
-      isCurrency = false;
-      timestamp = item.createdAt;
-    } else if (item is NestHangsengModel) {
-      title = 'NEST Hangseng';
-      details = 'Signal: ${item.signalLabel} | Open: ${item.open ?? '-'}';
-      result = item.close ?? 0.0;
       isCurrency = false;
       timestamp = item.createdAt;
     } else {
@@ -413,7 +398,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
               _buildSoftClayButton(
                 context,
                 title: 'Hangseng (HKK)',
-                subtitle: 'Kalkulator Pivot Point & Nest Indeks',
+                subtitle: 'Kalkulator Pivot Point',
                 icon: Icons.trending_up_rounded,
                 isExpanded: _isHangsengDropdownOpen,
                 onPressed: () {
@@ -514,14 +499,6 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
 
       case 'nest_gold':
         return NestGoldCalculatorContent(
-          historicalDataViewModel: widget.historicalDataViewModel,
-          onCalculate: (result) {
-            historyViewModel.addHistory(result);
-          },
-        );
-
-      case 'nest_hangseng':
-        return NestHangsengCalculatorContent(
           historicalDataViewModel: widget.historicalDataViewModel,
           onCalculate: (result) {
             historyViewModel.addHistory(result);

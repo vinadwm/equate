@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -1016,7 +1017,7 @@ class PivotGoldViewModel extends ChangeNotifier {
   }
 
   // ============================================================
-  // BUILD PDF
+  // BUILD PDF DENGAN WATERMARK LOGO PT EWF
   // ============================================================
 
   Future<Uint8List> buildPdf() async {
@@ -1029,104 +1030,123 @@ class PivotGoldViewModel extends ChangeNotifier {
     final reference = referenceData;
     final previous = previousGoldData;
 
+    // Memuat logo dari assets Flutter.
+    pw.MemoryImage? logoImage;
+
+    try {
+      final logoData = await rootBundle.load('assets/images/logoEWF.png');
+
+      logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    } catch (e) {
+      debugPrint('Logo watermark PDF gagal dimuat: $e');
+    }
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(20),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  'HASIL KALKULASI PIVOT POINT GOLD',
-                  style: pw.TextStyle(
-                    fontSize: 18,
-                    fontWeight: pw.FontWeight.bold,
+          return pw.Stack(
+            children: [
+              // WATERMARK DI BELAKANG KONTEN PDF
+              if (logoImage != null)
+                pw.Positioned.fill(
+                  child: pw.Center(
+                    child: pw.Opacity(
+                      opacity: 0.07,
+                      child: pw.Image(
+                        logoImage!,
+                        width: 500,
+                        height: 500,
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ),
                   ),
                 ),
 
-                pw.SizedBox(height: 12),
+              // KONTEN ASLI PDF
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(20),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'HASIL KALKULASI PIVOT POINT GOLD',
+                      style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
 
-                if (previous != null)
-                  pw.Text(
-                    'Tanggal H/L/C : '
-                    '${previous.dateFormatted}',
-                  ),
+                    pw.SizedBox(height: 12),
 
-                pw.Text('High : ${formatValue(highValue)}'),
+                    if (previous != null)
+                      pw.Text('Tanggal H/L/C : ${previous.dateFormatted}'),
 
-                pw.Text('Low : ${formatValue(lowValue)}'),
+                    pw.Text('High : ${formatValue(highValue)}'),
+                    pw.Text('Low : ${formatValue(lowValue)}'),
+                    pw.Text('Close : ${formatValue(closeValue)}'),
 
-                pw.Text('Close : ${formatValue(closeValue)}'),
+                    pw.SizedBox(height: 8),
 
-                pw.SizedBox(height: 8),
+                    pw.Text('Tanggal Open : ${_formatDate(calculationDate)}'),
+                    pw.Text('Open : ${formatValue(openValue)}'),
 
-                pw.Text(
-                  'Tanggal Open : '
-                  '${_formatDate(calculationDate)}',
-                ),
+                    pw.SizedBox(height: 10),
 
-                pw.Text('Open : ${formatValue(openValue)}'),
+                    if (reference != null) ...[
+                      pw.Text('Tanggal Signal : ${reference.dateFormatted}'),
+                      pw.Text('Open : ${reference.openFormatted}'),
+                      pw.Text(
+                        'Signal : $signalLabel',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                      pw.SizedBox(height: 12),
+                    ] else ...[
+                      pw.Text(
+                        'Tanggal Signal : ${_formatDate(calculationDate)}',
+                      ),
+                      pw.Text('Open : Data belum tersedia'),
+                      pw.Text(
+                        'Signal : BELUM TERSEDIA',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                      pw.SizedBox(height: 12),
+                    ],
 
-                pw.SizedBox(height: 10),
-
-                if (reference != null) ...[
-                  pw.Text(
-                    'Tanggal Signal : '
-                    '${reference.dateFormatted}',
-                  ),
-                  pw.Text('Open : ${reference.openFormatted}'),
-                  pw.Text(
-                    'Signal : $signalLabel',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.SizedBox(height: 12),
-                ] else ...[
-                  pw.Text(
-                    'Tanggal Signal : '
-                    '${_formatDate(calculationDate)}',
-                  ),
-                  pw.Text('Open : Data belum tersedia'),
-                  pw.Text(
-                    'Signal : BELUM TERSEDIA',
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                  pw.SizedBox(height: 12),
-                ],
-
-                pw.Table.fromTextArray(
-                  headers: ['Tingkat', 'Nilai'],
-                  data: [
-                    ['Resistance 4 (R4)', formatValue(_r4)],
-                    if (_r4 != null && _r3 != null)
-                      ['Midpoint R4-R3', formatValue(midpoint(_r4!, _r3!))],
-                    ['Resistance 3 (R3)', formatValue(_r3)],
-                    if (_r3 != null && _r2 != null)
-                      ['Midpoint R3-R2', formatValue(midpoint(_r3!, _r2!))],
-                    ['Resistance 2 (R2)', formatValue(_r2)],
-                    if (_r2 != null && _r1 != null)
-                      ['Midpoint R2-R1', formatValue(midpoint(_r2!, _r1!))],
-                    ['Resistance 1 (R1)', formatValue(_r1)],
-                    if (_r1 != null && _pp != null)
-                      ['Midpoint R1-PP', formatValue(midpoint(_r1!, _pp!))],
-                    ['Pivot Point (PP)', formatValue(_pp)],
-                    if (_pp != null && _s1 != null)
-                      ['Midpoint PP-S1', formatValue(midpoint(_pp!, _s1!))],
-                    ['Support 1 (S1)', formatValue(_s1)],
-                    if (_s1 != null && _s2 != null)
-                      ['Midpoint S1-S2', formatValue(midpoint(_s1!, _s2!))],
-                    ['Support 2 (S2)', formatValue(_s2)],
-                    if (_s2 != null && _s3 != null)
-                      ['Midpoint S2-S3', formatValue(midpoint(_s2!, _s3!))],
-                    ['Support 3 (S3)', formatValue(_s3)],
-                    if (_s3 != null && _s4 != null)
-                      ['Midpoint S3-S4', formatValue(midpoint(_s3!, _s4!))],
-                    ['Support 4 (S4)', formatValue(_s4)],
+                    pw.Table.fromTextArray(
+                      headers: ['Tingkat', 'Nilai'],
+                      data: [
+                        ['Resistance 4 (R4)', formatValue(_r4)],
+                        if (_r4 != null && _r3 != null)
+                          ['Midpoint R4-R3', formatValue(midpoint(_r4!, _r3!))],
+                        ['Resistance 3 (R3)', formatValue(_r3)],
+                        if (_r3 != null && _r2 != null)
+                          ['Midpoint R3-R2', formatValue(midpoint(_r3!, _r2!))],
+                        ['Resistance 2 (R2)', formatValue(_r2)],
+                        if (_r2 != null && _r1 != null)
+                          ['Midpoint R2-R1', formatValue(midpoint(_r2!, _r1!))],
+                        ['Resistance 1 (R1)', formatValue(_r1)],
+                        if (_r1 != null && _pp != null)
+                          ['Midpoint R1-PP', formatValue(midpoint(_r1!, _pp!))],
+                        ['Pivot Point (PP)', formatValue(_pp)],
+                        if (_pp != null && _s1 != null)
+                          ['Midpoint PP-S1', formatValue(midpoint(_pp!, _s1!))],
+                        ['Support 1 (S1)', formatValue(_s1)],
+                        if (_s1 != null && _s2 != null)
+                          ['Midpoint S1-S2', formatValue(midpoint(_s1!, _s2!))],
+                        ['Support 2 (S2)', formatValue(_s2)],
+                        if (_s2 != null && _s3 != null)
+                          ['Midpoint S2-S3', formatValue(midpoint(_s2!, _s3!))],
+                        ['Support 3 (S3)', formatValue(_s3)],
+                        if (_s3 != null && _s4 != null)
+                          ['Midpoint S3-S4', formatValue(midpoint(_s3!, _s4!))],
+                        ['Support 4 (S4)', formatValue(_s4)],
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),

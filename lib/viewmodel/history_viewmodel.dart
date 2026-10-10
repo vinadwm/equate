@@ -7,9 +7,8 @@ import '../model/calculation_history_model.dart';
 import '../model/digital_gold_model.dart';
 import '../model/physical_gold_model.dart';
 import '../model/pivot_gold_model.dart';
-import '../model/nest_gold_model.dart';          // 👈 Import model Nest Gold
-import '../model/pivot_hangseng_model.dart';      // 👈 Import model Pivot Hangseng
-import '../model/nest_hangseng_model.dart';       // 👈 Import model Nest Hangseng
+import '../model/nest_gold_model.dart'; // 👈 Import model Nest Gold
+import '../model/pivot_hangseng_model.dart'; // 👈 Import model Pivot Hangseng     // 👈 Import model Nest Hangseng
 
 class HistoryViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -52,11 +51,15 @@ class HistoryViewModel extends ChangeNotifier {
           switch (category) {
             // --- EMAS ---
             case 'Emas Digital':
-              list.add(DigitalGoldModel.fromFirestore(doc) as CalculationHistory);
+              list.add(
+                DigitalGoldModel.fromFirestore(doc) as CalculationHistory,
+              );
               break;
 
             case 'Emas Fisik':
-              list.add(PhysicalGoldModel.fromFirestore(doc) as CalculationHistory);
+              list.add(
+                PhysicalGoldModel.fromFirestore(doc) as CalculationHistory,
+              );
               break;
 
             case 'Pivot Gold':
@@ -74,17 +77,16 @@ class HistoryViewModel extends ChangeNotifier {
             case 'Pivot Hangseng':
             case 'Pivot Point Hangseng':
             case 'Pivot Point (Hangseng)':
-              list.add(PivotHangsengModel.fromFirestore(doc) as CalculationHistory);
-              break;
-
-            case 'NEST Hangseng':
-            case 'NEST (Hangseng)':
-              list.add(NestHangsengModel.fromFirestore(doc) as CalculationHistory);
+              list.add(
+                PivotHangsengModel.fromFirestore(doc) as CalculationHistory,
+              );
               break;
 
             // --- FALLBACK / UNKNOWN CATEGORY ---
             default:
-              list.add(GenericHistoryModel.fromFirestore(doc) as CalculationHistory);
+              list.add(
+                GenericHistoryModel.fromFirestore(doc) as CalculationHistory,
+              );
               break;
           }
         } catch (e) {
@@ -105,14 +107,18 @@ class HistoryViewModel extends ChangeNotifier {
     }
 
     try {
-      debugPrint('🔄 Mencoba menyimpan riwayat ke Firestore untuk UID: ${user.uid}');
+      debugPrint(
+        '🔄 Mencoba menyimpan riwayat ke Firestore untuk UID: ${user.uid}',
+      );
       final docRef = await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('histories')
           .add(history.toMap(user.uid));
 
-      debugPrint('✅ Berhasil menyimpan riwayat dengan ID Dokumen: ${docRef.id}');
+      debugPrint(
+        '✅ Berhasil menyimpan riwayat dengan ID Dokumen: ${docRef.id}',
+      );
     } catch (e) {
       debugPrint('❌ FIRESTORE ERROR saat addHistory: $e');
       rethrow;

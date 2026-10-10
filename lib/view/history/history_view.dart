@@ -8,7 +8,6 @@ import 'package:equate/model/calculation_history_model.dart';
 import 'package:equate/model/digital_gold_model.dart';
 import 'package:equate/model/physical_gold_model.dart'; // <--- Titik dua (:) setelah package
 import 'package:equate/model/nest_gold_model.dart';
-import 'package:equate/model/nest_hangseng_model.dart';
 import 'package:equate/model/pivot_gold_model.dart';
 import 'package:equate/model/pivot_hangseng_model.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
@@ -169,24 +168,7 @@ class _HistoryViewState extends State<HistoryView> {
       subType = 'Pivot Point';
     }
     // ============================================================
-    // 6. NEST HANGSENG
-    // ============================================================
-    else if (item is NestHangsengModel) {
-      title = 'NEST Hangseng';
-
-      details =
-          'Signal: ${item.signalLabel} | '
-          'Open: ${item.open ?? '-'}';
-
-      result = item.close ?? 0.0;
-      timestamp = item.createdAt;
-
-      isCurrency = false;
-      marketType = 'Hangseng';
-      subType = 'NEST';
-    }
-    // ============================================================
-    // 7. MAP
+    // 6. MAP
     // Untuk kompatibilitas data lama
     // ============================================================
     else if (item is Map) {
@@ -516,7 +498,7 @@ class _HistoryViewState extends State<HistoryView> {
                 'NEST',
               ]);
             } else if (_selectedMarket == 'Hangseng') {
-              calcOptions.addAll(['Pivot Point', 'NEST']);
+              calcOptions.addAll(['Pivot Point']);
             } else {
               calcOptions.addAll([
                 'Emas Digital',

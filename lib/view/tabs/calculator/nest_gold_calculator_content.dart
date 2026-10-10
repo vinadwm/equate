@@ -635,71 +635,99 @@ class _NestGoldCalculatorContentState extends State<NestGoldCalculatorContent> {
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.check_circle, color: signalColor, size: 18),
-
-                      const SizedBox(width: 6),
-
-                      Text(
-                        'Hasil',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: primaryTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Divider(height: 1, color: dividerColor),
-
-                  const SizedBox(height: 16),
-
-                  if (_viewModel.isCalculated) ...[
-                    Center(
-                      child: Text(
-                        _viewModel.signalLabel,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 42,
-                          fontWeight: FontWeight.w800,
-                          color: signalColor,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    Center(
-                      child: Text(
-                        _viewModel.signalDescription,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ),
-                  ] else ...[
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 22),
-                        child: Text(
-                          'Belum ada hasil',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[500],
+                  // ==========================
+                  // WATERMARK LOGO EWF
+                  // ==========================
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Opacity(
+                        opacity: 0.07,
+                        child: Center(
+                          child: Image.asset(
+                            'assets/images/logoEWF.png',
+                            width: 500,
+                            height: 500,
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ),
                     ),
-                  ],
+                  ),
+
+                  // ==========================
+                  // KONTEN HASIL KALKULASI
+                  // ==========================
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: signalColor,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Hasil',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: primaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Divider(height: 1, color: dividerColor),
+
+                      const SizedBox(height: 16),
+
+                      if (_viewModel.isCalculated) ...[
+                        Center(
+                          child: Text(
+                            _viewModel.signalLabel,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 42,
+                              fontWeight: FontWeight.w800,
+                              color: signalColor,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        Center(
+                          child: Text(
+                            _viewModel.signalDescription,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 22),
+                            child: Text(
+                              'Belum ada hasil',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),

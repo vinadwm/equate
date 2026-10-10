@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -289,6 +290,18 @@ class _GoldPhysicalCalculatorContentState
   Future<void> _exportAsPdf() async {
     final pdf = pw.Document();
 
+    // Muat logo PT EWF dari assets untuk dijadikan watermark PDF.
+    pw.MemoryImage? logoImage;
+    try {
+      final ByteData logoData = await rootBundle.load(
+        'assets/images/logoEWF.png',
+      );
+      logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    } catch (e) {
+      // PDF tetap bisa dibuat meskipun logo gagal dimuat.
+      debugPrint('Logo PT EWF tidak ditemukan untuk watermark PDF: $e');
+    }
+
     final statusText = _hasilAkhir == null
         ? '-'
         : _hasilAkhir! >= 0
@@ -303,32 +316,50 @@ class _GoldPhysicalCalculatorContentState
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context pdfContext) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(20),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  'KALKULATOR EMAS FISIK',
-                  style: pw.TextStyle(
-                    fontSize: 18,
-                    fontWeight: pw.FontWeight.bold,
+          return pw.Stack(
+            children: [
+              if (logoImage != null)
+                pw.Positioned.fill(
+                  child: pw.Center(
+                    child: pw.Opacity(
+                      opacity: 0.055,
+                      child: pw.Image(
+                        logoImage!,
+                        width: 500,
+                        height: 500,
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ),
                   ),
                 ),
-                pw.SizedBox(height: 12),
-                pw.Table.fromTextArray(
-                  headers: ['Parameter', 'Nilai'],
-                  data: [
-                    ['Modal', 'Rp ${_modalController.text}'],
-                    ['Kurs', 'Rp ${_kursController.text}'],
-                    ['Harga Beli', _hargaBeliController.text],
-                    ['Harga Jual', _hargaJualController.text],
-                    ['Status', statusText],
-                    ['Hasil Akhir', hasilText],
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(20),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'KALKULATOR EMAS FISIK',
+                      style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 12),
+                    pw.Table.fromTextArray(
+                      headers: ['Parameter', 'Nilai'],
+                      data: [
+                        ['Modal', 'Rp ${_modalController.text}'],
+                        ['Kurs', 'Rp ${_kursController.text}'],
+                        ['Harga Beli', _hargaBeliController.text],
+                        ['Harga Jual', _hargaJualController.text],
+                        ['Status', statusText],
+                        ['Hasil Akhir', hasilText],
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
@@ -953,6 +984,83 @@ class _GoldPhysicalCalculatorContentState
     }
 
     // ============================================================
+    // WIDGET PECAHAN MATEMATIKA
+    // ============================================================
+
+    Widget fraction({required Widget numerator, required Widget denominator}) {
+      return SizedBox(
+        width: 100,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            numerator,
+            Container(
+              height: 1.2,
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              color: primaryOrange,
+            ),
+            denominator,
+          ],
+        ),
+      );
+    }
+
+    Widget formulaText(String text) {
+      return Text(
+        text,
+        textAlign: TextAlign.center,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: primaryTextColor,
+        ),
+      );
+    }
+
+    Widget formulaStep({
+      required String title,
+      required Widget formula,
+      required String explanation,
+    }) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 9),
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(
+          color: isDarkMode
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.white.withValues(alpha: 0.75),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: primaryOrange.withValues(alpha: 0.22)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: primaryOrange,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Center(child: formula),
+            const SizedBox(height: 9),
+            Text(
+              explanation,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 9.5,
+                height: 1.45,
+                color: subText,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ============================================================
     // MAIN CARD
     // ============================================================
 
@@ -1140,31 +1248,112 @@ class _GoldPhysicalCalculatorContentState
                 ),
 
                 // --------------------------------------------------
-                // TIPS
+                // RUMUS PERHITUNGAN EMAS FISIK
                 // --------------------------------------------------
+                Text(
+                  'Rumus Perhitungan Emas Fisik',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: primaryTextColor,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // LANGKAH 1
+                formulaStep(
+                  title: 'Langkah 1: Harga Beli per Gram',
+                  formula: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      fraction(
+                        numerator: formulaText('(Harga Beli × Kurs)'),
+                        denominator: formulaText('Toz'),
+                      ),
+                    ],
+                  ),
+                  explanation:
+                      'Harga beli dikalikan kurs Rupiah, lalu dibagi Toz '
+                      'untuk memperoleh harga beli per gram. ',
+                ),
+
+                // LANGKAH 2
+                formulaStep(
+                  title: 'Langkah 2: Harga Jual per Gram',
+                  formula: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      fraction(
+                        numerator: formulaText('(Harga Jual × Kurs)'),
+                        denominator: formulaText('Toz'),
+                      ),
+                    ],
+                  ),
+                  explanation:
+                      'Harga jual dikalikan kurs Rupiah, lalu dibagi Toz '
+                      'untuk memperoleh harga jual per gram.',
+                ),
+
+                // LANGKAH 3
+                formulaStep(
+                  title: 'Langkah 3: Selisih Harga',
+                  formula: formulaText('Hasil Langkah 2 − Hasil Langkah 1'),
+                  explanation:
+                      'Menghitung selisih harga jual dan harga beli per gram. '
+                      'Hasil positif menunjukkan kenaikan harga, sedangkan '
+                      'hasil negatif menunjukkan penurunan harga.',
+                ),
+
+                // LANGKAH 4
+                formulaStep(
+                  title: 'Langkah 4: Berat Emas',
+                  formula: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      fraction(
+                        numerator: formulaText('Modal'),
+                        denominator: formulaText('Hasil Langkah 1'),
+                      ),
+                    ],
+                  ),
+                  explanation:
+                      'Modal dibagi harga beli per gram untuk memperoleh '
+                      'perkiraan berat emas yang dapat dibeli.',
+                ),
+
+                // LANGKAH 5
+                formulaStep(
+                  title: 'Langkah 5: Keuntungan atau Kerugian',
+                  formula: formulaText('Hasil Langkah 3 × Hasil Langkah 4'),
+                  explanation:
+                      'Selisih harga per gram dikalikan berat emas. '
+                      'Hasil positif berarti untung, sedangkan hasil negatif '
+                      'berarti rugi.',
+                ),
+
+                // CATATAN TOZ
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: isDarkMode
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.white.withValues(alpha: 0.75),
+                    color: primaryOrange.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Icon(
-                        Icons.tips_and_updates_rounded,
+                        Icons.info_outline_rounded,
                         size: 15,
                         color: primaryOrange,
                       ),
                       const SizedBox(width: 7),
                       Expanded(
                         child: Text(
-                          'Tips: harga emas fisik biasanya lebih stabil '
-                          'dan cocok untuk investasi jangka menengah-panjang '
-                          'dibanding trading harian.',
+                          'Catatan: Toz (troy ounce) menggunakan nilai 31,1. '
+                          'Hasil setiap langkah mengikuti aturan pembulatan '
+                          'atau pemotongan desimal yang digunakan kalkulator.',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 9.5,
                             height: 1.45,

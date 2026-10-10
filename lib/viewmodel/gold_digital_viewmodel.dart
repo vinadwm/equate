@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -502,6 +503,18 @@ class GoldDigitalViewModel extends ChangeNotifier {
   Future<Uint8List> buildDigitalGoldPdf() async {
     final pdf = pw.Document();
 
+    // Muat logo PT EWF untuk watermark PDF.
+    // Jika logo gagal dimuat, PDF tetap dibuat tanpa watermark.
+    pw.MemoryImage? logoImage;
+    try {
+      final ByteData logoData = await rootBundle.load(
+        'assets/images/logoEWF.png',
+      );
+      logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    } catch (e) {
+      debugPrint('Logo PT EWF tidak ditemukan: $e');
+    }
+
     final String positionText = _digitalOpenPosition == PositionType.buy
         ? 'BUY (Long)'
         : 'SELL (Short)';
@@ -529,61 +542,73 @@ class GoldDigitalViewModel extends ChangeNotifier {
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(24),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  'KALKULATOR EMAS DIGITAL',
-                  style: pw.TextStyle(
-                    fontSize: 20,
-                    fontWeight: pw.FontWeight.bold,
+          return pw.Stack(
+            children: [
+              // Watermark logo di tengah halaman PDF.
+              if (logoImage != null)
+                pw.Positioned.fill(
+                  child: pw.Center(
+                    child: pw.Opacity(
+                      opacity: 0.055,
+                      child: pw.Image(
+                        logoImage!,
+                        width: 500,
+                        height: 500,
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ),
                   ),
                 ),
 
-                pw.SizedBox(height: 5),
-
-                pw.Text('Equate', style: const pw.TextStyle(fontSize: 11)),
-
-                pw.SizedBox(height: 24),
-
-                pw.Table.fromTextArray(
-                  headers: ['Parameter', 'Nilai'],
-                  data: [
-                    ['Jumlah Lot', _digitalLot],
-                    ['Open Position', positionText],
-                    ['Harga Open', _digitalHargaOpen],
-                    ['Harga Close', _digitalHargaClose],
-                    ['Selisih Point', selisihPointText],
-                    ['Hasil Kotor', hasilGrossText],
-                    ['Fee', feeText],
-                    ['Status', statusText],
-                    ['Hasil Netto', hasilNettoText],
+              // Konten utama PDF tetap berada di atas watermark.
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(24),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'KALKULATOR EMAS DIGITAL',
+                      style: pw.TextStyle(
+                        fontSize: 20,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 5),
+                    pw.Text('Equate', style: const pw.TextStyle(fontSize: 11)),
+                    pw.SizedBox(height: 24),
+                    pw.Table.fromTextArray(
+                      headers: ['Parameter', 'Nilai'],
+                      data: [
+                        ['Jumlah Lot', _digitalLot],
+                        ['Open Position', positionText],
+                        ['Harga Open', _digitalHargaOpen],
+                        ['Harga Close', _digitalHargaClose],
+                        ['Selisih Point', selisihPointText],
+                        ['Hasil Kotor', hasilGrossText],
+                        ['Fee', feeText],
+                        ['Status', statusText],
+                        ['Hasil Netto', hasilNettoText],
+                      ],
+                    ),
+                    pw.SizedBox(height: 30),
+                    pw.Text(
+                      'Keterangan',
+                      style: pw.TextStyle(
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 6),
+                    pw.Text(
+                      'Hasil perhitungan dibuat berdasarkan '
+                      'data yang dimasukkan pada '
+                      'Kalkulator Emas Digital Equate.',
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
                   ],
                 ),
-
-                pw.SizedBox(height: 30),
-
-                pw.Text(
-                  'Keterangan',
-                  style: pw.TextStyle(
-                    fontSize: 11,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-
-                pw.SizedBox(height: 6),
-
-                pw.Text(
-                  'Hasil perhitungan dibuat '
-                  'berdasarkan data yang '
-                  'dimasukkan pada Kalkulator '
-                  'Emas Digital Equate.',
-                  style: const pw.TextStyle(fontSize: 10),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),

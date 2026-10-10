@@ -6,7 +6,6 @@ import 'package:equate/model/base_calculation_history.dart';
 import '../../model/calculation_history_model.dart';
 import '../../model/digital_gold_model.dart';
 import '../../model/nest_gold_model.dart';
-import '../../model/nest_hangseng_model.dart';
 import '../../model/physical_gold_model.dart';
 import '../../model/pivot_gold_model.dart';
 import '../../model/pivot_hangseng_model.dart';
@@ -119,12 +118,6 @@ class HistoryDetailSheet extends StatelessWidget {
       title = 'Pivot Hangseng';
       category = 'Pivot';
       result = data.pp ?? 0.0;
-      isCurrency = false;
-    } else if (item is NestHangsengModel) {
-      final data = item as NestHangsengModel;
-      title = 'NEST Hangseng';
-      category = 'NEST';
-      result = data.close ?? 0.0;
       isCurrency = false;
     } else if (item is CalculationHistory) {
       final data = item as CalculationHistory;
@@ -239,8 +232,6 @@ class HistoryDetailSheet extends StatelessWidget {
             _buildNestGoldSection(item as NestGoldModel),
           ] else if (item is PivotHangsengModel) ...[
             _buildPivotHangsengSection(item as PivotHangsengModel),
-          ] else if (item is NestHangsengModel) ...[
-            _buildNestHangsengSection(item as NestHangsengModel),
           ] else if (item is CalculationHistory) ...[
             _buildGenericHistorySection(item as CalculationHistory),
           ],
@@ -423,27 +414,6 @@ class HistoryDetailSheet extends StatelessWidget {
         ),
         _buildRow('R1', data.r1 != null ? data.r1!.toStringAsFixed(2) : '-'),
         _buildRow('S1', data.s1 != null ? data.s1!.toStringAsFixed(2) : '-'),
-      ],
-    );
-  }
-
-  Widget _buildNestHangsengSection(NestHangsengModel data) {
-    return Column(
-      children: [
-        _buildRow(
-          'Rekomendasi',
-          data.signalLabel,
-          isBold: true,
-          valueColor: _getSignalColor(data.signalLabel),
-        ),
-        _buildRow(
-          'Harga Open',
-          data.open != null ? data.open!.toStringAsFixed(2) : '-',
-        ),
-        _buildRow(
-          'Harga Close',
-          data.close != null ? data.close!.toStringAsFixed(2) : '-',
-        ),
       ],
     );
   }

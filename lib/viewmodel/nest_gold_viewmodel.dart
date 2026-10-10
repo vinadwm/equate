@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter/services.dart';
 
 import 'package:equate/model/historical_data_model.dart';
 import 'historical_data_viewmodel.dart';
@@ -525,47 +526,94 @@ class NestGoldViewModel extends ChangeNotifier {
     }
 
     final pdf = pw.Document();
+
+    // Memuat logo watermark.
+    pw.MemoryImage? logoImage;
+
+    try {
+      final logoData = await rootBundle.load('assets/images/logoEWF.png');
+
+      logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    } catch (e) {
+      debugPrint('Logo watermark PDF gagal dimuat: $e');
+    }
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        build: (context) => pw.Padding(
-          padding: const pw.EdgeInsets.all(24),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'HASIL KALKULASI NEST GOLD',
-                style: pw.TextStyle(
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
+        build: (context) => pw.Stack(
+          children: [
+            // WATERMARK DI BELAKANG KONTEN
+            if (logoImage != null)
+              pw.Positioned.fill(
+                child: pw.Center(
+                  child: pw.Opacity(
+                    opacity: 0.06,
+                    child: pw.Image(
+                      logoImage!,
+                      width: 380,
+                      height: 380,
+                      fit: pw.BoxFit.contain,
+                    ),
+                  ),
                 ),
               ),
-              pw.SizedBox(height: 16),
-              pw.TableHelper.fromTextArray(
-                headers: ['Data', 'Nilai'],
-                data: [
-                  ['Tanggal', _formatDate(calculationDate)],
-                  ['Open', _parseNumber(_open)?.toStringAsFixed(2) ?? '-'],
-                  ['Close', _parseNumber(_close)?.toStringAsFixed(2) ?? '-'],
-                  ['Sinyal', signalLabel],
-                  ['Keterangan', signalDescription],
+
+            // KONTEN PDF
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(24),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'HASIL KALKULASI NEST GOLD',
+                    style: pw.TextStyle(
+                      fontSize: 18,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+
+                  pw.SizedBox(height: 16),
+
+                  pw.TableHelper.fromTextArray(
+                    headers: ['Data', 'Nilai'],
+                    data: [
+                      ['Tanggal', _formatDate(calculationDate)],
+                      ['Open', _parseNumber(_open)?.toStringAsFixed(2) ?? '-'],
+                      [
+                        'Close',
+                        _parseNumber(_close)?.toStringAsFixed(2) ?? '-',
+                      ],
+                      ['Sinyal', signalLabel],
+                      ['Keterangan', signalDescription],
+                    ],
+                  ),
+
+                  pw.SizedBox(height: 16),
+
+                  pw.Text(
+                    recommendationTitle,
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+
+                  pw.SizedBox(height: 8),
+
+                  for (final step in recommendationSteps)
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 4),
+                      child: pw.Text('- $step'),
+                    ),
+
+                  pw.SizedBox(height: 12),
+
+                  pw.Text(
+                    recommendationDisclaimer,
+                    style: const pw.TextStyle(fontSize: 9),
+                  ),
                 ],
               ),
-              pw.SizedBox(height: 16),
-              pw.Text(recommendationTitle),
-              pw.SizedBox(height: 8),
-              for (final step in recommendationSteps)
-                pw.Padding(
-                  padding: const pw.EdgeInsets.only(bottom: 4),
-                  child: pw.Text('- $step'),
-                ),
-              pw.SizedBox(height: 12),
-              pw.Text(
-                recommendationDisclaimer,
-                style: const pw.TextStyle(fontSize: 9),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
