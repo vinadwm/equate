@@ -9,6 +9,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:equate/model/user_model.dart';
 import 'package:equate/model/historical_data_model.dart';
 import 'package:equate/view/tabs/historical_data_view.dart';
+import 'package:equate/view/news/news_widgets.dart';
 import 'package:equate/viewmodel/auth_viewmodel.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
@@ -35,9 +36,6 @@ class HomeTabViewState extends State<HomeTabView> {
   UserModel? _user;
   bool _isLoadingUser = true;
 
-  // Tabel data historis: mulai collapsed (15 baris), bisa expand.
-  bool _isHistoryTableExpanded = false;
-
   // LGD = Gold / Emas
   // HSI = Hang Seng / HKK
   // SNI = Nikkei / JPK
@@ -54,17 +52,11 @@ class HomeTabViewState extends State<HomeTabView> {
 
     _loadUser();
 
-    // Load historical data saat pertama kali masuk Home
-    // jika data belum tersedia.
     if (_historicalViewModel.marketData.isEmpty &&
         !_historicalViewModel.isLoading) {
       _historicalViewModel.loadHistoricalData();
     }
   }
-
-  // ============================================================
-  // VIEWMODEL LISTENER
-  // ============================================================
 
   void _onHistoricalDataChanged() {
     if (!mounted) return;
@@ -143,8 +135,6 @@ class HomeTabViewState extends State<HomeTabView> {
     final isDarkMode = ThemeViewModel.isDarkMode;
     const primaryOrange = Color(0xFFFF9500);
 
-    // Token kaca (senada dengan glass card di halaman Home) supaya
-    // popup kalender terasa "futuristik glass" ala iOS.
     final glassFill = isDarkMode
         ? Colors.white.withOpacity(0.14)
         : Colors.white.withOpacity(0.78);
@@ -160,8 +150,6 @@ class HomeTabViewState extends State<HomeTabView> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            // Warna dialog dibuat translucent (bukan solid putih/hitam)
-            // supaya terasa seperti kaca.
             dialogBackgroundColor: glassFill,
             colorScheme: ColorScheme(
               brightness: isDarkMode ? Brightness.dark : Brightness.light,
@@ -175,12 +163,6 @@ class HomeTabViewState extends State<HomeTabView> {
               onSurface: isDarkMode ? Colors.white : Colors.black,
             ),
           ),
-          // PENTING: tidak ditambah Center/Container pembungkus baru —
-          // cukup ClipRRect + BackdropFilter langsung membungkus dialog
-          // aslinya, supaya ukuran & posisi popup TETAP persis seperti
-          // bawaan Flutter (di tengah layar), cuma tampilannya jadi
-          // blur/kaca. Radius 28 mengikuti radius default dialog M3,
-          // jadi blur pas mengikuti bentuk bulat dialognya.
           child: ClipRRect(
             borderRadius: BorderRadius.circular(28),
             child: BackdropFilter(
@@ -194,12 +176,11 @@ class HomeTabViewState extends State<HomeTabView> {
 
     if (picked == null) return;
 
-    // Kirim tanggal ke ViewModel
     _historicalViewModel.changeDate(picked);
   }
 
   // ============================================================
-  // MARKET LABEL (teks yang tampil di baris pilih pasar)
+  // MARKET LABEL
   // ============================================================
 
   String _marketLabel(String category) {
@@ -215,10 +196,7 @@ class HomeTabViewState extends State<HomeTabView> {
   }
 
   // ============================================================
-  // PILIH PASAR — menu kaca ala iOS yang MENEMPEL tepat di bawah
-  // tombol (sejajar, sama seperti posisi DropdownButton bawaan
-  // sebelumnya), bukan bottom sheet. Cuma tampilannya yang dibuat
-  // blur/glass; posisi & lebar mengikuti tombolnya sendiri.
+  // PILIH PASAR — menu kaca yang menempel di bawah tombol
   // ============================================================
 
   Future<void> _selectMarket(BuildContext anchorContext) async {
@@ -241,8 +219,6 @@ class HomeTabViewState extends State<HomeTabView> {
       {'value': 'SNI Daily', 'label': 'Nikkei / JPK (SNI)'},
     ];
 
-    // Hitung posisi & lebar tombol supaya menu-nya sejajar persis di
-    // bawah tombol (mirip perilaku DropdownButton bawaan).
     final RenderBox button = anchorContext.findRenderObject() as RenderBox;
     final RenderBox overlay =
         Navigator.of(anchorContext).overlay!.context.findRenderObject()
@@ -362,10 +338,6 @@ class HomeTabViewState extends State<HomeTabView> {
     await _historicalViewModel.loadHistoricalData();
   }
 
-  // ============================================================
-  // DISPOSE
-  // ============================================================
-
   @override
   void dispose() {
     _historicalViewModel.removeListener(_onHistoricalDataChanged);
@@ -387,9 +359,6 @@ class HomeTabViewState extends State<HomeTabView> {
         const primaryOrange = Color(0xFFFF9500);
         const secondaryOrange = Color(0xFFFFB74D);
 
-        // ====================================================
-        // GLASS TOKENS (dipakai berulang di semua card)
-        // ====================================================
         final glassFill = isDarkMode
             ? Colors.white.withOpacity(0.05)
             : Colors.white.withOpacity(0.55);
@@ -410,9 +379,7 @@ class HomeTabViewState extends State<HomeTabView> {
           backgroundColor: Colors.transparent,
           body: Stack(
             children: [
-              // ====================================================
-              // BACKGROUND GRADIENT (dasar futuristik gelap/terang)
-              // ====================================================
+              // BACKGROUND GRADIENT
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
@@ -427,9 +394,7 @@ class HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
 
-              // ====================================================
-              // RADIAL GLOW ORANYE (aksen "futuristik")
-              // ====================================================
+              // RADIAL GLOW ORANYE
               Positioned.fill(
                 child: IgnorePointer(
                   child: Container(
@@ -447,9 +412,7 @@ class HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
 
-              // ====================================================
-              // WATERMARK LOGO EWF DI BACKGROUND
-              // ====================================================
+              // WATERMARK LOGO EWF
               Positioned(
                 top: 60,
                 right: -60,
@@ -468,9 +431,7 @@ class HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
 
-              // ====================================================
               // KONTEN
-              // ====================================================
               SafeArea(
                 child: RefreshIndicator(
                   color: primaryOrange,
@@ -486,24 +447,22 @@ class HomeTabViewState extends State<HomeTabView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ==========================================
-                        // HEADER (glass pill)
-                        // ==========================================
                         _buildUserHeader(
                           isDarkMode: isDarkMode,
                           primaryOrange: primaryOrange,
                           secondaryOrange: secondaryOrange,
-                          glassFill: glassFill,
-                          glassBorder: glassBorder,
                           primaryTextColor: primaryTextColor,
                           secondaryTextColor: secondaryTextColor,
                         ),
 
                         const SizedBox(height: 24),
 
-                        // ==========================================
-                        // FILTER (Market + Tanggal digabung 1 card)
-                        // ==========================================
+                        // BANNER BERITA
+                        HomeNewsBanner(isDark: isDarkMode),
+
+                        const SizedBox(height: 24),
+
+                        // FILTER (Market + Tanggal)
                         _buildFilterCard(
                           isDarkMode: isDarkMode,
                           primaryOrange: primaryOrange,
@@ -515,9 +474,6 @@ class HomeTabViewState extends State<HomeTabView> {
 
                         const SizedBox(height: 20),
 
-                        // ==========================================
-                        // LOADING
-                        // ==========================================
                         if (_historicalViewModel.isLoading)
                           _buildLoadingCard(
                             isDarkMode: isDarkMode,
@@ -525,9 +481,6 @@ class HomeTabViewState extends State<HomeTabView> {
                             glassBorder: glassBorder,
                             secondaryTextColor: secondaryTextColor,
                           )
-                        // ==========================================
-                        // ERROR
-                        // ==========================================
                         else if (_historicalViewModel.errorMessage != null)
                           _buildErrorCard(
                             isDarkMode: isDarkMode,
@@ -537,9 +490,6 @@ class HomeTabViewState extends State<HomeTabView> {
                             secondaryTextColor: secondaryTextColor,
                             primaryOrange: primaryOrange,
                           )
-                        // ==========================================
-                        // DATA
-                        // ==========================================
                         else if (historicalData != null) ...[
                           _buildDataHeader(
                             data: historicalData,
@@ -620,7 +570,6 @@ class HomeTabViewState extends State<HomeTabView> {
 
                           const SizedBox(height: 24),
 
-                          // CHART
                           _buildChartCard(
                             isDarkMode: isDarkMode,
                             glassFill: glassFill,
@@ -632,9 +581,6 @@ class HomeTabViewState extends State<HomeTabView> {
 
                           const SizedBox(height: 24),
 
-                          // ======================================
-                          // TABEL DATA HISTORIS (BARU)
-                          // ======================================
                           _buildHistoricalTable(
                             isDarkMode: isDarkMode,
                             glassFill: glassFill,
@@ -646,7 +592,6 @@ class HomeTabViewState extends State<HomeTabView> {
 
                           const SizedBox(height: 20),
 
-                          // SOURCE
                           _buildSourceInfo(
                             secondaryTextColor: secondaryTextColor,
                           ),
@@ -664,7 +609,7 @@ class HomeTabViewState extends State<HomeTabView> {
   }
 
   // ============================================================
-  // GLASS CARD WRAPPER (reusable, ini yang bikin efek iOS blur)
+  // GLASS CARD WRAPPER
   // ============================================================
   Widget _glassCard({
     required bool isDarkMode,
@@ -694,15 +639,13 @@ class HomeTabViewState extends State<HomeTabView> {
   }
 
   // ============================================================
-  // USER HEADER (tanpa kotak/wadah — cuma avatar + teks polos)
+  // USER HEADER
   // ============================================================
 
   Widget _buildUserHeader({
     required bool isDarkMode,
     required Color primaryOrange,
     required Color secondaryOrange,
-    required Color glassFill,
-    required Color glassBorder,
     required Color primaryTextColor,
     required Color secondaryTextColor,
   }) {
@@ -773,7 +716,7 @@ class HomeTabViewState extends State<HomeTabView> {
   }
 
   // ============================================================
-  // FILTER CARD (Market selector + Date picker jadi 1 card)
+  // FILTER CARD
   // ============================================================
 
   Widget _buildFilterCard({
@@ -798,13 +741,6 @@ class HomeTabViewState extends State<HomeTabView> {
       padding: EdgeInsets.zero,
       child: Column(
         children: [
-          // ==================================================
-          // BARIS 1: PILIH PASAR (LGD / HSI / SNI)
-          // ==================================================
-          // Diganti dari DropdownButton bawaan (popup-nya tidak bisa
-          // di-glass-kan) menjadi tombol biasa yang membuka menu kaca
-          // lewat _selectMarket() — posisinya tetap menempel/sejajar
-          // tepat di bawah tombol ini, sama seperti dropdown biasa.
           Builder(
             builder: (buttonContext) {
               return InkWell(
@@ -829,8 +765,6 @@ class HomeTabViewState extends State<HomeTabView> {
                           ),
                         ),
                       ),
-                      // Panah ini sengaja dibuat SAMA dengan panah di
-                      // baris tanggal di bawah (tanpa kotak/gradient).
                       Icon(
                         Icons.keyboard_arrow_down_rounded,
                         color: primaryOrange,
@@ -842,7 +776,6 @@ class HomeTabViewState extends State<HomeTabView> {
             },
           ),
 
-          // Divider tipis pemisah antara filter pasar & tanggal
           Divider(
             height: 1,
             thickness: 1,
@@ -851,9 +784,6 @@ class HomeTabViewState extends State<HomeTabView> {
             color: glassBorder,
           ),
 
-          // ==================================================
-          // BARIS 2: PILIH TANGGAL
-          // ==================================================
           InkWell(
             onTap: _selectDate,
             borderRadius: const BorderRadius.vertical(
@@ -891,8 +821,6 @@ class HomeTabViewState extends State<HomeTabView> {
                     ],
                   ),
                   const Spacer(),
-                  // Panah ini sengaja dibuat SAMA persis dengan panah di
-                  // baris pemilihan pasar di atas (tanpa kotak/background).
                   Icon(Icons.keyboard_arrow_down_rounded, color: primaryOrange),
                 ],
               ),
@@ -913,17 +841,6 @@ class HomeTabViewState extends State<HomeTabView> {
     required Color primaryTextColor,
     required Color secondaryTextColor,
   }) {
-    final liveData = switch (data.category.trim().toUpperCase()) {
-      'LGD DAILY' => _historicalViewModel.liveGoldData,
-      'HSI DAILY' => _historicalViewModel.liveHangsengData,
-      _ => null,
-    };
-    final isShowingLiveData =
-        liveData != null &&
-        data.date.year == liveData.date.year &&
-        data.date.month == liveData.date.month &&
-        data.date.day == liveData.date.day;
-
     return Row(
       children: [
         Expanded(
@@ -952,9 +869,6 @@ class HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
               const SizedBox(height: 6),
-              // ================================================
-              // JAM DIGITAL LIVE (widget terpisah, self-ticking)
-              // ================================================
               _LiveClock(
                 accentColor: primaryOrange,
                 textColor: primaryTextColor,
@@ -965,8 +879,6 @@ class HomeTabViewState extends State<HomeTabView> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
           decoration: BoxDecoration(
-            // Sengaja dibuat netral & kotak (bukan pill oranye + dot
-            // berkedip) supaya tidak mirip dengan widget jam live.
             color: secondaryTextColor.withOpacity(0.12),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: secondaryTextColor.withOpacity(0.25)),
@@ -974,16 +886,10 @@ class HomeTabViewState extends State<HomeTabView> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                isShowingLiveData
-                    ? Icons.wifi_tethering_rounded
-                    : Icons.history_rounded,
-                size: 12,
-                color: secondaryTextColor,
-              ),
+              Icon(Icons.history_rounded, size: 12, color: secondaryTextColor),
               const SizedBox(width: 5),
               Text(
-                isShowingLiveData ? 'LIVE SNAPSHOT' : 'HISTORICAL',
+                'DATA HISTORIS',
                 style: GoogleFonts.poppins(
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
@@ -998,10 +904,6 @@ class HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  // ============================================================
-  // MARKET TITLE
-  // ============================================================
-
   String _getMarketTitle() {
     switch (_historicalViewModel.selectedCategory) {
       case 'HSI Daily':
@@ -1015,7 +917,7 @@ class HomeTabViewState extends State<HomeTabView> {
   }
 
   // ============================================================
-  // METRIC CARD (glass + badge gradasi warna semantik)
+  // METRIC CARD
   // ============================================================
 
   Widget _buildMetricCard({
@@ -1144,9 +1046,6 @@ class HomeTabViewState extends State<HomeTabView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ========================================================
-          // CHART HEADER
-          // ========================================================
           Row(
             children: [
               Text(
@@ -1170,9 +1069,6 @@ class HomeTabViewState extends State<HomeTabView> {
 
           const SizedBox(height: 14),
 
-          // ========================================================
-          // CHART RANGE SELECTOR
-          // ========================================================
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -1224,9 +1120,6 @@ class HomeTabViewState extends State<HomeTabView> {
 
           const SizedBox(height: 20),
 
-          // ========================================================
-          // CHART
-          // ========================================================
           if (chartData.isEmpty)
             SizedBox(
               height: 220,
@@ -1343,10 +1236,6 @@ class HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  // ============================================================
-  // CHART RANGE BUTTON
-  // ============================================================
-
   Widget _buildChartRangeButton({
     required String label,
     required int days,
@@ -1401,24 +1290,8 @@ class HomeTabViewState extends State<HomeTabView> {
   }
 
   // ============================================================
-  // TABEL DATA HISTORIS (BARU)
+  // TABEL DATA HISTORIS
   // ============================================================
-  //
-  // Sumber data: _historicalViewModel.chartData — list yang sama
-  // dipakai untuk grafik di atas, jadi tabel ini otomatis ikut
-  // range yang sedang dipilih (7H/30H/90H/1Y/Semua).
-  //
-  // Field yang dipakai (dateFormatted/openFormatted/highFormatted/
-  // lowFormatted/closeFormatted) sudah terbukti ada di model ini
-  // karena dipakai juga oleh `historicalData` (selectedData) di
-  // bagian metric card di atas.
-  // ============================================================
-
-  // Jumlah baris saat collapsed & batas maksimal saat expanded.
-  // Dibatasi (bukan unlimited) supaya page tetap ringan walau user
-  // pilih range "Semua"/1Y yang datanya bisa ratusan baris.
-  static const int _kCollapsedRows = 15;
-  static const int _kExpandedRows = 60;
 
   Widget _buildHistoricalTable({
     required bool isDarkMode,
@@ -1429,21 +1302,25 @@ class HomeTabViewState extends State<HomeTabView> {
     required Color secondaryTextColor,
   }) {
     // Terbaru di atas.
-    // REVISI: sebelumnya tabel dirender pakai ListView.separated
-    // shrinkWrap di dalam SingleChildScrollView horizontal, di dalam
-    // SingleChildScrollView vertical utama (nested scrollable). Pola
-    // ini berisiko memicu error layout ("_debugDoingThisLayout",
-    // "RelayoutBoundaryAlreadyMarkedNeedsLayout", dll). Sekarang
-    // diganti Column biasa (tanpa scroll bersarang) + jumlah baris
-    // dibatasi & bisa di-expand manual lewat tombol, biar page tetap
-    // ringan meski data historis banyak.
     final allRows = List<HistoricalDataModel>.from(
       _historicalViewModel.marketData,
     )..sort((a, b) => b.date.compareTo(a.date));
 
     final rows = allRows.length > 7 ? allRows.sublist(0, 7) : allRows;
 
-    final bool hasMore = allRows.length > _kCollapsedRows;
+    // Keterangan rentang data yang ditampilkan.
+    String rangeInfo = '';
+    if (rows.isNotEmpty) {
+      final newest = rows.first.date;
+      final oldest = rows.last.date;
+      final days = newest.difference(oldest).inDays + 1;
+      final fmt = DateFormat('d MMM yyyy', 'id_ID');
+
+      rangeInfo = days <= 1
+          ? '${rows.length} data terbaru • ${fmt.format(newest)}'
+          : '${rows.length} data terbaru • ${fmt.format(oldest)} – '
+                '${fmt.format(newest)} ($days hari)';
+    }
 
     return _glassCard(
       isDarkMode: isDarkMode,
@@ -1457,26 +1334,6 @@ class HomeTabViewState extends State<HomeTabView> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFB700), Color(0xFFFF9500)],
-                  ),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: const Icon(
-                  Icons.table_rows_rounded,
-                  size: 15,
-                  color: Colors.white,
-                ),
-              ),
-
-              const SizedBox(width: 10),
-
-              // ==========================
-              // JUDUL
-              // ==========================
               Expanded(
                 child: Text(
                   'Tabel Data Historis',
@@ -1492,9 +1349,6 @@ class HomeTabViewState extends State<HomeTabView> {
 
               const SizedBox(width: 10),
 
-              // ==========================
-              // LIHAT SEMUA + JUMLAH DATA
-              // ==========================
               GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -1506,35 +1360,39 @@ class HomeTabViewState extends State<HomeTabView> {
                     ),
                   );
                 },
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // LIHAT SEMUA
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Lihat Semua',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFFFF9500),
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 9,
-                          color: Color(0xFFFF9500),
-                        ),
-                      ],
+                    Text(
+                      'Lihat Semua',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFFF9500),
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 9,
+                      color: Color(0xFFFF9500),
                     ),
                   ],
                 ),
               ),
             ],
           ),
+
+          if (rangeInfo.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              rangeInfo,
+              style: GoogleFonts.poppins(
+                fontSize: 10.5,
+                color: secondaryTextColor,
+              ),
+            ),
+          ],
 
           const SizedBox(height: 14),
 
@@ -1551,10 +1409,7 @@ class HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
             )
-          else ...[
-            // ==================================================
-            // TABEL HORIZONTAL SCROLL
-            // ==================================================
+          else
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
@@ -1562,9 +1417,7 @@ class HomeTabViewState extends State<HomeTabView> {
                 width: 500,
                 child: Column(
                   children: [
-                    // ==================================================
                     // HEADER ROW
-                    // ==================================================
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -1617,9 +1470,7 @@ class HomeTabViewState extends State<HomeTabView> {
                       ),
                     ),
 
-                    // ==================================================
                     // BODY ROWS
-                    // ==================================================
                     ...List.generate(rows.length, (index) {
                       final item = rows[index];
                       final isEven = index % 2 == 0;
@@ -1680,7 +1531,6 @@ class HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
             ),
-          ],
         ],
       ),
     );
@@ -1824,13 +1674,7 @@ class HomeTabViewState extends State<HomeTabView> {
 }
 
 // ================================================================
-// LIVE CLOCK — jam digital real-time (jam:menit:detik)
-// ================================================================
-// Sengaja dibuat sebagai StatefulWidget TERPISAH (bukan setState di
-// HomeTabViewState) supaya yang re-render tiap detik CUMA widget
-// jam ini sendiri, bukan seluruh halaman Home (yang berat karena
-// banyak BackdropFilter/glass). Ini penting biar page tetap ringan
-// walau jamnya live-update tiap detik.
+// LIVE CLOCK — jam digital real-time
 // ================================================================
 class _LiveClock extends StatefulWidget {
   final Color accentColor;
@@ -1885,7 +1729,6 @@ class _LiveClockState extends State<_LiveClock> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Dot "LIVE" berkedip
           AnimatedContainer(
             duration: const Duration(milliseconds: 400),
             width: 6,
