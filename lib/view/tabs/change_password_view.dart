@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/auth_viewmodel.dart';
+import 'package:equate/view/help/help_widgets.dart';
+import 'package:equate/viewmodel/language_viewmodel.dart';
 
 class ChangePasswordView extends StatefulWidget {
   const ChangePasswordView({super.key});
@@ -155,7 +157,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
     // ==========================================================
 
     if (newPassword.isEmpty || confirmPassword.isEmpty) {
-      _showSnackBar('Harap isi semua bidang yang wajib diisi.');
+      _showSnackBar(tr('Harap isi semua bidang yang wajib diisi.', 'Please fill all required fields.'));
       return;
     }
 
@@ -164,7 +166,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
     // ==========================================================
 
     if (!_hasUppercase || !_hasDigits || !_hasMinLength) {
-      _showSnackBar('Password baru belum memenuhi semua kriteria keamanan.');
+      _showSnackBar(tr('Password baru belum memenuhi semua kriteria keamanan.', 'New password does not meet security requirements.'));
       return;
     }
 
@@ -173,7 +175,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
     // ==========================================================
 
     if (newPassword != confirmPassword) {
-      _showSnackBar('Konfirmasi kata sandi tidak cocok.');
+      _showSnackBar(tr('Konfirmasi kata sandi tidak cocok.', 'Password confirmation does not match.'));
       return;
     }
 
@@ -182,7 +184,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
     // ==========================================================
 
     if (_hasPassword && oldPassword.isEmpty) {
-      _showSnackBar('Kata sandi saat ini wajib diisi.');
+      _showSnackBar(tr('Kata sandi saat ini wajib diisi.', 'Current password is required.'));
       return;
     }
 
@@ -234,8 +236,8 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
 
       _showSnackBar(
         _hasPassword
-            ? 'Kata sandi berhasil diperbarui!'
-            : 'Kata sandi berhasil dibuat!',
+            ? tr('Kata sandi berhasil diperbarui!', 'Password updated successfully!')
+            : tr('Kata sandi berhasil dibuat!', 'Password created successfully!'),
         isError: false,
       );
 
@@ -292,36 +294,24 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
   Widget build(BuildContext context) {
     const primaryOrange = Color(0xFFFFA800);
 
-    // ==========================================================
-    // LOADING SAAT CEK PROVIDER
-    // ==========================================================
+    return AppThemeLang(
+      builder: (context, isDarkMode, t) {
+        // ==========================================================
+        // LOADING SAAT CEK PROVIDER
+        // ==========================================================
 
-    if (_checkingPassword) {
-      return ValueListenableBuilder<ThemeMode>(
-        valueListenable: ThemeViewModel.themeMode,
-        builder: (context, currentThemeMode, child) {
-          final isDarkMode = ThemeViewModel.isDarkMode;
-
+        if (_checkingPassword) {
           return Scaffold(
-            backgroundColor: isDarkMode
-                ? const Color(0xFF121212)
-                : Colors.white,
+            backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
             body: const Center(
               child: CircularProgressIndicator(color: primaryOrange),
             ),
           );
-        },
-      );
-    }
+        }
 
-    // ==========================================================
-    // MAIN VIEW
-    // ==========================================================
-
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeViewModel.themeMode,
-      builder: (context, currentThemeMode, child) {
-        final isDarkMode = ThemeViewModel.isDarkMode;
+        // ==========================================================
+        // MAIN VIEW
+        // ==========================================================
 
         final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
 
@@ -360,7 +350,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
             ),
 
             title: Text(
-              _hasPassword ? 'UBAH KATA SANDI' : 'BUAT KATA SANDI',
+              _hasPassword ? tr('UBAH KATA SANDI', 'CHANGE PASSWORD') : tr('BUAT KATA SANDI', 'CREATE PASSWORD'),
               style: GoogleFonts.plusJakartaSans(
                 color: primaryTextColor,
                 fontWeight: FontWeight.bold,
@@ -412,8 +402,8 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                     Expanded(
                       child: Text(
                         _hasPassword
-                            ? 'Perbarui kata sandi Anda untuk meningkatkan keamanan akun.'
-                            : 'Buat kata sandi untuk menambahkan metode login email ke akun Anda.',
+                            ? tr('Perbarui kata sandi Anda untuk meningkatkan keamanan akun.', 'Update your password to improve account security.')
+                            : tr('Buat kata sandi untuk menambahkan metode login email ke akun Anda.', 'Create a password to add email login to your account.'),
 
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
@@ -437,7 +427,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                 // ==================================================
                 if (_hasPassword) ...[
                   _buildLabel(
-                    'Kata Sandi Saat Ini',
+                    tr('Kata Sandi Saat Ini', 'Current Password'),
                     primaryTextColor,
                     isRequired: true,
                   ),
@@ -471,7 +461,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                 // KATA SANDI BARU
                 // ==================================================
                 _buildLabel(
-                  'Kata Sandi Baru',
+                  tr('Kata Sandi Baru', 'New Password'),
                   primaryTextColor,
                   isRequired: true,
                 ),
@@ -507,7 +497,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildLabel(
-                      'Konfirmasi Kata Sandi Baru',
+                      tr('Konfirmasi Kata Sandi Baru', 'Confirm New Password'),
                       primaryTextColor,
                       isRequired: true,
                     ),
@@ -516,7 +506,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                       onTap: _isLoading ? null : _clearConfirmPassword,
 
                       child: Text(
-                        'Hapus',
+                        tr('Hapus', 'Clear'),
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -557,7 +547,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                 // PASSWORD REQUIREMENTS
                 // ==================================================
                 Text(
-                  'Kata sandi harus mengandung:',
+                  tr('Kata sandi harus mengandung:', 'Password must contain:'),
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: secondaryTextColor,
@@ -568,7 +558,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                 const SizedBox(height: 8),
 
                 _buildValidationItem(
-                  'Minimal 1 huruf kapital',
+                  tr('Minimal 1 huruf kapital', 'At least 1 uppercase letter'),
                   isChecked: _hasUppercase,
                   secondaryTextColor: secondaryTextColor,
                 ),
@@ -576,7 +566,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                 const SizedBox(height: 6),
 
                 _buildValidationItem(
-                  'Minimal 1 angka',
+                  tr('Minimal 1 angka', 'At least 1 digit'),
                   isChecked: _hasDigits,
                   secondaryTextColor: secondaryTextColor,
                 ),
@@ -584,7 +574,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                 const SizedBox(height: 6),
 
                 _buildValidationItem(
-                  'Minimal 8 karakter',
+                  tr('Minimal 8 karakter', 'At least 8 characters'),
                   isChecked: _hasMinLength,
                   secondaryTextColor: secondaryTextColor,
                 ),
@@ -617,7 +607,7 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                           onPressed: _isLoading ? null : _resetAllFields,
 
                           child: Text(
-                            'Reset',
+                            tr('Reset', 'Reset'),
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -664,8 +654,8 @@ class _ChangePasswordViewState extends State<ChangePasswordView> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : Text(
-                                  'Simpan',
+                                  : Text(
+                                  tr('Simpan', 'Save'),
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,

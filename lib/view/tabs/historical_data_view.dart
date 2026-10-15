@@ -9,7 +9,9 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import 'package:equate/model/historical_data_model.dart';
+import 'package:equate/view/help/help_widgets.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
+import 'package:equate/viewmodel/language_viewmodel.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 
 class HistoricalDataView extends StatefulWidget {
@@ -42,9 +44,11 @@ class _HistoricalDataViewState extends State<HistoricalDataView> {
   // FORMATTER
   // ============================================================
 
-  final NumberFormat _numberFormat = NumberFormat('#,##0.##', 'id_ID');
+  String get _locale => LanguageViewModel.isEnglish ? 'en_US' : 'id_ID';
 
-  final DateFormat _dateFormat = DateFormat('dd MMM yyyy', 'id_ID');
+  NumberFormat get _numberFormat => NumberFormat('#,##0.##', _locale);
+
+  DateFormat get _dateFormat => DateFormat('dd MMM yyyy', _locale);
 
   // ============================================================
   // INIT
@@ -105,140 +109,142 @@ class _HistoricalDataViewState extends State<HistoricalDataView> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = ThemeViewModel.isDarkMode;
+    return AppThemeLang(
+      builder: (context, isDarkMode, t) {
+        final primaryOrange = const Color(0xFFFF9E0F);
 
-    final primaryOrange = const Color(0xFFFF9E0F);
+        final backgroundColor = isDarkMode
+            ? const Color(0xFF101010)
+            : const Color(0xFFF7F7F7);
 
-    final backgroundColor = isDarkMode
-        ? const Color(0xFF101010)
-        : const Color(0xFFF7F7F7);
+        final cardColor = isDarkMode ? const Color(0xFF1B1B1B) : Colors.white;
 
-    final cardColor = isDarkMode ? const Color(0xFF1B1B1B) : Colors.white;
+        final primaryTextColor = isDarkMode
+            ? Colors.white
+            : const Color(0xFF202020);
 
-    final primaryTextColor = isDarkMode
-        ? Colors.white
-        : const Color(0xFF202020);
+        final secondaryTextColor = isDarkMode
+            ? Colors.grey[400]!
+            : Colors.grey[600]!;
 
-    final secondaryTextColor = isDarkMode
-        ? Colors.grey[400]!
-        : Colors.grey[600]!;
+        final borderColor = isDarkMode
+            ? Colors.white.withOpacity(0.08)
+            : Colors.black.withOpacity(0.06);
 
-    final borderColor = isDarkMode
-        ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.06);
-
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: backgroundColor,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 19,
-            color: primaryTextColor,
+        return Scaffold(
+          backgroundColor: backgroundColor,
+          appBar: AppBar(
+            elevation: 0,
+            backgroundColor: backgroundColor,
+            surfaceTintColor: Colors.transparent,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 19,
+                color: primaryTextColor,
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            title: Text(
+              tr('Data Historis', 'Historical Data'),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: primaryTextColor,
+              ),
+            ),
+            centerTitle: false,
           ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: Text(
-          'Data Historis',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: primaryTextColor,
-          ),
-        ),
-        centerTitle: false,
-      ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: primaryOrange,
-          onRefresh: () {
-            return _historicalViewModel.loadHistoricalData();
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ==================================================
-                // HEADER
-                // ==================================================
+          body: SafeArea(
+            child: RefreshIndicator(
+              color: primaryOrange,
+              onRefresh: () {
+                return _historicalViewModel.loadHistoricalData();
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ==================================================
+                    // HEADER
+                    // ==================================================
 
-                _buildHeader(
-                  isDarkMode: isDarkMode,
-                  primaryTextColor: primaryTextColor,
-                  secondaryTextColor: secondaryTextColor,
-                  primaryOrange: primaryOrange,
+                    _buildHeader(
+                      isDarkMode: isDarkMode,
+                      primaryTextColor: primaryTextColor,
+                      secondaryTextColor: secondaryTextColor,
+                      primaryOrange: primaryOrange,
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // ==================================================
+                    // MARKET SELECTOR
+                    // ==================================================
+                    _buildMarketSelector(
+                      isDarkMode: isDarkMode,
+                      cardColor: cardColor,
+                      primaryTextColor: primaryTextColor,
+                      secondaryTextColor: secondaryTextColor,
+                      borderColor: borderColor,
+                      primaryOrange: primaryOrange,
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // ==================================================
+                    // RANGE SELECTOR
+                    // ==================================================
+                    _buildRangeSelector(
+                      isDarkMode: isDarkMode,
+                      cardColor: cardColor,
+                      primaryTextColor: primaryTextColor,
+                      secondaryTextColor: secondaryTextColor,
+                      borderColor: borderColor,
+                      primaryOrange: primaryOrange,
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // ==================================================
+                    // ERROR
+                    // ==================================================
+                    if (_historicalViewModel.errorMessage != null)
+                      _buildErrorCard(
+                        message: _historicalViewModel.errorMessage!,
+                        isDarkMode: isDarkMode,
+                        primaryTextColor: primaryTextColor,
+                        primaryOrange: primaryOrange,
+                      ),
+
+                    // ==================================================
+                    // LOADING
+                    // ==================================================
+                    if (_historicalViewModel.isLoading)
+                      _buildLoading(
+                        primaryOrange: primaryOrange,
+                        secondaryTextColor: secondaryTextColor,
+                      )
+                    else
+                      _buildHistoricalTable(
+                        isDarkMode: isDarkMode,
+                        cardColor: cardColor,
+                        primaryTextColor: primaryTextColor,
+                        secondaryTextColor: secondaryTextColor,
+                        borderColor: borderColor,
+                        primaryOrange: primaryOrange,
+                      ),
+                  ],
                 ),
-
-                const SizedBox(height: 18),
-
-                // ==================================================
-                // MARKET SELECTOR
-                // ==================================================
-                _buildMarketSelector(
-                  isDarkMode: isDarkMode,
-                  cardColor: cardColor,
-                  primaryTextColor: primaryTextColor,
-                  secondaryTextColor: secondaryTextColor,
-                  borderColor: borderColor,
-                  primaryOrange: primaryOrange,
-                ),
-
-                const SizedBox(height: 14),
-
-                // ==================================================
-                // RANGE SELECTOR
-                // ==================================================
-                _buildRangeSelector(
-                  isDarkMode: isDarkMode,
-                  cardColor: cardColor,
-                  primaryTextColor: primaryTextColor,
-                  secondaryTextColor: secondaryTextColor,
-                  borderColor: borderColor,
-                  primaryOrange: primaryOrange,
-                ),
-
-                const SizedBox(height: 18),
-
-                // ==================================================
-                // ERROR
-                // ==================================================
-                if (_historicalViewModel.errorMessage != null)
-                  _buildErrorCard(
-                    message: _historicalViewModel.errorMessage!,
-                    isDarkMode: isDarkMode,
-                    primaryTextColor: primaryTextColor,
-                    primaryOrange: primaryOrange,
-                  ),
-
-                // ==================================================
-                // LOADING
-                // ==================================================
-                if (_historicalViewModel.isLoading)
-                  _buildLoading(
-                    primaryOrange: primaryOrange,
-                    secondaryTextColor: secondaryTextColor,
-                  )
-                else
-                  _buildHistoricalTable(
-                    isDarkMode: isDarkMode,
-                    cardColor: cardColor,
-                    primaryTextColor: primaryTextColor,
-                    secondaryTextColor: secondaryTextColor,
-                    borderColor: borderColor,
-                    primaryOrange: primaryOrange,
-                  ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

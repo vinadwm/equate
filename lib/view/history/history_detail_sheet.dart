@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:equate/viewmodel/language_viewmodel.dart';
 import 'package:equate/model/base_calculation_history.dart';
 
 import '../../model/calculation_history_model.dart';
@@ -27,8 +28,9 @@ class HistoryDetailSheet extends StatelessWidget {
   });
 
   String _formatCurrency(double amount) {
+    final locale = LanguageViewModel.isEnglish ? 'en_US' : 'id_ID';
     final formatter = NumberFormat.currency(
-      locale: 'id_ID',
+      locale: locale,
       symbol: 'Rp ',
       decimalDigits: 0,
     );
@@ -151,7 +153,8 @@ class HistoryDetailSheet extends StatelessWidget {
     final double result = info['result'];
     final bool isCurrency = info['isCurrency'];
 
-    final formattedDate = DateFormat('dd MMMM yyyy, HH:mm').format(timestamp);
+    final locale = LanguageViewModel.isEnglish ? 'en_US' : 'id_ID';
+    final formattedDate = DateFormat('dd MMMM yyyy, HH:mm', locale).format(timestamp);
 
     return Container(
       padding: const EdgeInsets.all(24),

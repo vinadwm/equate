@@ -32,7 +32,7 @@ class AppThemeLang extends StatelessWidget {
 }
 
 // ================================================================
-// BACKGROUND POLOS (tidak berubah)
+// BACKGROUND POLOS
 // ================================================================
 class AppPlainBackground extends StatelessWidget {
   final bool isDark;
@@ -133,7 +133,71 @@ BoxDecoration appCardDecoration(
 }
 
 // ================================================================
-// KERANGKA HALAMAN BANTUAN: tombol kembali polos + judul + isi
+// ANIMASI MASUK (fade + geser halus) — dipakai bertahap per item
+// ================================================================
+class AppFadeIn extends StatelessWidget {
+  final Widget child;
+
+  /// Urutan item; makin besar makin lama muncul (efek bertahap).
+  final int index;
+
+  const AppFadeIn({super.key, required this.child, this.index = 0});
+
+  @override
+  Widget build(BuildContext context) {
+    final extra = index.clamp(0, 8) * 90;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 380 + extra),
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (context, v, ch) {
+        return Opacity(
+          opacity: v,
+          child: Transform.translate(offset: Offset(0, 18 * (1 - v)), child: ch),
+        );
+      },
+    );
+  }
+}
+
+// ================================================================
+// TOMBOL KEMBALI BULAT
+// ================================================================
+class AppBackButton extends StatelessWidget {
+  final bool isDark;
+  final VoidCallback? onTap;
+
+  const AppBackButton({super.key, required this.isDark, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AuthTokens(isDark);
+
+    return GestureDetector(
+      onTap: onTap ?? () => Navigator.pop(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          Icons.arrow_back_ios_new_rounded,
+          size: 18,
+          color: t.textPrimary.withOpacity(0.9),
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// KERANGKA HALAMAN BANTUAN: tombol kembali + judul + isi
 // ================================================================
 class HelpScaffold extends StatelessWidget {
   final String titleId;
@@ -163,23 +227,19 @@ class HelpScaffold extends StatelessWidget {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(18, 10, 20, 0),
                   child: Row(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 20,
-                          color: t.textPrimary,
-                        ),
-                      ),
+                      AppBackButton(isDark: isDark),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               tr(titleId, titleEn),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 19,
                                 fontWeight: FontWeight.w800,
@@ -187,8 +247,11 @@ class HelpScaffold extends StatelessWidget {
                                 color: t.textPrimary,
                               ),
                             ),
+                            const SizedBox(height: 1),
                             Text(
                               tr(subtitleId, subtitleEn),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11.5,
                                 color: t.textSecondary,
@@ -203,7 +266,7 @@ class HelpScaffold extends StatelessWidget {
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(22, 20, 22, 40),
+                    padding: const EdgeInsets.fromLTRB(22, 22, 22, 40),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 440),
@@ -222,7 +285,128 @@ class HelpScaffold extends StatelessWidget {
 }
 
 // ================================================================
-// BARIS MENU POLOS (tanpa kotak) — dipakai di Pusat Bantuan
+// KARTU MENU (baru) — kartu kaca yang bisa diketuk, dengan efek ripple
+// ================================================================
+class AppMenuCard extends StatelessWidget {
+  final bool isDark;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool filledIcon;
+
+  const AppMenuCard({
+    super.key,
+    required this.isDark,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.filledIcon = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AuthTokens(isDark);
+
+    return Container(
+      decoration: appCardDecoration(isDark, radius: 22, highlighted: filledIcon),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            splashColor: kAuthOrange.withOpacity(0.10),
+            highlightColor: kAuthOrange.withOpacity(0.04),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: filledIcon
+                          ? const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                kAuthOrangeSoft,
+                                kAuthOrange,
+                                kAuthOrangeDeep,
+                              ],
+                            )
+                          : null,
+                      color: filledIcon ? null : kAuthOrange.withOpacity(0.12),
+                      boxShadow: filledIcon
+                          ? [
+                              BoxShadow(
+                                color: kAuthOrange.withOpacity(0.35),
+                                blurRadius: 14,
+                                offset: const Offset(0, 5),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 22,
+                      color: filledIcon ? Colors.white : kAuthOrange,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: t.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11.5,
+                            height: 1.4,
+                            color: t.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: kAuthOrange.withOpacity(0.10),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 16,
+                      color: kAuthOrange,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// BARIS MENU POLOS (tanpa kotak) — tetap dipertahankan agar halaman lain aman
 // ================================================================
 class AppListRow extends StatelessWidget {
   final bool isDark;

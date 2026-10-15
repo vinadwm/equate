@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:equate/viewmodel/profile_viewmodel.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/view/help/help_widgets.dart';
+import 'package:equate/viewmodel/language_viewmodel.dart';
 
 class EditProfileView extends StatefulWidget {
   const EditProfileView({super.key});
@@ -111,7 +113,7 @@ class _EditProfileViewState extends State<EditProfileView> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Pilih Sumber Foto Profil',
+                  tr('Pilih Sumber Foto Profil', 'Choose Profile Photo Source'),
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -130,7 +132,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                     color: Color(0xFFFF9800),
                   ),
                   title: Text(
-                    'Galeri',
+                    tr('Galeri', 'Gallery'),
                     style: GoogleFonts.poppins(
                       color: isDarkMode ? Colors.white : Colors.black,
                     ),
@@ -151,7 +153,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                     color: Color(0xFFFF9800),
                   ),
                   title: Text(
-                    'Kamera',
+                    tr('Kamera', 'Camera'),
                     style: GoogleFonts.poppins(
                       color: isDarkMode ? Colors.white : Colors.black,
                     ),
@@ -188,7 +190,7 @@ class _EditProfileViewState extends State<EditProfileView> {
     }
 
     if (success) {
-      _showSnackBar('Foto profil berhasil diperbarui.', isError: false);
+      _showSnackBar(tr('Foto profil berhasil diperbarui.', 'Profile photo updated.'), isError: false);
     }
   }
 
@@ -257,7 +259,7 @@ class _EditProfileViewState extends State<EditProfileView> {
     FocusScope.of(context).unfocus();
 
     if (_firstNameController.text.trim().isEmpty) {
-      _showSnackBar('Nama depan tidak boleh kosong.', isError: true);
+      _showSnackBar(tr('Nama depan tidak boleh kosong.', 'First name cannot be empty.'), isError: true);
       return;
     }
 
@@ -277,7 +279,7 @@ class _EditProfileViewState extends State<EditProfileView> {
       return;
     }
 
-    _showSnackBar('Profil berhasil diperbarui.', isError: false);
+    _showSnackBar(tr('Profil berhasil diperbarui.', 'Profile updated successfully.'), isError: false);
 
     await Future.delayed(const Duration(milliseconds: 500));
 
@@ -367,7 +369,7 @@ class _EditProfileViewState extends State<EditProfileView> {
         ),
 
         title: Text(
-          'Edit Profil',
+          tr('Edit Profil', 'Edit Profile'),
           style: GoogleFonts.poppins(
             color: primaryTextColor,
             fontWeight: FontWeight.bold,

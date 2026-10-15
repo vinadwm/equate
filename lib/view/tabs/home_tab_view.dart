@@ -10,9 +10,12 @@ import 'package:equate/model/user_model.dart';
 import 'package:equate/model/historical_data_model.dart';
 import 'package:equate/view/tabs/historical_data_view.dart';
 import 'package:equate/view/news/news_widgets.dart';
+import 'package:equate/view/kurs/kurs_card.dart';
+import 'package:equate/view/help/help_widgets.dart';
 import 'package:equate/viewmodel/auth_viewmodel.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/viewmodel/language_viewmodel.dart';
 
 class HomeTabView extends StatefulWidget {
   final HistoricalDataViewModel historicalDataViewModel;
@@ -186,14 +189,30 @@ class HomeTabViewState extends State<HomeTabView> {
   String _marketLabel(String category) {
     switch (category) {
       case 'HSI Daily':
-        return 'Hang Seng / HKK (HSI)';
+        return LanguageViewModel.isEnglish
+            ? 'Hang Seng / HKK (HSI)'
+            : 'Hang Seng / HKK (HSI)';
       case 'SNI Daily':
-        return 'Nikkei / JPK (SNI)';
+        return LanguageViewModel.isEnglish
+            ? 'Nikkei / JPK (SNI)'
+            : 'Nikkei / JPK (SNI)';
       case 'LGD Daily':
       default:
-        return 'Emas Global (LGD)';
+        return LanguageViewModel.isEnglish
+            ? 'Global Gold (LGD)'
+            : 'Emas Global (LGD)';
     }
   }
+
+  String _getGreetingText() => LanguageViewModel.isEnglish
+      ? 'Good day'
+      : 'Halo';
+
+  String _dateLocale() => LanguageViewModel.isEnglish ? 'en_US' : 'id_ID';
+
+  String _currencyUnitLabel() => LanguageViewModel.isEnglish ? 'USD / oz' : 'USD / oz';
+
+  String _indexUnitLabel() => LanguageViewModel.isEnglish ? 'Index Point' : 'Index Point';
 
   // ============================================================
   // PILIH PASAR — menu kaca yang menempel di bawah tombol
@@ -351,10 +370,8 @@ class HomeTabViewState extends State<HomeTabView> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeViewModel.themeMode,
-      builder: (context, currentThemeMode, child) {
-        final bool isDarkMode = ThemeViewModel.isDarkMode;
+    return AppThemeLang(
+      builder: (context, isDarkMode, t) {
 
         const primaryOrange = Color(0xFFFF9500);
         const secondaryOrange = Color(0xFFFFB74D);
@@ -462,6 +479,11 @@ class HomeTabViewState extends State<HomeTabView> {
 
                         const SizedBox(height: 24),
 
+                        // KURS LIVE
+                        KursCard(isDark: isDarkMode),
+
+                        const SizedBox(height: 24),
+
                         // FILTER (Market + Tanggal)
                         _buildFilterCard(
                           isDarkMode: isDarkMode,
@@ -508,7 +530,7 @@ class HomeTabViewState extends State<HomeTabView> {
                                   isDarkMode: isDarkMode,
                                   glassFill: glassFill,
                                   glassBorder: glassBorder,
-                                  title: 'Open',
+                                  title: tr('Open', 'Open'),
                                   value: historicalData.openFormatted,
                                   icon: Icons.wb_sunny_outlined,
                                   accentColor: const Color(0xFFFFB700),
@@ -522,7 +544,7 @@ class HomeTabViewState extends State<HomeTabView> {
                                   isDarkMode: isDarkMode,
                                   glassFill: glassFill,
                                   glassBorder: glassBorder,
-                                  title: 'Close',
+                                  title: tr('Close', 'Close'),
                                   value: historicalData.closeFormatted,
                                   icon: Icons.nightlight_round_outlined,
                                   accentColor: const Color(0xFFFF9500),
@@ -543,7 +565,7 @@ class HomeTabViewState extends State<HomeTabView> {
                                   isDarkMode: isDarkMode,
                                   glassFill: glassFill,
                                   glassBorder: glassBorder,
-                                  title: 'High',
+                                  title: tr('High', 'High'),
                                   value: historicalData.highFormatted,
                                   icon: Icons.trending_up_rounded,
                                   accentColor: const Color(0xFF4CAF50),
@@ -557,7 +579,7 @@ class HomeTabViewState extends State<HomeTabView> {
                                   isDarkMode: isDarkMode,
                                   glassFill: glassFill,
                                   glassBorder: glassBorder,
-                                  title: 'Low',
+                                  title: tr('Low', 'Low'),
                                   value: historicalData.lowFormatted,
                                   icon: Icons.trending_down_rounded,
                                   accentColor: const Color(0xFFEF5350),
@@ -649,13 +671,10 @@ class HomeTabViewState extends State<HomeTabView> {
     required Color primaryTextColor,
     required Color secondaryTextColor,
   }) {
-    final String firstName = _user?.firstName.trim() ?? '';
-
-    final String greeting = _isLoadingUser
-        ? 'Hai, ...'
-        : firstName.isNotEmpty
-        ? 'Halo, $firstName'
-        : 'Halo, Pengguna';
+    final greeting = _getGreetingText();
+    final displayName = _user?.firstName?.isNotEmpty == true
+        ? _user!.firstName!
+        : 'Equate';
 
     return Row(
       children: [
@@ -693,7 +712,7 @@ class HomeTabViewState extends State<HomeTabView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                greeting,
+                '$greeting, $displayName',
                 style: GoogleFonts.poppins(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -702,7 +721,7 @@ class HomeTabViewState extends State<HomeTabView> {
               ),
               const SizedBox(height: 2),
               Text(
-                'Pantau pasar emas & indeks hari ini',
+                tr('Pantau pasar emas & indeks hari ini', 'Track gold and index markets today'),
                 style: GoogleFonts.poppins(
                   fontSize: 10.5,
                   color: secondaryTextColor,
@@ -731,7 +750,7 @@ class HomeTabViewState extends State<HomeTabView> {
 
     final dateFormatted = selectedDate == null
         ? '-'
-        : DateFormat('dd MMMM yyyy', 'id_ID').format(selectedDate);
+        : DateFormat('dd MMMM yyyy', _dateLocale()).format(selectedDate);
 
     return _glassCard(
       isDarkMode: isDarkMode,
@@ -803,7 +822,7 @@ class HomeTabViewState extends State<HomeTabView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Tanggal Data',
+                        tr('Tanggal Data', 'Data Date'),
                         style: GoogleFonts.poppins(
                           fontSize: 9.5,
                           color: secondaryTextColor,
@@ -889,7 +908,7 @@ class HomeTabViewState extends State<HomeTabView> {
               Icon(Icons.history_rounded, size: 12, color: secondaryTextColor),
               const SizedBox(width: 5),
               Text(
-                'DATA HISTORIS',
+                tr('DATA HISTORIS', 'HISTORICAL DATA'),
                 style: GoogleFonts.poppins(
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
@@ -907,12 +926,12 @@ class HomeTabViewState extends State<HomeTabView> {
   String _getMarketTitle() {
     switch (_historicalViewModel.selectedCategory) {
       case 'HSI Daily':
-        return 'Hang Seng';
+        return tr('Hang Seng', 'Hang Seng');
       case 'SNI Daily':
-        return 'Nikkei';
+        return tr('Nikkei', 'Nikkei');
       case 'LGD Daily':
       default:
-        return 'Harga Emas';
+        return tr('Harga Emas', 'Gold Price');
     }
   }
 
@@ -988,8 +1007,8 @@ class HomeTabViewState extends State<HomeTabView> {
           const SizedBox(height: 2),
           Text(
             _historicalViewModel.selectedCategory == 'LGD Daily'
-                ? 'USD / oz'
-                : 'Index Point',
+                ? _currencyUnitLabel()
+                : _indexUnitLabel(),
             style: GoogleFonts.poppins(fontSize: 9, color: secondaryTextColor),
           ),
         ],
@@ -1049,7 +1068,7 @@ class HomeTabViewState extends State<HomeTabView> {
           Row(
             children: [
               Text(
-                'Pergerakan Harga',
+                tr('Pergerakan Harga', 'Price Movement'),
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -1058,7 +1077,7 @@ class HomeTabViewState extends State<HomeTabView> {
               ),
               const Spacer(),
               Text(
-                'Close',
+                tr('Close', 'Close'),
                 style: GoogleFonts.poppins(
                   fontSize: 10,
                   color: secondaryTextColor,
@@ -1109,7 +1128,7 @@ class HomeTabViewState extends State<HomeTabView> {
                   isDarkMode: isDarkMode,
                 ),
                 _buildChartRangeButton(
-                  label: 'Semua',
+                  label: tr('Semua', 'All'),
                   days: -1,
                   primaryOrange: primaryOrange,
                   isDarkMode: isDarkMode,
@@ -1125,7 +1144,7 @@ class HomeTabViewState extends State<HomeTabView> {
               height: 220,
               child: Center(
                 child: Text(
-                  'Data chart belum tersedia',
+                  tr('Data chart belum tersedia', 'Chart data not available'),
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: secondaryTextColor,
@@ -1314,12 +1333,12 @@ class HomeTabViewState extends State<HomeTabView> {
       final newest = rows.first.date;
       final oldest = rows.last.date;
       final days = newest.difference(oldest).inDays + 1;
-      final fmt = DateFormat('d MMM yyyy', 'id_ID');
+      final fmt = DateFormat('d MMM yyyy', _dateLocale());
 
       rangeInfo = days <= 1
-          ? '${rows.length} data terbaru • ${fmt.format(newest)}'
-          : '${rows.length} data terbaru • ${fmt.format(oldest)} – '
-                '${fmt.format(newest)} ($days hari)';
+          ? '${rows.length} ${tr('data terbaru', 'latest data')} • ${fmt.format(newest)}'
+          : '${rows.length} ${tr('data terbaru', 'latest data')} • ${fmt.format(oldest)} – '
+                '${fmt.format(newest)} ($days ${tr('hari', 'days')})';
     }
 
     return _glassCard(
@@ -1336,7 +1355,7 @@ class HomeTabViewState extends State<HomeTabView> {
             children: [
               Expanded(
                 child: Text(
-                  'Tabel Data Historis',
+                  tr('Tabel Data Historis', 'Historical Data Table'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
@@ -1364,7 +1383,7 @@ class HomeTabViewState extends State<HomeTabView> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Lihat Semua',
+                      tr('Lihat Semua', 'View All'),
                       style: GoogleFonts.poppins(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
@@ -1401,7 +1420,7 @@ class HomeTabViewState extends State<HomeTabView> {
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Text(
-                  'Belum ada data untuk ditampilkan',
+                  tr('Belum ada data untuk ditampilkan', 'No data to display yet'),
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: secondaryTextColor,
@@ -1436,36 +1455,11 @@ class HomeTabViewState extends State<HomeTabView> {
                       ),
                       child: Row(
                         children: [
-                          _tableCell(
-                            'Tanggal',
-                            width: 120,
-                            isHeader: true,
-                            color: primaryOrange,
-                          ),
-                          _tableCell(
-                            'Open',
-                            width: 90,
-                            isHeader: true,
-                            color: primaryOrange,
-                          ),
-                          _tableCell(
-                            'High',
-                            width: 90,
-                            isHeader: true,
-                            color: primaryOrange,
-                          ),
-                          _tableCell(
-                            'Low',
-                            width: 90,
-                            isHeader: true,
-                            color: primaryOrange,
-                          ),
-                          _tableCell(
-                            'Close',
-                            width: 90,
-                            isHeader: true,
-                            color: primaryOrange,
-                          ),
+                          _tableCell(tr('Tanggal', 'Date'), width: 120, isHeader: true, color: primaryOrange),
+                          _tableCell(tr('Open', 'Open'), width: 90, isHeader: true, color: primaryOrange),
+                          _tableCell(tr('High', 'High'), width: 90, isHeader: true, color: primaryOrange),
+                          _tableCell(tr('Low', 'Low'), width: 90, isHeader: true, color: primaryOrange),
+                          _tableCell(tr('Close', 'Close'), width: 90, isHeader: true, color: primaryOrange),
                         ],
                       ),
                     ),
@@ -1497,32 +1491,11 @@ class HomeTabViewState extends State<HomeTabView> {
                         ),
                         child: Row(
                           children: [
-                            _tableCell(
-                              item.dateFormatted,
-                              width: 120,
-                              color: secondaryTextColor,
-                            ),
-                            _tableCell(
-                              item.openFormatted,
-                              width: 90,
-                              color: primaryTextColor,
-                            ),
-                            _tableCell(
-                              item.highFormatted,
-                              width: 90,
-                              color: const Color(0xFF4CAF50),
-                            ),
-                            _tableCell(
-                              item.lowFormatted,
-                              width: 90,
-                              color: const Color(0xFFEF5350),
-                            ),
-                            _tableCell(
-                              item.closeFormatted,
-                              width: 90,
-                              color: primaryTextColor,
-                              bold: true,
-                            ),
+                            _tableCell(item.dateFormatted, width: 120, color: secondaryTextColor),
+                            _tableCell(item.openFormatted, width: 90, color: primaryTextColor),
+                            _tableCell(item.highFormatted, width: 90, color: const Color(0xFF4CAF50)),
+                            _tableCell(item.lowFormatted, width: 90, color: const Color(0xFFEF5350)),
+                            _tableCell(item.closeFormatted, width: 90, color: primaryTextColor, bold: true),
                           ],
                         ),
                       );
@@ -1582,7 +1555,7 @@ class HomeTabViewState extends State<HomeTabView> {
             const CircularProgressIndicator(color: Color(0xFFFF9500)),
             const SizedBox(height: 14),
             Text(
-              'Memuat data historical...',
+              tr('Memuat data historical...', 'Loading historical data...'),
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 color: secondaryTextColor,
@@ -1617,7 +1590,7 @@ class HomeTabViewState extends State<HomeTabView> {
           Icon(Icons.cloud_off_rounded, size: 40, color: Colors.grey[500]),
           const SizedBox(height: 12),
           Text(
-            'Data tidak dapat dimuat',
+            tr('Data tidak dapat dimuat', 'Data could not be loaded'),
             style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -1626,7 +1599,7 @@ class HomeTabViewState extends State<HomeTabView> {
           ),
           const SizedBox(height: 5),
           Text(
-            _historicalViewModel.errorMessage ?? 'Terjadi kesalahan.',
+            _historicalViewModel.errorMessage ?? tr('Terjadi kesalahan.', 'An error occurred.'),
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(fontSize: 11, color: secondaryTextColor),
           ),
@@ -1634,7 +1607,7 @@ class HomeTabViewState extends State<HomeTabView> {
           TextButton(
             onPressed: () => _historicalViewModel.loadHistoricalData(),
             child: Text(
-              'Coba Lagi',
+              tr('Coba Lagi', 'Try Again'),
               style: GoogleFonts.poppins(
                 color: primaryOrange,
                 fontWeight: FontWeight.w600,
@@ -1658,9 +1631,10 @@ class HomeTabViewState extends State<HomeTabView> {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Data historical bersumber dari Newsmaker.id. '
-            'Data yang ditampilkan meliputi Open, High, Low, '
-            'dan Close berdasarkan tanggal yang dipilih.',
+            tr(
+              'Data historical bersumber dari Newsmaker.id. Data yang ditampilkan meliputi Open, High, Low, dan Close berdasarkan tanggal yang dipilih.',
+              'Historical data is sourced from Newsmaker.id. The displayed data includes Open, High, Low, and Close based on the selected date.',
+            ),
             style: GoogleFonts.poppins(
               fontSize: 10,
               height: 1.5,

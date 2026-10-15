@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
 import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/view/help/help_widgets.dart';
+import 'package:equate/viewmodel/language_viewmodel.dart';
 import 'package:equate/viewmodel/historical_data_viewmodel.dart';
 import 'package:equate/viewmodel/history_viewmodel.dart';
 import 'package:equate/model/base_calculation_history.dart';
@@ -97,8 +99,9 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
   ];
 
   String _formatCurrency(double amount) {
+    final locale = LanguageViewModel.isEnglish ? 'en_US' : 'id_ID';
     final formatter = NumberFormat.currency(
-      locale: 'id_ID',
+      locale: locale,
       symbol: '',
       decimalDigits: 0,
     );
@@ -187,11 +190,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeViewModel.themeMode,
-      builder: (context, currentThemeMode, child) {
-        final isDarkMode = ThemeViewModel.isDarkMode;
-
+    return AppThemeLang(
+      builder: (context, isDarkMode, t) {
         final primaryTextColor = isDarkMode
             ? Colors.white
             : const Color(0xFF2C2D30);
@@ -275,8 +275,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                           Expanded(
                             child: Text(
                               _selectedCalculatorType == null
-                                  ? 'Kalkulator'
-                                  : _getCalculatorTitle(),
+                                    ? tr('Kalkulator', 'Calculator')
+                                      : _getCalculatorTitle(),
                               textAlign: TextAlign.center,
                               style: GoogleFonts.plusJakartaSans(
                                 color: primaryTextColor,
@@ -326,7 +326,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Pilih Pasar & Instrumen',
+                tr('Pilih Pasar & Instrumen', 'Select Market & Instrument'),
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -336,7 +336,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Hitung estimasi profit dan pivot point transaksi.',
+                tr('Hitung estimasi profit dan pivot point transaksi.', 'Calculate estimated profit and pivot points.'),
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   color: isDarkMode
@@ -354,8 +354,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
             children: [
               _buildSoftClayButton(
                 context,
-                title: 'Emas',
-                subtitle: 'Kalkulator Emas Digital, Fisik, Pivot & Nest',
+                title: tr('Emas', 'Gold'),
+                subtitle: tr('Kalkulator Emas Digital, Fisik, Pivot & Nest', 'Digital, Physical, Pivot & Nest gold calculators'),
                 icon: Icons.monetization_on_rounded,
                 isExpanded: _isGoldDropdownOpen,
                 onPressed: () {
@@ -397,8 +397,8 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
               const SizedBox(height: 16),
               _buildSoftClayButton(
                 context,
-                title: 'Hangseng (HKK)',
-                subtitle: 'Kalkulator Pivot Point',
+                title: tr('Hangseng (HKK)', 'Hangseng (HKK)'),
+                subtitle: tr('Kalkulator Pivot Point', 'Pivot Point Calculator'),
                 icon: Icons.trending_up_rounded,
                 isExpanded: _isHangsengDropdownOpen,
                 onPressed: () {
@@ -741,7 +741,7 @@ class _CalculatorTabViewState extends State<CalculatorTabView> {
                             alignment: Alignment.centerLeft,
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              'Riwayat Hari Ini',
+                              tr('Riwayat Hari Ini', 'Today\'s History'),
                               maxLines: 1,
                               style: GoogleFonts.plusJakartaSans(
                                 fontWeight: FontWeight.w700,

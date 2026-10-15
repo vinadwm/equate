@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:equate/model/historical_data_model.dart';
 import 'package:equate/service/historical_data_service.dart';
+import 'package:equate/viewmodel/language_viewmodel.dart';
 
 enum HistoricalMarket { gold, hkk, jpk }
 
@@ -188,13 +189,13 @@ class HistoricalDataViewModel extends ChangeNotifier {
   String get marketName {
     switch (_selectedMarket) {
       case HistoricalMarket.gold:
-        return 'Emas';
+        return LanguageViewModel.isEnglish ? 'Gold' : 'Emas';
 
       case HistoricalMarket.hkk:
-        return 'HKK';
+        return LanguageViewModel.isEnglish ? 'HKK' : 'HKK';
 
       case HistoricalMarket.jpk:
-        return 'JPK';
+        return LanguageViewModel.isEnglish ? 'JPK' : 'JPK';
     }
   }
 
@@ -299,22 +300,24 @@ class HistoricalDataViewModel extends ChangeNotifier {
   String get historyRangeLabel {
     switch (_historyDays) {
       case 7:
-        return '7 Hari';
+        return LanguageViewModel.isEnglish ? '7 Days' : '7 Hari';
 
       case 30:
-        return '30 Hari';
+        return LanguageViewModel.isEnglish ? '30 Days' : '30 Hari';
 
       case 90:
-        return '90 Hari';
+        return LanguageViewModel.isEnglish ? '90 Days' : '90 Hari';
 
       case 365:
-        return '1 Tahun';
+        return LanguageViewModel.isEnglish ? '1 Year' : '1 Tahun';
 
       case -1:
-        return 'Semua';
+        return LanguageViewModel.isEnglish ? 'All' : 'Semua';
 
       default:
-        return '$_historyDays Hari';
+        return LanguageViewModel.isEnglish
+            ? '$_historyDays Days'
+            : '$_historyDays Hari';
     }
   }
 

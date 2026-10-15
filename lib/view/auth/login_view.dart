@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:equate/viewmodel/theme_viewmodel.dart';
+import 'package:equate/view/help/help_widgets.dart';
 
 import 'signup_view.dart';
 import 'auth_glass_widgets.dart';
@@ -39,10 +40,9 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeViewModel.themeMode,
-      builder: (context, currentThemeMode, _) {
-        final t = AuthTokens(ThemeViewModel.isDarkMode);
+    return AppThemeLang(
+      builder: (context, isDark, t) {
+        final themeTokens = AuthTokens(isDark);
 
         return Scaffold(
           backgroundColor: t.pageBackground,

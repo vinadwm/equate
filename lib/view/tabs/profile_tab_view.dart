@@ -11,6 +11,8 @@ import 'package:equate/viewmodel/language_viewmodel.dart';
 import 'package:equate/viewmodel/theme_viewmodel.dart';
 import 'package:equate/viewmodel/profile_viewmodel.dart';
 
+const Color _kRed = Color(0xFFFF3B30);
+
 class ProfileTabView extends StatefulWidget {
   const ProfileTabView({super.key});
 
@@ -40,6 +42,21 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     super.dispose();
   }
 
+  Future<void> _openEditProfile() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const EditProfileView()),
+    );
+    await _profileViewModel.refreshProfile();
+  }
+
+  void _openHelp() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const HelpCenterView()),
+    );
+  }
+
   // ==========================================================
   // BUILD
   // ==========================================================
@@ -47,9 +64,11 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   Widget build(BuildContext context) {
     return AppThemeLang(
       builder: (context, isDark, t) {
+        final bg = isDark ? const Color(0xFF0D0E12) : Colors.white;
+
         if (_profileViewModel.isLoading) {
           return Scaffold(
-            backgroundColor: isDark ? const Color(0xFF0D0E12) : Colors.white,
+            backgroundColor: bg,
             body: AppPlainBackground(
               isDark: isDark,
               child: const Center(
@@ -64,102 +83,31 @@ class _ProfileTabViewState extends State<ProfileTabView> {
         final String userEmail = _profileViewModel.email;
 
         return Scaffold(
-          backgroundColor: isDark ? const Color(0xFF0D0E12) : Colors.white,
+          backgroundColor: bg,
           body: AppPlainBackground(
             isDark: isDark,
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(22, 20, 22, 130),
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 130),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 440),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ==================================================
-                      // AVATAR, NAMA, EMAIL
-                      // ==================================================
-                      _buildAvatar(t, userPhoto),
-                      const SizedBox(height: 6),
-                      Text(
-                        userName.isNotEmpty
-                            ? userName
-                            : tr('Nama Pengguna', 'User Name'),
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 25,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: -0.6,
-                          color: t.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
+                      // ================================================
+                      // HEADER
+                      // ================================================
+                      _buildHeader(t, isDark, userPhoto, userName, userEmail),
 
-                      // E-mail dalam bentuk pil kecil
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(30),
-                          color: kAuthOrange.withOpacity(isDark ? 0.14 : 0.10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.alternate_email_rounded,
-                              size: 13,
-                              color: kAuthOrange,
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                userEmail.isNotEmpty
-                                    ? userEmail
-                                    : 'email@domain.com',
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: t.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      const SizedBox(height: 34),
 
-                      const SizedBox(height: 22),
-
-                      // ==================================================
-                      // TOMBOL EDIT PROFIL
-                      // ==================================================
-                      _EditProfileButton(
-                        label: tr('Edit Profil', 'Edit Profile'),
+                      // ================================================
+                      // PENGATURAN
+                      // ================================================
+                      AppSectionLabel(
+                        text: tr('PENGATURAN', 'SETTINGS'),
                         isDark: isDark,
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const EditProfileView(),
-                            ),
-                          );
-                          await _profileViewModel.refreshProfile();
-                        },
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      // ==================================================
-                      // PENGATURAN (satu kartu)
-                      // ==================================================
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: AppSectionLabel(
-                          text: tr('PENGATURAN', 'SETTINGS'),
-                          isDark: isDark,
-                        ),
                       ),
                       AppGroupCard(
                         isDark: isDark,
@@ -201,7 +149,10 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                             isDark: isDark,
                             icon: Icons.translate_rounded,
                             title: tr('Bahasa', 'Language'),
-                            subtitle: tr('Indonesia / English', 'Indonesian / English'),
+                            subtitle: tr(
+                              'Indonesia / English',
+                              'Indonesian / English',
+                            ),
                             trailing: _LanguageToggle(isDark: isDark),
                           ),
                           AppGroupRow(
@@ -212,67 +163,21 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                               'Customer service, FAQ, dan panduan',
                               'Customer service, FAQ, and guide',
                             ),
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const HelpCenterView(),
-                              ),
-                            ),
+                            onTap: _openHelp,
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 14),
 
-                      // ==================================================
-                      // KELUAR (teks polos, tanpa kotak)
-                      // ==================================================
-                      TextButton.icon(
-                        onPressed: () => _showLogoutDialog(t),
-                        style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFFFF3B30),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                          shape: const StadiumBorder(),
-                        ),
-                        icon: const Icon(Icons.logout_rounded, size: 18),
-                        label: Text(
-                          tr('Keluar dari Akun', 'Log Out'),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFFFF3B30),
-                          ),
-                        ),
-                      ),
+                      _buildLogoutRow(t, isDark),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 48),
 
-                      // ==================================================
-                      // FOOTER
-                      // ==================================================
-                      Opacity(
-                        opacity: isDark ? 0.55 : 0.7,
-                        child: Image.asset(
-                          'assets/images/logoEWF.png',
-                          width: 40,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const SizedBox.shrink(),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Equate',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.6,
-                          color: t.textSecondary,
-                        ),
-                      ),
+                      // ================================================
+                      // CREDITS
+                      // ================================================
+                      _buildCredits(t, isDark),
                     ],
                   ),
                 ),
@@ -285,19 +190,174 @@ class _ProfileTabViewState extends State<ProfileTabView> {
   }
 
   // ==========================================================
-  // AVATAR + STIKER
+  // HEADER: foto kiri, nama & e-mail kanan, tombol edit,
+  // dengan dekorasi lingkaran dan titik oranye di belakang.
+  // ==========================================================
+  Widget _buildHeader(
+    AuthTokens t,
+    bool isDark,
+    String photo,
+    String name,
+    String email,
+  ) {
+    Widget dot(double size, double opacity) => Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: kAuthOrange.withOpacity(opacity),
+      ),
+    );
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Lingkaran lembut besar (kanan atas)
+        Positioned(
+          right: -70,
+          top: -60,
+          child: IgnorePointer(
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    kAuthOrange.withOpacity(isDark ? 0.24 : 0.22),
+                    kAuthOrange.withOpacity(0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Lingkaran lembut kecil (kiri bawah)
+        Positioned(
+          left: -50,
+          bottom: -40,
+          child: IgnorePointer(
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    kAuthOrange.withOpacity(isDark ? 0.14 : 0.12),
+                    kAuthOrange.withOpacity(0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Titik-titik hiasan
+        Positioned(right: 28, top: 6, child: IgnorePointer(child: dot(10, 0.5))),
+        Positioned(right: 62, top: 34, child: IgnorePointer(child: dot(6, 0.32))),
+        Positioned(right: 14, top: 52, child: IgnorePointer(child: dot(5, 0.26))),
+        Positioned(right: 84, top: 8, child: IgnorePointer(child: dot(4, 0.22))),
+
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildAvatar(t, photo),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr('Akun Saya', 'My Account').toUpperCase(),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.4,
+                          color: kAuthOrange,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        name.isNotEmpty
+                            ? name
+                            : tr('Nama Pengguna', 'User Name'),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 21,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.5,
+                          color: t.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: kAuthOrange.withOpacity(isDark ? 0.14 : 0.10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.alternate_email_rounded,
+                              size: 12,
+                              color: kAuthOrange,
+                            ),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                email.isNotEmpty ? email : 'email@domain.com',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: t.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _EditProfileButton(
+              label: tr('Edit Profil', 'Edit Profile'),
+              isDark: isDark,
+              onTap: _openEditProfile,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ==========================================================
+  // AVATAR KECIL + titik status hijau
   // ==========================================================
   Widget _buildAvatar(AuthTokens t, String userPhoto) {
     return SizedBox(
-      height: 160,
-      width: 170,
+      width: 82,
+      height: 82,
       child: Stack(
-        alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
           Container(
-            width: 120,
-            height: 120,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
@@ -307,15 +367,15 @@ class _ProfileTabViewState extends State<ProfileTabView> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: kAuthOrange.withOpacity(t.isDark ? 0.30 : 0.35),
-                  blurRadius: 22,
+                  color: kAuthOrange.withOpacity(t.isDark ? 0.28 : 0.35),
+                  blurRadius: 16,
                   spreadRadius: -2,
-                  offset: const Offset(0, 8),
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
             child: Padding(
-              padding: const EdgeInsets.all(3.5),
+              padding: const EdgeInsets.all(3),
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -325,54 +385,38 @@ class _ProfileTabViewState extends State<ProfileTabView> {
                     ? ClipOval(
                         child: Image.network(
                           userPhoto,
-                          width: 113,
-                          height: 113,
+                          width: 74,
+                          height: 74,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => Icon(
                             Icons.person_rounded,
-                            size: 58,
+                            size: 38,
                             color: t.textSecondary,
                           ),
                         ),
                       )
                     : Icon(
                         Icons.person_rounded,
-                        size: 58,
+                        size: 38,
                         color: t.textSecondary,
                       ),
               ),
             ),
           ),
           Positioned(
-            top: 2,
-            left: 6,
-            child: Transform.rotate(
-              angle: -0.18,
-              child: _buildBadgeIcon(t, Icons.calculate_outlined),
-            ),
-          ),
-          Positioned(
-            top: 4,
-            right: 6,
-            child: Transform.rotate(
-              angle: 0.15,
-              child: _buildBadgeIcon(t, Icons.monetization_on_outlined),
-            ),
-          ),
-          Positioned(
-            bottom: 6,
-            left: 2,
-            child: Transform.rotate(
-              angle: -0.1,
-              child: _buildBadgeIcon(t, Icons.show_chart_rounded),
-            ),
-          ),
-          Positioned(
-            bottom: 8,
-            right: 4,
-            child: Transform.rotate(
-              angle: 0.18,
-              child: _buildBadgeIcon(t, Icons.percent_rounded),
+            right: 2,
+            bottom: 2,
+            child: Container(
+              width: 17,
+              height: 17,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF34C759),
+                border: Border.all(
+                  color: t.isDark ? const Color(0xFF16181F) : Colors.white,
+                  width: 2.5,
+                ),
+              ),
             ),
           ),
         ],
@@ -380,23 +424,147 @@ class _ProfileTabViewState extends State<ProfileTabView> {
     );
   }
 
-  Widget _buildBadgeIcon(AuthTokens t, IconData icon) {
+  // ==========================================================
+  // BARIS KELUAR
+  // ==========================================================
+  Widget _buildLogoutRow(AuthTokens t, bool isDark) {
     return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: t.isDark ? const Color(0xFF2A2B31) : Colors.white,
-        border: Border.all(color: t.glassBorder, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(t.isDark ? 0.25 : 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+      decoration: appCardDecoration(isDark),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          splashColor: _kRed.withOpacity(0.10),
+          highlightColor: _kRed.withOpacity(0.04),
+          onTap: () => _showLogoutDialog(t),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _kRed.withOpacity(0.12),
+                  ),
+                  child: const Icon(
+                    Icons.logout_rounded,
+                    size: 19,
+                    color: _kRed,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tr('Keluar dari Akun', 'Log Out'),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _kRed,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        tr(
+                          'Kamu bisa masuk lagi kapan saja',
+                          'You can sign in again any time',
+                        ),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: t.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 23,
+                  color: _kRed.withOpacity(0.6),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
-      child: Icon(icon, color: kAuthOrange, size: 17),
+    );
+  }
+
+  // ==========================================================
+  // CREDITS: tanpa judul, tanpa frame; hanya garis pemisah di tengah
+  // ==========================================================
+  Widget _buildCredits(AuthTokens t, bool isDark) {
+    final lineColor = isDark
+        ? Colors.white.withOpacity(0.12)
+        : Colors.black.withOpacity(0.10);
+
+    return Column(
+      children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _CreditItem(
+                  t: t,
+                  caption: 'Powered by',
+                  name: 'PT Equityworld\nFutures',
+                  logo: Image.asset(
+                    'assets/images/logoEWF.png',
+                    height: 56,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.business_rounded,
+                      size: 40,
+                      color: kAuthOrange,
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                width: 1,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                color: lineColor,
+              ),
+              Expanded(
+                child: _CreditItem(
+                  t: t,
+                  caption: 'Supported by',
+                  name: 'Kepompong\nTeam',
+                  logo: ClipOval(
+                    child: Image.asset(
+                      'assets/images/logoKepompong.jpeg',
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.groups_rounded,
+                        size: 40,
+                        color: kAuthOrange,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 30),
+
+        Text(
+          'Equate © 2026',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+            color: t.textSecondary.withOpacity(0.8),
+          ),
+        ),
+      ],
     );
   }
 
@@ -507,6 +675,53 @@ class _ProfileTabViewState extends State<ProfileTabView> {
 }
 
 // ================================================================
+// ITEM CREDIT: logo polos + keterangan + nama
+// ================================================================
+class _CreditItem extends StatelessWidget {
+  final AuthTokens t;
+  final String caption;
+  final String name;
+  final Widget logo;
+
+  const _CreditItem({
+    required this.t,
+    required this.caption,
+    required this.name,
+    required this.logo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(height: 56, child: Center(child: logo)),
+        const SizedBox(height: 12),
+        Text(
+          caption.toUpperCase(),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+            color: kAuthOrange,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          name,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12.5,
+            height: 1.3,
+            fontWeight: FontWeight.w700,
+            color: t.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ================================================================
 // TOGGLE BAHASA: ID | EN
 // ================================================================
 class _LanguageToggle extends StatelessWidget {
@@ -577,7 +792,7 @@ class _LanguageToggle extends StatelessWidget {
 }
 
 // ================================================================
-// TOMBOL EDIT PROFIL (pil gradasi oranye, ukuran tetap di tengah)
+// TOMBOL EDIT PROFIL (pil gradasi oranye, selebar layar)
 // ================================================================
 class _EditProfileButton extends StatelessWidget {
   final String label;
@@ -625,28 +840,26 @@ class _EditProfileButton extends StatelessWidget {
             onTap: onTap,
             child: SizedBox(
               height: 48,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 30),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.edit_outlined,
+              width: double.infinity,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.edit_outlined,
+                    color: Colors.white,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
                       color: Colors.white,
-                      size: 17,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      label,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

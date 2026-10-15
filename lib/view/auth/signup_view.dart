@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:equate/viewmodel/auth_viewmodel.dart';
+import 'package:equate/viewmodel/language_viewmodel.dart';
 
 import 'auth_glass_widgets.dart';
 import '../main_navigation_view.dart';
+import '../help/help_widgets.dart';
 
 // ================================================================
 // FORM DAFTAR (kartu kaca + tautan di bawahnya)
@@ -78,12 +80,12 @@ class _SignUpFormState extends State<SignUpForm> {
     final confirmPassword = _confirmPasswordController.text;
 
     if (firstName.isEmpty) {
-      _showError('Nama depan wajib diisi.');
+      _showError(tr('Nama depan wajib diisi.', 'First name is required.'));
       return;
     }
 
     if (lastName.isEmpty) {
-      _showError('Nama belakang wajib diisi.');
+      _showError(tr('Nama belakang wajib diisi.', 'Last name is required.'));
       return;
     }
 
@@ -102,12 +104,12 @@ class _SignUpFormState extends State<SignUpForm> {
     }
 
     if (confirmPassword.isEmpty) {
-      _showError('Konfirmasi kata sandi wajib diisi.');
+      _showError(tr('Konfirmasi kata sandi wajib diisi.', 'Password confirmation is required.'));
       return;
     }
 
     if (password != confirmPassword) {
-      _showError('Kata sandi dan konfirmasi kata sandi tidak sama.');
+      _showError(tr('Kata sandi dan konfirmasi kata sandi tidak sama.', 'Password and confirmation do not match.'));
       return;
     }
 
@@ -122,8 +124,10 @@ class _SignUpFormState extends State<SignUpForm> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Akun berhasil dibuat. Silakan masuk.'),
+        SnackBar(
+          content: Text(
+            tr('Akun berhasil dibuat. Silakan masuk.', 'Account created. Please sign in.'),
+          ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -228,13 +232,12 @@ class _SignUpFormState extends State<SignUpForm> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Judul + tombol Google
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: Text(
-                          'Buat akun',
+                          tr('Buat akun', 'Create account'),
                           style: GoogleFonts.poppins(
                             fontSize: 32,
                             fontWeight: FontWeight.w400,
@@ -253,7 +256,7 @@ class _SignUpFormState extends State<SignUpForm> {
                   const SizedBox(height: 4),
 
                   Text(
-                    'Simpan riwayat perhitunganmu di satu tempat.',
+                    tr('Simpan riwayat perhitunganmu di satu tempat.', 'Save your calculation history in one place.'),
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: t.textSecondary,
@@ -262,11 +265,10 @@ class _SignUpFormState extends State<SignUpForm> {
 
                   const SizedBox(height: 22),
 
-                  // Nama depan
                   AuthPillField(
                     t: t,
                     controller: _firstNameController,
-                    hint: 'Nama depan',
+                    hint: tr('Nama depan', 'First name'),
                     icon: Icons.person_outline_rounded,
                     enabled: !isLoading,
                     textCapitalization: TextCapitalization.words,
@@ -275,11 +277,10 @@ class _SignUpFormState extends State<SignUpForm> {
 
                   const SizedBox(height: 12),
 
-                  // Nama belakang
                   AuthPillField(
                     t: t,
                     controller: _lastNameController,
-                    hint: 'Nama belakang',
+                    hint: tr('Nama belakang', 'Last name'),
                     icon: Icons.badge_outlined,
                     enabled: !isLoading,
                     textCapitalization: TextCapitalization.words,
@@ -288,11 +289,10 @@ class _SignUpFormState extends State<SignUpForm> {
 
                   const SizedBox(height: 12),
 
-                  // Email
                   AuthPillField(
                     t: t,
                     controller: _emailController,
-                    hint: 'Alamat e-mail',
+                    hint: tr('Alamat e-mail', 'Email address'),
                     icon: Icons.alternate_email_rounded,
                     enabled: !isLoading,
                     keyboardType: TextInputType.emailAddress,
@@ -301,11 +301,10 @@ class _SignUpFormState extends State<SignUpForm> {
 
                   const SizedBox(height: 12),
 
-                  // Kata sandi
                   AuthPillField(
                     t: t,
                     controller: _passwordController,
-                    hint: 'Kata sandi',
+                    hint: tr('Kata sandi', 'Password'),
                     icon: Icons.lock_outline_rounded,
                     obscure: _isObscurePassword,
                     enabled: !isLoading,
@@ -324,11 +323,10 @@ class _SignUpFormState extends State<SignUpForm> {
 
                   const SizedBox(height: 12),
 
-                  // Konfirmasi kata sandi
                   AuthPillField(
                     t: t,
                     controller: _confirmPasswordController,
-                    hint: 'Ulangi kata sandi',
+                    hint: tr('Ulangi kata sandi', 'Repeat password'),
                     icon: Icons.shield_outlined,
                     obscure: _isObscureConfirmPassword,
                     enabled: !isLoading,
@@ -342,8 +340,7 @@ class _SignUpFormState extends State<SignUpForm> {
                       isLoading: isLoading,
                       onToggle: () {
                         setState(() {
-                          _isObscureConfirmPassword =
-                              !_isObscureConfirmPassword;
+                          _isObscureConfirmPassword = !_isObscureConfirmPassword;
                         });
                       },
                     ),
@@ -351,13 +348,12 @@ class _SignUpFormState extends State<SignUpForm> {
 
                   const SizedBox(height: 18),
 
-                  // Catatan + tombol daftar
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: Text(
-                          'Gunakan kata sandi yang kuat dan mudah kamu ingat.',
+                          tr('Gunakan kata sandi yang kuat dan mudah kamu ingat.', 'Use a strong password that is easy to remember.'),
                           style: GoogleFonts.poppins(
                             fontSize: 10.5,
                             height: 1.45,
@@ -368,7 +364,7 @@ class _SignUpFormState extends State<SignUpForm> {
                       const SizedBox(width: 14),
                       AuthActionButton(
                         t: t,
-                        label: 'Daftar',
+                        label: tr('Daftar', 'Sign Up'),
                         isLoading: isLoading,
                         onPressed: isLoading ? null : _handleSignUp,
                       ),
@@ -382,8 +378,8 @@ class _SignUpFormState extends State<SignUpForm> {
 
             AuthBottomLink(
               t: t,
-              question: 'Sudah punya akun?',
-              actionLabel: 'Masuk',
+              question: tr('Sudah punya akun?', 'Already have an account?'),
+              actionLabel: tr('Masuk', 'Sign In'),
               onTap: isLoading ? null : widget.onGoToLogin,
             ),
           ],
